@@ -1,4 +1,4 @@
-name: ci
+name: CI
 
 on: 
   push:
@@ -15,7 +15,7 @@ on:
     
 jobs:
   build:
-    name: Run MATLAB Tests and Generate Artifacts
+    name: Run MATLAB Tests
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
