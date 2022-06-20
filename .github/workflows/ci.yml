@@ -1,0 +1,46 @@
+name: ci
+
+on: 
+  push:
+    branches:
+      - main
+      - dev
+  pull_request:
+    branches:
+      - main
+      - dev
+
+  # allows to run manually from the Actions tab
+  workflow_dispatch:
+    
+jobs:
+  build:
+    name: Run MATLAB Tests and Generate Artifacts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v2
+        
+      - name: Setup MATLAB
+        uses: matlab-actions/setup-matlab@v1
+        with:
+          release: R2020b
+        
+      - name: Run tests and generate artifacts
+        uses: matlab-actions/run-tests@v1
+        with:
+          source-folder: src
+          select-by-folder: test
+          test-results-junit: test-results/results.xml
+          code-coverage-cobertura: code-coverage/coverage.xml
+          
+      - name: Publish Unit Test Results
+        uses: mikepenz/action-junit-report@v3
+        if: always()
+        with:
+          report_paths: test-results/results.xml
+          
+      - name: Code Coverage Summary Report
+        uses: codecov/codecov-action@v2
+        with:
+          files: code-coverage/coverage.xml
