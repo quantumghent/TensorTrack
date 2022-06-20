@@ -7,7 +7,7 @@
   [![ci](https://github.com/quantumghent/TensorTrack/actions/workflows/ci.yml/badge.svg)](https://github.com/quantumghent/TensorTrack/actions/workflows/ci.yml)
   [![codecov](https://codecov.io/gh/quantumghent/TensorTrack/branch/main/graph/badge.svg?token=1I0XEB69TQ)](https://codecov.io/gh/quantumghent/TensorTrack)
   [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-  [![DOI](https://zenodo.org/badge/469891425.svg)](https://zenodo.org/badge/latestdoi/469891425)
+  [![DOI](https://zenodo.org/badge/481924253.svg)](https://zenodo.org/badge/latestdoi/481924253)
 
 </div>
 
