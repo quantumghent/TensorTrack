@@ -4,8 +4,8 @@
 <div align="center">
   
   [![Documentation Status](https://readthedocs.org/projects/tensortrack/badge/?version=latest)](https://tensortrack.readthedocs.io/en/latest/index.html)
-  [![ci](https://github.com/quantumghent/TensorTrack/actions/workflows/ci.yml/badge.svg)](https://github.com/quantumghent/TensorTrack/actions/workflows/ci.yml)
-  [![codecov](https://codecov.io/gh/quantumghent/TensorTrack/branch/main/graph/badge.svg?token=1I0XEB69TQ)](https://codecov.io/gh/quantumghent/TensorTrack)
+  [![CI](https://github.com/quantumghent/TensorTrack/actions/workflows/CI.yml/badge.svg)](https://github.com/quantumghent/TensorTrack/actions/workflows/CI.yml)
+  [![Codecov](https://codecov.io/gh/quantumghent/TensorTrack/branch/main/graph/badge.svg?token=1I0XEB69TQ)](https://codecov.io/gh/quantumghent/TensorTrack)
   [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
   [![DOI](https://zenodo.org/badge/481924253.svg)](https://zenodo.org/badge/latestdoi/481924253)
 
@@ -152,7 +152,7 @@ Lukas Devos - [lkdvos](https://github.com/lkdvos) - Lukas.Devos@ugent.be
 
 Lander Burgelman - [leburgel](https://github.com/leburgel) - Lander.Burgelman@ugent.be
 
-Project Link: [https://github.com/lkdvos/TensorTrack](https://github.com/quantumghent/TensorTrack)
+Project Link: [https://github.com/quantumghent/TensorTrack](https://github.com/quantumghent/TensorTrack)
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
