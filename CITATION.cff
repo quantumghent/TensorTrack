@@ -1,0 +1,27 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+- family-names: "Devos"
+  given-names: "Lukas"
+  orcid: "https://orcid.org/0000-0002-0256-4200"
+- family-names: "Burgelman"
+  given-names: "Lander"
+  orcid: "https://orcid.org/0000-0003-1724-5330"
+- family-names: "Vanhecke"
+  given-names: "Bram"
+  orcid: "https://orcid.org/0000-0001-9557-1591"
+- family-names: "Haegeman"
+  given-names: "Jutho"
+  orcid: "https://orcid.org/0000-0002-0858-291X"
+- family-names: "Verstraete"
+  given-names: "Frank"
+  orcid: "https://orcid.org/0000-0003-0270-5592"
+- family-names: "Vanderstraeten"
+  given-names: "Laurens"
+  orcid: "https://orcid.org/0000-0002-3227-9822"
+
+title: "TensorTrack"
+version: 0.0.1
+doi: 10.5281/zenodo.6619296
+date-released: 2022-06-07
+url: "https://github.com/lkdvos/TensorTrack"

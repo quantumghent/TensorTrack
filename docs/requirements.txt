@@ -1,0 +1,9 @@
+sphinx==4.5.0
+sphinx-rtd-theme==0.5.1
+sphinxcontrib-matlabdomain==0.12.0
+sphinx-prompt
+nbsphinx==0.8.9
+sphinx-gallery==0.10.1
+myst-parser==0.17.2
+linkify-it-py==2.0.0
+

@@ -1,0 +1,41 @@
+/* Fix for: https://github.com/readthedocs/sphinx_rtd_theme/issues/301 */
+/* Fix taken from: https://github.com/readthedocs/sphinx_rtd_theme/pull/383/ */
+span.eqno {
+  margin-left: 5px;
+  float: right;
+  /* position the number above the equation so that :hover is activated */
+  z-index: 1;
+  position: relative;
+}
+
+span.eqno .headerlink {
+  display: none;
+  visibility: hidden;
+}
+
+span.eqno:hover .headerlink {
+  display: inline-block;
+  visibility: visible;
+}
+
+/* change some colors */
+
+.wy-side-nav-search, .wy-nav-top {
+    background: #2980B9;
+}
+
+/* change maximal page width */
+
+dl.config table td p {
+       margin: 0px !important;
+}
+.wy-nav-content {
+    max-width: 1000px !important;
+}
+
+/* change color of inline code block */
+
+code.literal {
+    color: #404040 !important;
+    background-color: #fbfbfb !important;
+}
