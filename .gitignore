@@ -4,3 +4,5 @@
 _build
 .ipynb_checkpoints
 docs/src/examples/**/*.m
+resources/
+*.prj

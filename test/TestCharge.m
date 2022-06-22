@@ -12,7 +12,9 @@ classdef TestCharge < matlab.unittest.TestCase
             'U1', U1(-2:2), ...
             'O2', O2([0 0 1 2], [0 1 2 2]), ...
             'SU2', SU2(1:4), ...
-            'Z2xU1', ProductCharge(Z2(0, 0, 0, 1, 1, 1), U1(-1, 0, 1, -1, 0, 1)))
+            'A4', A4(1:4), ...
+            'Z2xU1', ProductCharge(Z2(0, 0, 0, 1, 1, 1), U1(-1, 0, 1, -1, 0, 1))...
+            )
     end
     
     methods (Test)
@@ -59,6 +61,14 @@ classdef TestCharge < matlab.unittest.TestCase
                             end
                         end
                     end, end, end
+        end
+        
+        function qdims(testCase, smallset)
+            for a = smallset
+                F = Fsymbol(a, conj(a), a, a, one(a), one(a));
+                testCase.verifyTrue(isapprox(qdim(a), abs(1 / F(1))), ...
+                    'Fsymbol and qdim incompatible');
+            end
         end
         
         function Funitary(testCase, smallset)

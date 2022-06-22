@@ -343,10 +343,10 @@ classdef (Abstract) AbstractCharge
                 Fblocks = cell(length(f), length(e));
                 for i = 1:length(e)
                     for j = 1:length(f)
-                        Fblocks{j, i} = Fsymbol(a, b, c, d, e(i), f(j));
-                        Fblocks{j, i} = reshape(Fblocks{j, i}, ...
-                            size(Fblocks{j, i}, 1) * size(Fblocks{j, i}, 2), ...
-                            size(Fblocks{j, i}, 3) * size(Fblocks{j, i}, 4));
+                        Fblocks{i, j} = Fsymbol(a, b, c, d, e(i), f(j));
+                        sz = size(Fblocks{i, j}, 1:4);
+                        Fblocks{i, j} = reshape(Fblocks{i, j}, ...
+                            sz(1) * sz(2), sz(3) * sz(4));
                     end
                 end
                 F = cell2mat(Fblocks);
@@ -356,7 +356,7 @@ classdef (Abstract) AbstractCharge
             F = zeros(length(f), length(e));
             for i = 1:length(e)
                 for j = 1:length(f)
-                    F(j, i) = Fsymbol(a, b, c, d, e(i), f(j));
+                    F(i, j) = Fsymbol(a, b, c, d, e(i), f(j));
                 end
             end
         end
@@ -389,8 +389,11 @@ classdef (Abstract) AbstractCharge
             if fusionstyle(a) == FusionStyle.Unique
                 d = ones(size(a));
             else
-                F = Fsymbol(a, conj(a), a, a, one(a), one(a));
-                d = abs(1 / F(1));
+                d = zeros(size(a));
+                for i = 1:numel(d)
+                    F = Fsymbol(a(i), conj(a(i)), a(i), a(i), one(a(i)), one(a(i)));
+                    d(i) = abs(1 / F(1));
+                end
             end
         end
         
@@ -488,8 +491,36 @@ classdef (Abstract) AbstractCharge
                     end
                     
                 case FusionStyle.Generic
-                    
-                    error('TBA');
+                    d = a(1);
+                    N = 1;
+                    for i = 2:length(a)
+                        d_ = d(1) * a(i);
+                        if nargout > 1
+                            N_(1:length(d_)) = N(1) .* ...
+                                Nsymbol(repmat(d(1), 1, length(d_)), ...
+                                repmat(a(i), 1, length(d_)), d_);
+                        end
+                        
+                        for j = 2:length(d)
+                            c = d(j) * a(i);
+                            d_(end + (1:length(c))) = c;
+                            if nargout > 1
+                                N_(end + (1:length(c))) = N(j) .* ...
+                                    Nsymbol(repmat(d(j), 1, length(c)), ...
+                                    repmat(a(i), 1, length(c)), c);
+                            end
+                        end
+                        
+                        if nargout < 2
+                            d = unique(d_);
+                        else
+                            [d, ~, ic] = unique(d_);
+                            N = zeros(size(d));
+                            for i = 1:length(N)
+                                N(i) = sum(N_(ic == i));
+                            end
+                        end
+                    end
             end
         end
         
@@ -579,9 +610,8 @@ classdef (Abstract) AbstractCharge
                 vertices = [];
                 for f = a(1) * a(2)
                     N = Nsymbol(a(1), a(2), f);
-                    charges = vertcat(charges, ...
-                        repmat([a(1) f], N, 1));
-                    vertices = vertcat(vertices, (1:N)');
+                    charges = [charges repmat([a(1); f], 1, N)]; 
+                    vertices = [vertices 1:N];
                 end
                 return
             end
@@ -589,13 +619,11 @@ classdef (Abstract) AbstractCharge
             [chargepart, vertexpart] = cumprod(a(1:end-1));
             charges = [];
             vertices = [];
-            for i = 1:size(chargepart, 1)
-                for f = chargepart(i, end) * a(end)
-                    N = Nsymbol(chargepart(i, end), a(end), f);
-                    charges = vertcat(charges, ...
-                        repmat([chargepart(i, :) f], N, 1));
-                    vertices = vertcat(vertices, ...
-                        [repmat(vertexpart(i,:), N, 1) (1:N)']);
+            for i = 1:size(chargepart, 2)
+                for f = chargepart(end, i) * a(end)
+                    N = Nsymbol(chargepart(end, i), a(end), f);
+                    charges = [charges, repmat([chargepart(:, i); f], 1, N)];
+                    vertices = [vertices [repmat(vertexpart(:, i), 1, N); 1:N]];
                 end
             end
         end
