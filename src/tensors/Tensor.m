@@ -148,6 +148,86 @@ classdef Tensor
                 t.var = fill_tensor_fun(t.var, data, trees);
             end
         end
+        
+        function t = similar(fun, tensors, indices, kwargs)
+            % Create a tensor based on the indices of other tensors.
+            %
+            % Usage
+            % -----
+            % :code:`t = similar(fun, tensors, indices, kwargs)`
+            %
+            % Arguments
+            % ---------
+            % fun : :class:`function_handle`
+            %   function to fill the tensor data with. This should have signature
+            %   based on keyword Mode. If left empty, this defaults to a random complex
+            %   tensor.
+            %
+            % Repeating Arguments
+            % -------------------
+            % tensors : :class:`Tensor`
+            %   input tensors used to copy legs.
+            %
+            % indices : int
+            %   array with length equal to the legs of the tensor, where zero values
+            %   indicate unused legs, and nonzero values indicate the leg of the output
+            %   tensor.
+            %
+            % Keyword Arguments
+            % -----------------
+            % Rank : (1, 2) int
+            %   rank of the output tensor, by default this is :code:`[nspaces(t) 0]`.
+            %
+            % Conj : logical
+            %   flag to indicate whether the space should be equal to the input space, or
+            %   fit onto the input space. This can be either an array of size(tensors), or a
+            %   scalar.
+            %
+            % Mode : 'tensor' or 'matrix'
+            %   method of filling the tensor data. By default this is matrix, where the
+            %   function should be of signature :code:`fun(dims, charge)`, for 'tensor' this
+            %   should be of signature :code:`fun(dims, tree)`.
+            %
+            % Returns
+            % -------
+            % t : :class:`Tensor`
+            %   output tensor.
+            %
+            % Examples
+            % --------
+            % :code:`t = similar([], mps, [3 0 0], mpo, [0 0 0 2], mpsbar, [1 0 0], 'Conj',
+            % true)` creates a left mps environment tensor.
+            
+            arguments
+                fun = []
+            end
+            
+            arguments (Repeating)
+                tensors
+                indices
+            end
+            
+            arguments
+                kwargs.Rank (1, 2) = [sum(cellfun(@length, indices)) 0]
+                kwargs.Conj = false(size(tensors))
+                kwargs.Mode = 'matrix'
+            end
+            
+            for i = 1:length(tensors)
+                inds = find(indices{i} > 0);
+                if any(inds)
+                    if kwargs.Conj(i)
+                        spaces(indices{i}(inds)) = conj(space(tensors{i}, ...
+                            adjointindices(tensors{i}, inds)));
+                    else
+                        spaces(indices{i}(inds)) = space(tensors{i}, inds);
+                    end
+                end
+            end
+            
+            t = Tensor.new(fun, spaces(1:kwargs.Rank(1)), ...
+                spaces((1:kwargs.Rank(2)) + kwargs.Rank(1))', 'Mode', kwargs.Mode);
+        end
     end
     
     methods (Static)
@@ -297,8 +377,6 @@ classdef Tensor
         end
     end
     
-    
-
     
     %% Structure
     methods
@@ -1606,37 +1684,6 @@ classdef Tensor
             end
             
             r = norm(t, p) * norm(inv(t), p);
-        end
-    end
-    
-    
-    %% Copy constructors
-    methods
-        function t = similar(tensors, indices, options)
-            
-            arguments (Repeating)
-                tensors
-                indices
-            end
-            arguments
-                options.Rank (1, 2) = [sum(cellfun(@length, indices)) 0]
-                options.Conj = false(size(tensors))
-            end
-            
-            for i = 1:length(tensors)
-                inds = find(indices{i} > 0);
-                if any(inds)
-                    if options.Conj(i)
-                        spaces(indices{i}(inds)) = conj(space(tensors{i}, ...
-                            adjointindices(tensors{i}, inds)));
-                    else
-                        spaces(indices{i}(inds)) = space(tensors{i}, inds);
-                    end
-                end
-            end
-            
-            t = Tensor(spaces(1:options.Rank(1)), ...
-                spaces((1:options.Rank(2)) + options.Rank(1))');
         end
     end
     
