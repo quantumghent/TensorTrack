@@ -39,8 +39,8 @@ classdef O2 < AbstractCharge
                 return
             end
             
-            if ~(Nsymbol(a, b, e) && Nsymbol(e, c, d) && ...
-                    Nsymbol(b, c, f) && Nsymbol(a, f, d))
+            if ~Nsymbol(a, b, e) || ~Nsymbol(e, c, d) || ...
+                    ~Nsymbol(b, c, f) || ~Nsymbol(a, f, d)
                 F = 0;
                 return
             end
