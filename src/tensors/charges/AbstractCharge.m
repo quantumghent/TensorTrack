@@ -343,10 +343,10 @@ classdef (Abstract) AbstractCharge
                 Fblocks = cell(length(f), length(e));
                 for i = 1:length(e)
                     for j = 1:length(f)
-                        Fblocks{i, j} = Fsymbol(a, b, c, d, e(i), f(j));
-                        sz = size(Fblocks{i, j}, 1:4);
-                        Fblocks{i, j} = reshape(Fblocks{i, j}, ...
-                            sz(1) * sz(2), sz(3) * sz(4));
+                        Fblocks{j, i} = Fsymbol(a, b, c, d, e(i), f(j));
+                        sz = size(Fblocks{j, i}, 1:4);
+                        Fblocks{j, i} = reshape(Fblocks{j, i}, ...
+                            sz(1) * sz(2), sz(3) * sz(4)).';
                     end
                 end
                 F = cell2mat(Fblocks);
@@ -356,7 +356,7 @@ classdef (Abstract) AbstractCharge
             F = zeros(length(f), length(e));
             for i = 1:length(e)
                 for j = 1:length(f)
-                    F(i, j) = Fsymbol(a, b, c, d, e(i), f(j));
+                    F(j, i) = Fsymbol(a, b, c, d, e(i), f(j));
                 end
             end
         end
