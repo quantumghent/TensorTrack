@@ -169,9 +169,7 @@ classdef Tensor
             %   input tensors used to copy legs.
             %
             % indices : int
-            %   array with length equal to the legs of the tensor, where zero values
-            %   indicate unused legs, and nonzero values indicate the leg of the output
-            %   tensor.
+            %   array of which indices to copy for each input tensor.
             %
             % Keyword Arguments
             % -----------------
@@ -181,7 +179,7 @@ classdef Tensor
             % Conj : logical
             %   flag to indicate whether the space should be equal to the input space, or
             %   fit onto the input space. This can be either an array of size(tensors), or a
-            %   scalar.
+            %   scalar, in which case it applies to all tensors.
             %
             % Mode : 'tensor' or 'matrix'
             %   method of filling the tensor data. By default this is matrix, where the
@@ -195,8 +193,8 @@ classdef Tensor
             %
             % Examples
             % --------
-            % :code:`t = similar([], mps, [3 0 0], mpo, [0 0 0 2], mpsbar, [1 0 0], 'Conj',
-            % true)` creates a left mps environment tensor.
+            % :code:`t = similar([], mpsbar, 1, mpo, 4, mps, 1, 'Conj', true)` creates a 
+            % left mps environment tensor.
             
             arguments
                 fun = []
@@ -213,20 +211,27 @@ classdef Tensor
                 kwargs.Mode = 'matrix'
             end
             
-            for i = 1:length(tensors)
-                inds = find(indices{i} > 0);
-                if any(inds)
-                    if kwargs.Conj(i)
-                        spaces(indices{i}(inds)) = conj(space(tensors{i}, ...
-                            adjointindices(tensors{i}, inds)));
-                    else
-                        spaces(indices{i}(inds)) = space(tensors{i}, inds);
-                    end
+            if isempty(fun)
+                fun = @(dims, charge) randnc(dims);
+            end
+            
+            ntotal = sum(cellfun('length', indices));
+            ctr = 0;
+            for i = length(indices):-1:1
+                ctr = ctr + length(indices{i});
+                if kwargs.Conj(i)
+                    sp(ntotal - ctr + (1:length(indices{i}))) = ...
+                        conj(space(tensors{i}, indices{i}));
+                else
+                    sp(ntotal - ctr + (1:length(indices{i}))) = ...
+                        space(tensors{i}, indices{i});
                 end
             end
             
-            t = Tensor.new(fun, spaces(1:kwargs.Rank(1)), ...
-                spaces((1:kwargs.Rank(2)) + kwargs.Rank(1))', 'Mode', kwargs.Mode);
+            assert(sum(kwargs.Rank) == ntotal, 'tensors:ArgumentError', ...
+                'Invalid rank specified.');
+            t = Tensor.new(fun, sp(1:kwargs.Rank(1)), ...
+                sp((1:kwargs.Rank(2)) + kwargs.Rank(1))', 'Mode', kwargs.Mode);
         end
     end
     
@@ -731,7 +736,7 @@ classdef Tensor
                 med = get(cache, key);
                 if isempty(med)
                     med = struct;
-                    med.structure = similar(t, invperm(p), 'Rank', r);
+                    med.structure = similar(@(x,charge) uninit(x), t, p, 'Rank', r);
                     med.map = permute(fusiontrees(t), p, r);
                     cache = set(cache, key, med);
                 end
@@ -739,7 +744,7 @@ classdef Tensor
                 tdst = med.structure;
                 map = med.map;
             else
-                tdst = similar(t, invperm(p), 'Rank', r);
+                tdst = similar(t, p, 'Rank', r);
                 map = permute(fusiontrees(t.codomain, t.domain), p, r);
             end
             
@@ -857,11 +862,11 @@ classdef Tensor
                 med = get(cache, key);
                 if isempty(med)
                     med = struct;
-                    A_ = similar(A, invperm(iA), 'Rank', rA);
+                    A_ = similar(@(x,charge) uninit(x), A, iA, 'Rank', rA);
                     med.varA = A_.var;
                     med.mapA = permute(fusiontrees(A), iA, rA);
                     
-                    B_ = similar(B, invperm(iB), 'Rank', rB);
+                    B_ = similar(@(x,charge) uninit(x), B, iB, 'Rank', rB);
                     med.varB = B_.var;
                     med.mapB = permute(fusiontrees(B), iB, rB);
                     
