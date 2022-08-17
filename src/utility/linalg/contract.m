@@ -86,7 +86,7 @@ ia(dimA) = [];  ib(dimB) = [];
 ic = [ia ib];
 
 % permute last tensor
-if ~isempty(ic)
+if ~isempty(ic) && length(ic) > 1
     [~, order] = sort(ic, 'descend');
     if isnumeric(C)
         C = permute(C, order);

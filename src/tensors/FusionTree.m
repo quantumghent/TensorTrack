@@ -1,20 +1,20 @@
 classdef FusionTree < matlab.mixin.CustomDisplay
-% Splitting and fusion tree pair in canonical form.
-%
-% Properties
-% ----------
-% charges : AbstractCharge
-%   labels for the edges of the fusion trees
-%
-% vertices : int
-%   labels for the vertices of the fusion trees
-%
-% isdual : logical
-%   indicator of duality transform on the external edges.
-%
-% rank : int
-%   amount of splitting tree and fusion tree legs.
-
+    % Splitting and fusion tree pair in canonical form.
+    %
+    % Properties
+    % ----------
+    % charges : AbstractCharge
+    %   labels for the edges of the fusion trees
+    %
+    % vertices : int
+    %   labels for the vertices of the fusion trees
+    %
+    % isdual : logical
+    %   indicator of duality transform on the external edges.
+    %
+    % rank : int
+    %   amount of splitting tree and fusion tree legs.
+    
     properties
         charges (:, :)
         vertices (:, :) uint8
@@ -55,7 +55,7 @@ classdef FusionTree < matlab.mixin.CustomDisplay
             end
             
             %% Trivial tree with no external legs
-            if sum(rank) == 0 
+            if sum(rank) == 0
                 if isempty(charges) && isempty(vertices) && isempty(isdual)
                     f.rank = rank;
                     return
@@ -67,12 +67,12 @@ classdef FusionTree < matlab.mixin.CustomDisplay
             %% General tree
             N = length(isdual);
             if N ~= sum(rank) || ...
-                size(charges, 2) ~= sum(treeindsequence(rank)) + 1 || ... 
-                (N > 2 && hasmultiplicity(fusionstyle(charges)) && ...
-                size(vertices, 2) ~= max(N - 2, 0))
+                    size(charges, 2) ~= sum(treeindsequence(rank)) + 1 || ...
+                    (N > 2 && hasmultiplicity(fusionstyle(charges)) && ...
+                    size(vertices, 2) ~= max(N - 2, 0))
                 error('tensors:tree:argError', 'Incompatible input sizes.');
             end
-
+            
             f.charges = charges;
             f.vertices = vertices;
             f.isdual = isdual;
@@ -104,15 +104,15 @@ classdef FusionTree < matlab.mixin.CustomDisplay
                 charges (1, :) {mustBeA(charges, 'AbstractCharge')}
                 isdual (1, 1) logical
             end
-
+            
             assert(sum(rank) == length(isdual), 'tensors:trees:ArgError', ...
-            'Rank incompatible with the amount of legs specified.');
-
+                'Rank incompatible with the amount of legs specified.');
+            
             if sum(rank) == 0
                 f = FusionTree([], [], [], rank);
                 return
             end
-
+            
             
             %% Splitting tree
             if rank(1) == 0
@@ -128,7 +128,7 @@ classdef FusionTree < matlab.mixin.CustomDisplay
                         charges_l = charges_l(2:end, :).';
                     case FusionStyle.Simple
                         charges_l = [];
-
+                        
                         for unc_l = combvec(charges{1:rank(1)})
                             inn_l = cumprod(unc_l);
                             temp = reshape( ...
@@ -177,18 +177,18 @@ classdef FusionTree < matlab.mixin.CustomDisplay
             end
             
             charge_cell = cell(size(coupled));
-
+            
             for i = 1:length(coupled)
                 ind_l = coupled(i) == charges_l(:, end);
                 nnz_l = nnz(ind_l);
                 ind_r = coupled(i) == charges_r(:, end);
                 nnz_r = nnz(ind_r);
                 charge_cell{i} = [reshape(repmat(reshape( ...
-                                charges_l(ind_l, 1:end - 1), 1, []), nnz_r, 1), nnz_r * nnz_l, []), ...
-                                repmat(coupled(i), nnz_r * nnz_l, 1), ...
-                                repmat(charges_r(ind_r, end - 1:-1:1), nnz_l, 1)];
+                    charges_l(ind_l, 1:end - 1), 1, []), nnz_r, 1), nnz_r * nnz_l, []), ...
+                    repmat(coupled(i), nnz_r * nnz_l, 1), ...
+                    repmat(charges_r(ind_r, end - 1:-1:1), nnz_l, 1)];
             end
-
+            
             f = FusionTree(vertcat(charge_cell{:}), [], [isdual{:}], rank);
             f = sort(f);
         end
@@ -214,23 +214,23 @@ classdef FusionTree < matlab.mixin.CustomDisplay
             %
             % Returns
             % -------
-            %  c : sparse double
+            % c : sparse double
             %   matrix of coefficients that transform input to output trees.
             %   f(i) --> c(i,j) * f(j)
             %
             % f : FusionTree
             %   braided trees in canonical form.
             if nargin < 3, inv = false; end
-
+            
             if hasmultiplicity(fusionstyle(f))
                 error('trees:TBA', 'Not implemented yet.');
             end
-
+            
             assert(f.rank(2) == 0, 'Only defined for splitting trees.');
-
+            
             %% Special case - Abelian
             if braidingstyle(f) == BraidingStyle.Abelian
-
+                
                 if i == 1
                     f.charges(:, 1:2) = f.charges(:, [2 1]);
                     f.isdual(1:2) = f.isdual([2 1]);
@@ -238,7 +238,7 @@ classdef FusionTree < matlab.mixin.CustomDisplay
                     c = sparse(1:length(f), invperm(p), ones(1, length(f)));
                     return
                 end
-
+                
                 f.charges(:, [2 * i - 2 2 * i]) = f.charges(:, [2 * i 2 * i - 2]);
                 f.charges(:, 2 * i - 1) = f.charges(:, 2 * i - 3) * f.charges(:, 2 * i - 2);
                 f.isdual(i:i + 1) = f.isdual([i + 1 i]);
@@ -246,7 +246,7 @@ classdef FusionTree < matlab.mixin.CustomDisplay
                 c = sparse(1:length(f), invperm(p), ones(1, length(f)));
                 return
             end
-
+            
             %% Special case - first legs
             %   braiding by only an R-move
             if i == 1
@@ -261,7 +261,7 @@ classdef FusionTree < matlab.mixin.CustomDisplay
                 c = sparse(1:length(f), invperm(p), vals);
                 return
             end
-
+            
             %% General case
             %   braiding by R-move, F-move, R-move
             charges = f.charges; %#ok<*PROPLC>
@@ -272,9 +272,9 @@ classdef FusionTree < matlab.mixin.CustomDisplay
             charges1 = charges(ia1, :);
             blocks = cell(1, length(ia1));
             newcharges = cell(1, length(ia1));
-
+            
             [~, ia2, ic2] = unique(charges1(:, [2 * i - 3 2 * i - 2 2 * i 2 * i + 1]), 'rows');
-
+            
             for j = 1:length(ia2)
                 a = charges1(ia2(j), 2 * i - 3);
                 b = charges1(ia2(j), 2 * i - 2);
@@ -283,15 +283,15 @@ classdef FusionTree < matlab.mixin.CustomDisplay
                 e = charges1(ia2(j), 2 * i + 1);
                 fs = intersect(a * d, e * conj(b)).';
                 blocks{j} = braidingmatrix(a, b, cs, d, e, fs, inv);
-
+                
                 for k = find(j == ic2).'
                     newcharges{k} = repmat(charges1(k, :), length(fs), 1);
                     newcharges{k}(:, 2 * i - 2:2 * i) = [newcharges{k}(:, 2 * i) fs(:) ...
-                                                        newcharges{k}(:, 2 * i - 2)];
+                        newcharges{k}(:, 2 * i - 2)];
                 end
-
+                
             end
-
+            
             f.charges = vertcat(newcharges{:});
             f.isdual(i:i + 1) = f.isdual([i + 1 i]);
             c = sparse(blkdiag(blocks{ic2}));
@@ -309,7 +309,7 @@ classdef FusionTree < matlab.mixin.CustomDisplay
             %
             % Returns
             % -------
-            %  c : sparse double
+            % c : sparse double
             %   matrix of coefficients that transform input to output trees.
             %   f(i) --> c(i,j) * f(j)
             %
@@ -321,7 +321,7 @@ classdef FusionTree < matlab.mixin.CustomDisplay
             c = conj(c);
             return
         end
-
+        
         function [c, f] = bendright(f)
             % Compute the coefficients for bending a splitting leg to a fusing leg.
             %
@@ -332,7 +332,7 @@ classdef FusionTree < matlab.mixin.CustomDisplay
             %
             % Returns
             % -------
-            %  c : sparse double
+            % c : sparse double
             %   matrix of coefficients that transform input to output trees.
             %   f(i) --> c(i,j) * f(j)
             %
@@ -341,7 +341,7 @@ classdef FusionTree < matlab.mixin.CustomDisplay
             if hasmultiplicity(fusionstyle(f))
                 error('TBA');
             end
-
+            
             if f.rank(1) == 0
                 error('tensors:trees:ArgError', 'Invalid rank [%d %d]', f.rank(1), f.rank(2));
             elseif f.rank(1) == 1
@@ -352,21 +352,21 @@ classdef FusionTree < matlab.mixin.CustomDisplay
                 [abc, ~, ic] = unique(f.charges(:, ind), 'rows');
                 a = abc(:, 1); b = abc(:, 2); c = abc(:, 3);
             end
-
+            
             vals = sqrt(qdim(c) ./ qdim(a)) .* Bsymbol(a, b, c);
             if f.isdual(f.rank(1)), vals = vals .* conj(frobeniusschur(conj(b))); end
-
+            
             f.isdual(f.rank(1)) = ~f.isdual(f.rank(1));
-
+            
             if f.rank(2) < 2
                 chargesR = [conj(f.charges(:, end - f.rank(2) - 1)) f.charges(:, end - f.rank(2) + 1:end)];
             else
                 chargesR = [conj(f.charges(:, treeindsequence(f.rank(1)))) ...
-                            f.charges(:, end - treeindsequence(f.rank(2)):end)];
+                    f.charges(:, end - treeindsequence(f.rank(2)):end)];
             end
-
+            
             chargesC = a(ic);
-
+            
             if f.rank(1) == 1
                 chargesL = [];
             elseif f.rank(1) == 2
@@ -374,9 +374,9 @@ classdef FusionTree < matlab.mixin.CustomDisplay
             else
                 chargesL = f.charges(:, 1:treeindsequence(f.rank(1) - 1));
             end
-
+            
             f.charges = [chargesL chargesC chargesR];
-
+            
             f.rank = f.rank + int16([-1 +1]);
             c = sparse(1:length(f), 1:length(f), vals(ic));
         end
@@ -424,13 +424,13 @@ classdef FusionTree < matlab.mixin.CustomDisplay
             N = length(p);
             assert(isperm(p), 'tensors:trees:ArgError', 'p is not a valid permutation.');
             assert(N == f.legs, 'tensors:trees:ArgError', ...
-            'p has the wrong number of elements.');
-
+                'p has the wrong number of elements.');
+            
             if all(p == 1:f.legs)
                 [c, f] = repartition(f, rank);
                 return
             end
-
+            
             swaps = perm2swap(p);
             [c, f] = repartition(f, [f.legs 0]);
             for s = swaps
@@ -440,6 +440,99 @@ classdef FusionTree < matlab.mixin.CustomDisplay
             end
             [c_, f] = repartition(f, rank);
             c = c * c_;
+        end
+        
+        function [c, f] = elementary_trace(f, i)
+            N = f.legs;
+            assert(N > 1, 'tensors:trees:ArgError', ...
+                'Tree needs at least two legs to trace.');
+            assert(f.isdual(i) ~= f.isdual(mod1(i+1, f.legs)), 'tensors:trees:ArgError', ...
+                'Tracing only defined between space and its dual.');
+            
+            
+            
+            L1 = length(f);
+            
+            if i == 1
+                mask = find(f.charges(:, 1) == conj(f.charges(:, 2)) & ...
+                    f.charges(:, 3) == one(f.charges));
+                
+                b = f.charges(mask, 1);
+                vals = sqrt(qdim(b));
+                if f.isdual(i), vals = frobeniusschur(b) .* vals; end
+                if N > 4
+                    f.charges = f.charges(mask, 4:end);
+                elseif N == 4
+                    f.charges = f.charges(mask, [4 6 7]);
+                else
+                    f.charges = f.charges(mask, 3:end);
+                end
+                f.isdual = f.isdual(3:end);
+                if hasmultiplicity(fusionstyle(f)) && ~isempty(f.vertices)
+                    f.vertices = f.vertices(mask, 2:end);
+                end
+                f.rank(1) = f.rank(1) - 2;
+                try
+                [f, ~, locb] = unique(f);
+                catch
+                    bla
+                end
+                c = sparse(mask, locb, vals, L1, length(f));
+                return
+            end
+            
+            if i == N
+                assert(all(f.coupled == one(f.coupled)), 'tensors:trees:ArgError', ...
+                    'Tracing final and first leg allowed iff coupled charge is trivial.');
+                if N == 2
+                    [c, f] = elementary_trace(f, 1);
+                    c = conj(c);
+                    return
+                end
+                
+                [c, f] = cycleanticlockwise(f);
+                [c_, f] = elementary_trace(f, 1);
+                c = c * c_;
+                return
+            end
+            
+            mask = find(f.charges(:, 2 * i - 2) == conj(f.charges(:, 2 * i)) & ...
+                f.charges(:, 2 * i - 3) == f.charges(:, 2 * i + 1));
+            charges1 = f.charges(mask, (2 * i - 3):(2 * i + 1));
+            
+            b = charges1(:, 2);
+            vals = sqrt(qdim(b));
+            if hasmultiplicity(fusionstyle(f))
+                u = one(b);
+                mu = f.vertices(mask, i-1);
+                nu = f.vertices(mask, i);
+                for i = 1:length(vals)
+                    F = Fsymbol(charges1(:, 1), b, charges1(:, 4), ...
+                        charges1(:, 1), charges1(:, 3), u);
+                    vals(i) = vals(i) * F(mu(i), nu(i), 1, 1);
+                end
+            else
+                vals = vals .* Fsymbol(charges1(:, 1), b, charges1(:, 4), ...
+                    charges1(:, 1), charges1(:, 3), repmat(one(charges1), length(mask), 1));
+            end
+            
+            if f.isdual(i), vals = vals .* frobeniusschur(b); end
+            
+            if f.legs == 3
+                f.charges = f.charges(mask, [1 end]);
+            else
+                f.charges = f.charges(mask, [1:(2 * i - 3) (2 * i + 2):end]);
+            end
+            f.isdual(i:i+1) = [];
+            
+            if hasmultiplicity(fusionstyle(f))
+                f.vertices = f.vertices(mask, [1:i-2 i+1:end]);
+            end
+            f.rank(1) = f.rank(1) - 2;
+            
+            [f, ~, locb] = unique(f);
+            
+            c = sparse(mask, locb, vals, L1, length(f));
         end
         
         function [c, f] = permute(f, p, r)
@@ -502,7 +595,7 @@ classdef FusionTree < matlab.mixin.CustomDisplay
             oldrank = f.rank;
             assert(sum(newrank) == sum(oldrank), 'tensors:trees:ArgError', ...
                 'New rank is incompatible with old rank.');
-                
+            
             if all(newrank == oldrank)
                 c = speye(length(f));
                 return
@@ -525,7 +618,8 @@ classdef FusionTree < matlab.mixin.CustomDisplay
             c = c(:, p);
         end
     end
-        
+    
+    
     %% Utility
     methods
         function style = braidingstyle(f)
@@ -800,17 +894,17 @@ classdef FusionTree < matlab.mixin.CustomDisplay
                 C = num2cell(ones(size(f)));
                 return;
             end
-
+            
             
             if length(f) > 1
                 C = arrayfun(@fusiontensor, f);
-%                 C = cell(size(f));
-%                 for i = 1:length(f)
-%                     C(i) = fusiontensor(f(i));
-%                 end
+                %                 C = cell(size(f));
+                %                 for i = 1:length(f)
+                %                     C(i) = fusiontensor(f(i));
+                %                 end
                 return
             end
-
+            
             multi = hasmultiplicity(fusionstyle(f));
             switch f.rank(1)
                 case 0
@@ -888,7 +982,7 @@ classdef FusionTree < matlab.mixin.CustomDisplay
                     end
             end
             if f.rank(1) == 0
-                C = permute(conj(C_fuse), f.rank(2):-1:1);
+                C = permute(conj(C_fuse), max(f.rank(2), 2):-1:1);
             elseif f.rank(2) == 0
                 C = C_split;
             else

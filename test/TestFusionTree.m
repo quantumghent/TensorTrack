@@ -89,7 +89,9 @@ classdef TestFusionTree < matlab.unittest.TestCase
                     end
                     args = cell(2, rank1+rank2);
                     args(1, :) = {chargeset};
-                    args(2, :) = num2cell(randi([0 1], 1, rank1+rank2));
+%                     args(2, :) = num2cell(randi([0 1], 1, rank1+rank2));
+                    args(2, 1:2:end) = {false};
+                    args(2, 2:2:end) = {true};
                     trees = FusionTree.new([rank1 rank2], args{:});
                     nTrees = length(trees);
                     while nTrees < 1 || nTrees > maxTrees
@@ -178,6 +180,48 @@ classdef TestFusionTree < matlab.unittest.TestCase
                             'AbsTol', tc.tol, 'RelTol', tc.tol, ...
                             'Braiding should be invertible.');
                         assertEqual(tc, f2, f, 'Braiding should be invertible.');
+                    end
+                end
+            end
+        end
+        
+        function traces(tc)
+            for i = 1:numel(tc.trees)
+                if isempty(tc.trees{i}) || tc.trees{i}.legs < 2 || tc.trees{i}.rank(2) ~= 0
+                    continue;
+                end
+                
+                f = tc.trees{i};
+                for j = 1:f.legs-1
+                    [c1, f1] = elementary_trace(f, j);
+                    
+                    assertEqual(tc, size(c1), [length(f) length(f1)], ...
+                        'Coefficients have the wrong size.');
+                    assertEqual(tc, isallowed(f1), true(length(f1), 1), ...
+                        'Output trees are not allowed.');
+                    assertEqual(tc, unique(f1), f1, ...
+                        'Output trees are not unique.');
+                    
+                    % compatible with fusiontensor
+                    if issymmetric(braidingstyle(f))
+                        a1_cell = fusiontensor(f);
+                        a2_cell = fusiontensor(f1);
+                        
+                        for k = 1:length(f)
+                            if f.uncoupled(k, j) ~= conj(f.uncoupled(k, j+1))
+                                assertEqual(tc, norm(c1(k, :)), 0);
+                            else
+                                a1 = tensortrace(a1_cell{k}, [1:j-1 j j j+2:f.legs+1]);
+                                a2 = zeros(size(a1));
+                                [~, col, val] = find(c1(k, :));
+                                for l = 1:length(val)
+                                    a2 = a2 + val(l) * a2_cell{col(l)};
+                                end
+                                
+                                assertEqual(tc, a2, a1, 'AbsTol', tc.tol, ...
+                                    'Tracing should be compatible with fusiontensors.');
+                            end
+                        end
                     end
                 end
             end
