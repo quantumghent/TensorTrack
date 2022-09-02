@@ -366,8 +366,10 @@ classdef ProductCharge < AbstractCharge
                 col = 1:size(a, 2)
                 direction = 'ascend'
             end
+            
+            
             [I, a.charges{:}] = simulsortrows(a.charges{:}, ...
-                'Col', col, 'Direction', direction);
+                'Col', repmat({col}, size(a.charges)), 'Direction', direction);
         end
         
         function s = string(a)

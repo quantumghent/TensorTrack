@@ -38,7 +38,7 @@ arguments (Repeating)
 end
 
 arguments
-    kwargs.Col = 1:size(arrays{1}, 2)
+    kwargs.Col = []
     kwargs.Direction = 'ascend'
 end
 
@@ -46,25 +46,54 @@ end
 sz = size(arrays{1});
 assert(length(sz) == 2, 'Input should be matrices.');
 for i = 2:length(arrays)
-    assert(all(sz == size(arrays{i})), 'Input arrays should have equal sizes.');
+    assert(all(sz(1) == size(arrays{i}, 1)), 'Input arrays should have equal sizes.');
 end
 
 
-%% Sort last array
-[varargout{length(arrays)}, I] = sortrows(arrays{end}, kwargs.Col, kwargs.Direction);
+%% Sort with columns
+if ~isempty(kwargs.Col)
+    cols = cellfun(@(x) size(x, 2), arrays);
+    arrayinds = zeros(1, length(cols));
+    ctr = 0;
+    for i = 1:length(arrays)
+        arrayinds(ctr+(1:cols(i))) = i;
+        ctr = ctr + cols(i);
+    end
+    
+    col = kwargs.Col(end);
+    [varargout{arrayinds(col)}, I] = sortrows(arrays{arrayinds(col)}, ...
+        col - sum(cols(1:arrayinds(col)-1)));
+    for k = [length(arrays):-1:arrayinds(col)+1 arrayinds(col)-1:-1:1]
+        varargout{k} = arrays{k}(I, :);
+    end
+    
+    for col = kwargs.Col(end-1:-1:1)
+        [varargout{arrayinds(col)}, I_] = sortrows(varargout{arrayinds(col)}, ...
+            col - sum(cols(1:arrayinds(col)-1)));
+        for k = 1:length(arrays)
+            if k == arrayinds(col), continue; end
+            varargout{k} = varargout{k}(I_, :);
+        end
+        I = I(I_);
+    end
+    return;
+end
+    
+
+%% Sort without columns
+[varargout{length(arrays)}, I] = sortrows(arrays{end}, kwargs.Direction);
 for k = length(arrays)-1:-1:1
     varargout{k} = arrays{k}(I, :);
 end
 
-
-%% Sort other arrays
 for n = length(arrays)-1:-1:1
-    [varargout{n}, I_] = sortrows(varargout{n}, kwargs.Col, kwargs.Direction);
+    [varargout{n}, I_] = sortrows(varargout{n}, kwargs.Direction);
     for k = 1:length(arrays)
         if k == n, continue; end
         varargout{k} = varargout{k}(I_, :);
     end
     I = I(I_);
 end
+
 
 end

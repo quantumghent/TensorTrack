@@ -5,7 +5,7 @@ classdef TestFusionTree < matlab.unittest.TestCase
     
     properties (ClassSetupParameter)
         weight = {'small', 'medium'}%, 'large'}
-        charge = {'Z1', 'Z2', 'U1', 'O2', 'SU2', 'Z2xU1'}
+        charge = {'A4', 'Z1', 'Z2', 'U1', 'O2', 'SU2', 'Z2xU1'}
     end
     
     methods (TestClassSetup)
@@ -55,13 +55,24 @@ classdef TestFusionTree < matlab.unittest.TestCase
                             chargeset = ProductCharge(Z2([0 0 0 0 0 1 1 1 1 1]), ...
                                 U1([-2:2 -2:2]));
                     end
+                    
+                case 'A4'
+                    switch weight
+                        case 'small'
+                            chargeset = A4([1 4]);
+                        case 'medium'
+                            chargeset = A4(1:4);
+                        case 'large'
+                            chargeset = A4(1:4);
+                    end
+                    
             end
             
             %% Setup weight
             switch weight
                 case 'small'
                     legs = 0:3;
-                    maxTrees = 25;
+                    maxTrees = 15;
                     maxLegs = 4;
                     tc.testWeight = 0.5;
                 case 'medium'
@@ -129,7 +140,7 @@ classdef TestFusionTree < matlab.unittest.TestCase
                     if i == 1 && j == 1 || isempty(tc.trees{i,j})
                         continue;
                     end
-                    verifyTrue(tc, all(isallowed(tc.trees{i,j})), ...
+                    assertTrue(tc, all(isallowed(tc.trees{i,j})), ...
                         'Generated invalid fusion trees.');
                 end
             end
@@ -143,7 +154,7 @@ classdef TestFusionTree < matlab.unittest.TestCase
                 if rand < tc.testWeight
                     f = tc.trees{i};
                     ps = perms(1:f.legs);
-                    for p = ps(randperm(size(ps, 2), min(size(ps, 2), 5)), :).'
+                    for p = ps(randperm(size(ps, 1), min(size(ps, 1), 5)), :).'
                         lvl = randperm(f.legs);
                         indout = randi([0 f.legs]);
                         
@@ -226,44 +237,47 @@ classdef TestFusionTree < matlab.unittest.TestCase
                 end
             end
         end
-        %       function repartitioning(tc)
-        %          for i = 1:numel(tc.trees)
-        %             if isempty(tc.trees{i}) || tc.trees{i}.legs < 2
-        %                continue;
-        %             end
-        %             if rand < tc.testWeight
-        %                f = tc.trees{i};
-        %                for n = 0:f.legs
-        %                   [f1, c1] = repartition(f, [n f.legs-n]);
-        %                   verifyEqual(tc, full(abs(c1).^2 * qdim(f1.coupled)), ...
-        %                      qdim(f.coupled), 'AbsTol', tc.tol, 'RelTol', tc.tol, ...
-        %                      'Repartition must preserve centernorm.');
-        %                   verifyEqual(tc, isallowed(f1), true(size(f1), 1), ...
-        %                      'Output trees are not allowed.');
-        %
-        %                   [f2, c2] = repartition(f1, f.rank);
-        %                   verifyEqual(tc, c1 * c2, speye(size(f)), 'AbsTol', tc.tol, ...
-        %                      'RelTol', tc.tol, 'Repartition should be invertible.');
-        %                   verifyEqual(tc, f, f2, 'Repartition should be invertible.');
-        %
-        %                   if issymmetric(braidingstyle(f))
-        %                      a1_cell = arrayfun(@double, f, 'UniformOutput', false);
-        %                      a2_cell = arrayfun(@double, f1, 'UniformOutput', false);
-        %                      for j = 1:length(f)
-        %                         a1 = a1_cell{j};
-        %                         a2 = zeros(size(a1));
-        %                         [~, col, val] = find(c1(j, :));
-        %                         for k = 1:length(val)
-        %                            a2 = a2 + val(k) * a2_cell{col(k)};
-        %                         end
-        %                         verifyEqual(tc, a2, a1, 'AbsTol', tc.tol, ...
-        %                            'Repartition should be compatible with fusiontensors.');
-        %                      end
-        %                   end
-        %                end
-        %             end
-        %          end
-        %       end
+              function repartitioning(tc)
+                 for i = 1:numel(tc.trees)
+                    if isempty(tc.trees{i}) || tc.trees{i}.legs < 2
+                       continue;
+                    end
+                    if rand < tc.testWeight
+                       f = tc.trees{i};
+                       for n = 0:f.legs
+                          [c1, f1] = repartition(f, [n f.legs-n]);
+                          
+                          assertEqual(tc, size(c1), [length(f) length(f1)], ...
+                              'Coefficients have the wrong size.');
+                          assertEqual(tc, full(abs(c1).^2 * qdim(f1.coupled)), ...
+                             qdim(f.coupled), 'AbsTol', tc.tol, 'RelTol', tc.tol, ...
+                             'Repartition must preserve centernorm.');
+                          assertEqual(tc, isallowed(f1), true(length(f1), 1), ...
+                             'Output trees are not allowed.');
+        
+                          [c2, f2] = repartition(f1, f.rank);
+                          assertEqual(tc, c1 * c2, speye(length(f)), 'AbsTol', tc.tol, ...
+                             'RelTol', tc.tol, 'Repartition should be invertible.');
+                          assertEqual(tc, f, f2, 'Repartition should be invertible.');
+        
+                          if issymmetric(braidingstyle(f))
+                             a1_cell = fusiontensor(f);
+                             a2_cell = fusiontensor(f1);
+                             for j = 1:length(f)
+                                a1 = a1_cell{j};
+                                a2 = zeros(size(a1));
+                                [~, col, val] = find(c1(j, :));
+                                for k = 1:length(val)
+                                   a2 = a2 + val(k) * a2_cell{col(k)};
+                                end
+                                assertEqual(tc, a2, a1, 'AbsTol', tc.tol, ...
+                                   'Repartition should be compatible with fusiontensors.');
+                             end
+                          end
+                       end
+                    end
+                 end
+              end
         
         %       end
         %

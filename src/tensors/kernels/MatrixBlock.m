@@ -28,7 +28,6 @@ classdef MatrixBlock < AbstractBlock
             
             [lia, locb] = ismember(uncoupled, ch, 'rows');
             tdims = d(locb(lia), :);
-%             tdims = computedegeneracies(codomain, domain, uncoupled);
             mdims = [prod(tdims(:, 1:rank(1)), 2) prod(tdims(:, (1:rank(2)) + rank(1)), 2)];
             splits = split(trees);
             fuses = fuse(trees);
@@ -153,7 +152,6 @@ classdef MatrixBlock < AbstractBlock
                     for j = 1:length(rowsz) - 1
                         ind = j + (k-1) * (length(rowsz) - 1);
                         offset = offset + 1;
-                        
                         vars_in{offset} = reshape(permute(reshape(...
                             var_in(rowsz(j)+1:rowsz(j+1), colsz(k)+1:colsz(k+1)), ...
                             oldtdims(ind, :)), ...

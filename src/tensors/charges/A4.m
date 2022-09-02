@@ -15,6 +15,10 @@ classdef A4 < AbstractCharge & uint8
             charge@uint8(labels);
         end
         
+        function B = Bsymbol(a, b, c)
+            B = eye(Nsymbol(a, b, c));
+        end
+        
         function style = braidingstyle(~)
             style = BraidingStyle.Bosonic;
         end
@@ -27,6 +31,10 @@ classdef A4 < AbstractCharge & uint8
         
         function varargout = cumprod(a)
             [varargout{1:nargout}] = cumprod@AbstractCharge(a);
+        end
+        
+        function nu = frobeniusschur(a)
+            nu = ones(size(a));
         end
         
         function F = Fsymbol(a, b, c, d, e, f)
@@ -59,8 +67,26 @@ classdef A4 < AbstractCharge & uint8
         end
         
         function c = mtimes(a, b)
-            c = A4(1:4);
-            c(~Nsymbol(repmat(a, 1, 4), repmat(b, 1, 4), c)) = [];
+            if a > b
+                c = b * a;
+                return
+            end
+            
+            if a == 1
+                c = b;
+            elseif a == 4
+                c = A4(1:4);
+            elseif b == 4
+                c = b;
+            elseif a == 3
+                c = A4(2);
+            else % a == 2
+                if b == 2
+                    c = A4(3);
+                else % b == 3
+                    c = A4(1);
+                end
+            end
         end
         
         function N = Nsymbol(a, b, c)
@@ -68,8 +94,9 @@ classdef A4 < AbstractCharge & uint8
             if isempty(Ncache)
                 load('A4_data.mat', 'Ncache');
             end
-            ind = sub2ind([4 4 4], a, b, c);
-            N = Ncache(ind);
+            
+            linearinds = double(a(:) + 4 * (b(:)-1) + 16 * (c(:)-1));
+            N = reshape(Ncache(linearinds), size(a));
         end
         
         function e = one(~)
@@ -95,6 +122,10 @@ classdef A4 < AbstractCharge & uint8
             end
             
             R = Rcache{a, b, c};
+        end
+        
+        function s = string(a)
+            s = compose("%d", a);
         end
     end
 end

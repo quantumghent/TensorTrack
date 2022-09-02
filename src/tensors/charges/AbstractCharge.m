@@ -270,15 +270,28 @@ classdef (Abstract) AbstractCharge
             %   Complete docstring.
             % 
             if hasmultiplicity(a.fusionstyle)
-                error('Not implemented.');
+                R1 = arrayfun(@(x) Rsymbol(d, x, e, inv), c, 'UniformOutput', false);
+                R2 = arrayfun(@(x) Rsymbol(d, a, x, ~inv), f, 'UniformOutput', false);
+                F = arrayfun(@(x,y) Fsymbol(d, a, b, e, x, y), ...
+                    repmat(f(:).', length(c), 1), repmat(c(:), 1, length(f)), ...
+                    'UniformOutput', false);
+                
+                blocks = cell(length(c), length(f));
+                for i = 1:length(c)
+                    for j = 1:length(f)
+                        blocks{i,j} = contract(...
+                            R1{i}, [-2 1], ...
+                            F{i,j}, [2 -3 -1 1], ...
+                            R2{j}, [-4 2]);
+                        sz = size(blocks{i,j}, 1:4);
+                        blocks{i,j} = reshape(blocks{i,j}, sz(1) * sz(2), sz(3) * sz(4));
+                    end
+                end
+                B = cell2mat(blocks);
+                return
             end
-            if inv
-                R1 = conj(Rsymbol(repmat(d, length(c), 1), c, repmat(e, length(c), 1)));
-                R2 = Rsymbol(repmat(d, length(f), 1), repmat(a, length(f), 1), f);
-            else
-                R1 = Rsymbol(c, repmat(d, length(c), 1), repmat(e, length(c), 1));
-                R2 = conj(Rsymbol(repmat(a, length(f), 1), repmat(d, length(f), 1), f));
-            end
+            R1 = Rsymbol(c, repmat(d, length(c), 1), repmat(e, length(c), 1), inv);
+            R2 = Rsymbol(repmat(d, length(f), 1), repmat(a, length(f), 1), f, ~inv);
             R1 = reshape(R1, [], 1);
             R2 = reshape(R2, 1, []);
             
@@ -496,7 +509,7 @@ classdef (Abstract) AbstractCharge
                     for i = 2:length(a)
                         d_ = d(1) * a(i);
                         if nargout > 1
-                            N_(1:length(d_)) = N(1) .* ...
+                            N_ = N(1) .* ...
                                 Nsymbol(repmat(d(1), 1, length(d_)), ...
                                 repmat(a(i), 1, length(d_)), d_);
                         end

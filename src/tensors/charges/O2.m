@@ -278,7 +278,11 @@ classdef O2 < AbstractCharge
             d([a.j] ~= 0) = 2;
         end
         
-        function R = Rsymbol(a, b, c)
+        function R = Rsymbol(a, b, c, inv)
+            if nargin > 3 && inv
+                R = Rsymbol(b, a, c);
+                return
+            end
             R = Nsymbol(a, b, c);
             R([c.s] == 1 & [a.j] > 0) = -R([c.s] == 1 & [a.j] > 0);
         end

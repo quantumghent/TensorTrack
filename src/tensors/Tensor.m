@@ -725,6 +725,10 @@ classdef Tensor
             
             if isempty(p), p = 1:nspaces(t); end
             if isempty(r), r = rank(t); end
+            
+            assert(length(p) == nspaces(t), 'Invalid permutation.');
+            assert(length(p) == sum(r), 'Invalid new rank.');
+            
             if (all(p == 1:nspaces(t)) && all(rank(t) == r)),    return; end
             
             persistent cache
@@ -744,8 +748,8 @@ classdef Tensor
                 tdst = med.structure;
                 map = med.map;
             else
-                tdst = similar(t, p, 'Rank', r);
-                map = permute(fusiontrees(t.codomain, t.domain), p, r);
+                tdst = similar(@(x,charge) uninit(x), t, p, 'Rank', r);
+                map = permute(fusiontrees(t), p, r);
             end
             
             tdst.var = axpby(1, t.var, 0, tdst.var, p, map);
@@ -1384,8 +1388,6 @@ classdef Tensor
             if isfield(trunc, 'TruncSpace')
                 error('TBA');
             end
-            
-            
             
             if ~doTrunc
                 W1 = prod(t.codomain);
