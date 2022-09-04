@@ -230,6 +230,15 @@ classdef ComplexSpace < AbstractSpace
                 [spaces1.isdual] == [spaces2.isdual];
         end
         
+        function bool = ge(space1, space2)
+            bool = le(space2, space1);
+        end
+        
+        function bool = le(space1, space2)
+            assert(isscalar(space1) && isscalar(space2));
+            bool = degeneracies(space1) <= degeneracies(space2);
+        end
+        
         function hashable = GetMD5_helper(spaces)
             % Helper function for hash algorithm. This converts the space object to a data
             % structure which can be processed by :function:`GetMD5`.

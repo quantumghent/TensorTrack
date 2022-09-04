@@ -11,11 +11,16 @@ switch alg
         
     case 'qrpos'
         [Q, R] = qr(A, 0);
-        D = diag(R);
-        D(abs(D) < 1e-12) = 1;
-        D = sign(D);
-        Q = Q .* D';
-        R = D .* R;
+        if isrow(Q)
+            Q = Q * sign(R(1));
+            R = R * sign(R(1));
+        else
+            D = diag(R);
+            D(abs(D) < 1e-12) = 1;
+            D = sign(D);
+            Q = Q .* D';
+            R = D .* R;
+        end
         
     case 'ql'
         [Q, R] = qr(flip(A, 2), 0);
@@ -24,11 +29,16 @@ switch alg
         
     case 'qlpos'
         [Q, R] = qr(flip(A, 2), 0);
-        D = diag(R);
-        D(abs(D) < 1e-12) = 1;
-        D = sign(D);
-        Q = Q .* D';
-        R = D .* R;
+        if isrow(Q)
+            Q = Q * sign(R(1));
+            R = R * sign(R(1));
+        else
+            D = diag(R);
+            D(abs(D) < 1e-12) = 1;
+            D = sign(D);
+            Q = Q .* D';
+            R = D .* R;
+        end
         Q = flip(Q, 2);
         R = flip(flip(R, 1), 2);
         

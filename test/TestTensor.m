@@ -177,8 +177,9 @@ classdef TestTensor < matlab.unittest.TestCase
             %% Left orthogonalize
             p1 = [3 4 2];
             p2 = [1 5];
+            tc.assumeTrue(spaces(3) * spaces(4) * spaces(2) >= spaces(1)' * spaces(5)')
             
-            for alg = ["qr", "qrpos", "polar", "svd"] % ql qlpos
+            for alg = ["qr", "qrpos", "polar", "svd" "ql" "qlpos"]
                 [Q, R] = leftorth(t, p1, p2, alg);
                 
                 assertTrue(tc, ...
@@ -205,9 +206,10 @@ classdef TestTensor < matlab.unittest.TestCase
             
             
             %% Right orthogonalize
+            tc.assumeTrue(spaces(3) * spaces(4) <= spaces(1)' * spaces(2)' * spaces(5)');
             p1 = [3 4];
             p2 = [2 1 5];
-            for alg = ["lq", "lqpos", "polar", "svd"] % rq rqpos
+            for alg = ["lq", "lqpos", "polar", "svd" "rq" "rqpos"]
                 [L, Q] = rightorth(t, p1, p2, alg);
                 
                 assertTrue(tc, ...
