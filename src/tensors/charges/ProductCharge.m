@@ -116,8 +116,7 @@ classdef ProductCharge < AbstractCharge
                     end
             end
         end
-            
-        
+
         function varargout = subsref(prodcharge, s)
             % Overload indexing.
             %
