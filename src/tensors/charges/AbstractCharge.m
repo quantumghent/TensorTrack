@@ -435,6 +435,16 @@ classdef (Abstract) AbstractCharge
                 theta = theta + qdim(b) / qdim(a) * trace(Rsymbol(a, a, b));
             end
         end
+        
+        function p = parity(a)
+            if braidingstyle(a) == BraidingStyle.Bosonic || ...
+                    braidingstyle(a) == BraidingStyle.Abelian
+                p = false(size(a));
+                return
+            end
+            
+            error('Non-bosonic charges should implement a parity.')
+        end
     end
     
     %% Utility functions
