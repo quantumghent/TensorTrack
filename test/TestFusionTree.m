@@ -5,7 +5,7 @@ classdef TestFusionTree < matlab.unittest.TestCase
     
     properties (ClassSetupParameter)
         weight = {'small', 'medium'}%, 'large'}
-        charge = {'A4', 'Z1', 'Z2', 'U1', 'O2', 'SU2', 'Z2xU1'}
+        charge = {'A4', 'Z1', 'Z2', 'fZ2', 'U1', 'O2', 'SU2', 'Z2xU1'}
     end
     
     methods (TestClassSetup)
@@ -18,13 +18,13 @@ classdef TestFusionTree < matlab.unittest.TestCase
                     chargeset = Z1;
                 case 'Z2'
                     chargeset = Z2([0 1]);
+                case 'fZ2'
+                    chargeset = fZ2([0 1]);
                 case 'U1'
                     switch weight
                         case 'small'
                             chargeset = U1(-1:1);
-                        case 'medium'
-                            chargeset = U1(-2:2);
-                        case 'large'
+                        case {'medium', 'large'}
                             chargeset = U1(-2:2);
                     end
                 case 'O2'
@@ -60,9 +60,7 @@ classdef TestFusionTree < matlab.unittest.TestCase
                     switch weight
                         case 'small'
                             chargeset = A4([1 4]);
-                        case 'medium'
-                            chargeset = A4(1:4);
-                        case 'large'
+                        case {'medium', 'large'}
                             chargeset = A4(1:4);
                     end
                     
@@ -237,163 +235,47 @@ classdef TestFusionTree < matlab.unittest.TestCase
                 end
             end
         end
-              function repartitioning(tc)
-                 for i = 1:numel(tc.trees)
-                    if isempty(tc.trees{i}) || tc.trees{i}.legs < 2
-                       continue;
-                    end
-                    if rand < tc.testWeight
-                       f = tc.trees{i};
-                       for n = 0:f.legs
-                          [c1, f1] = repartition(f, [n f.legs-n]);
-                          
-                          assertEqual(tc, size(c1), [length(f) length(f1)], ...
-                              'Coefficients have the wrong size.');
-                          assertEqual(tc, full(abs(c1).^2 * qdim(f1.coupled)), ...
-                             qdim(f.coupled), 'AbsTol', tc.tol, 'RelTol', tc.tol, ...
-                             'Repartition must preserve centernorm.');
-                          assertEqual(tc, isallowed(f1), true(length(f1), 1), ...
-                             'Output trees are not allowed.');
         
-                          [c2, f2] = repartition(f1, f.rank);
-                          assertEqual(tc, c1 * c2, speye(length(f)), 'AbsTol', tc.tol, ...
-                             'RelTol', tc.tol, 'Repartition should be invertible.');
-                          assertEqual(tc, f, f2, 'Repartition should be invertible.');
-        
-                          if issymmetric(braidingstyle(f))
-                             a1_cell = fusiontensor(f);
-                             a2_cell = fusiontensor(f1);
-                             for j = 1:length(f)
+        function repartitioning(tc)
+            for i = 1:numel(tc.trees)
+                if isempty(tc.trees{i}) || tc.trees{i}.legs < 2
+                    continue;
+                end
+                if rand < tc.testWeight
+                    f = tc.trees{i};
+                    for n = 0:f.legs
+                        [c1, f1] = repartition(f, [n f.legs-n]);
+                        
+                        assertEqual(tc, size(c1), [length(f) length(f1)], ...
+                            'Coefficients have the wrong size.');
+                        assertEqual(tc, full(abs(c1).^2 * qdim(f1.coupled)), ...
+                            qdim(f.coupled), 'AbsTol', tc.tol, 'RelTol', tc.tol, ...
+                            'Repartition must preserve centernorm.');
+                        assertEqual(tc, isallowed(f1), true(length(f1), 1), ...
+                            'Output trees are not allowed.');
+                        
+                        [c2, f2] = repartition(f1, f.rank);
+                        assertEqual(tc, c1 * c2, speye(length(f)), 'AbsTol', tc.tol, ...
+                            'RelTol', tc.tol, 'Repartition should be invertible.');
+                        assertEqual(tc, f, f2, 'Repartition should be invertible.');
+                        
+                        if issymmetric(braidingstyle(f))
+                            a1_cell = fusiontensor(f);
+                            a2_cell = fusiontensor(f1);
+                            for j = 1:length(f)
                                 a1 = a1_cell{j};
                                 a2 = zeros(size(a1));
                                 [~, col, val] = find(c1(j, :));
                                 for k = 1:length(val)
-                                   a2 = a2 + val(k) * a2_cell{col(k)};
+                                    a2 = a2 + val(k) * a2_cell{col(k)};
                                 end
                                 assertEqual(tc, a2, a1, 'AbsTol', tc.tol, ...
-                                   'Repartition should be compatible with fusiontensors.');
-                             end
-                          end
-                       end
+                                    'Repartition should be compatible with fusiontensors.');
+                            end
+                        end
                     end
-                 end
-              end
-        
-        %       end
-        %
-        %       function permute_fusiontensor(testCase, smallset, legs)
-        %          trees = generateFusionTrees(testCase, smallset, legs);
-        %          ps = perms(1:legs);
-        %          for p = ps(randperm(size(ps, 2), min(size(ps, 2), 5)), :).'
-        %             [t1, c1] = permute(trees, p.');
-        %             for j = 1:length(trees)
-        %                array1 = permute(cast(slice(trees, j), 'double'), ...
-        %                   [p.' legs+1]);
-        %                array2 = zeros(size(array1));
-        %                [~, col, val] = find(c1(j,:));
-        %                for k = 1:length(val)
-        %                   array2 = array2 + val(k) * cast(slice(t1, col(k)), 'double');
-        %                end
-        %                verifyEqual(testCase, array1, array2, 'AbsTol', testCase.tol, ...
-        %                   'Permute should be compatible with fusiontensors.');
-        %             end
-        %          end
-        %       end
-        %
-        %       function permute_properties(testCase, smallset, legs)
-        %          trees = generateFusionTrees(testCase, smallset, legs);
-        %
-        %          treeargs = cell(2, legs);
-        %          for i = 1:legs
-        %             treeargs{1,i} = unique(trees.uncoupled(:, i));
-        %             treeargs{2,i} = trees.arrows(i);
-        %          end
-        %          coupled = unique(trees.coupled);
-        %
-        %          ps = perms(1:legs);
-        %          for p = ps(randperm(size(ps, 2), min(size(ps, 2), 5)), :).'
-        %             [t1, c1] = permute(trees, p.');
-        %
-        %             verifyEqual(testCase, size(c1), [length(trees) length(t1)], ...
-        %                'Coefficients have the wrong size.');
-        %             verifyEqual(testCase, full(vecnorm(c1)), ones(1, length(trees)), ...
-        %                'AbsTol', testCase.tol, 'Norm of coefficients should be 1.');
-        %             verifyEqual(testCase, c1 * c1', speye(length(trees)), ...
-        %                'AbsTol', testCase.tol, 'Permute should be unitary.');
-        %             verifyEqual(testCase, c1' * c1, speye(length(t1)), ...
-        %                'AbsTol', testCase.tol, 'Permute should be unitary.');
-        %
-        %             verifyTrue(testCase, issorted(t1), ...
-        %                'Permute should return sorted trees.');
-        %
-        %             tempargs = treeargs(:, p.');
-        %             t3 = FusionTree.new(tempargs{:});
-        %             lia = ismember(t3.coupled, coupled);
-        %             t3.charges = t3.charges(lia, :);
-        %             if ~isempty(t3.vertices)
-        %                t3.vertices = t3.vertices(lia,:);
-        %             end
-        %             verifyEqual(testCase, t1, t3, ...
-        %                'Permute should transform full basis to full basis.');
-        %
-        %             [t2, c2] = permute(t1, invperm(p));
-        %             verifyEqual(testCase, c2, c1', 'AbsTol', testCase.tol, ...
-        %                'RelTol', testCase.tol, 'Permute should be invertible.');
-        %             verifyEqual(testCase, t2, trees, ...
-        %                'Permute should be invertible.');
-        %          end
-        %       end
-        %
-        %       function yangbaxter(testCase, smallset, legs)
-        %          trees = generateFusionTrees(testCase, smallset, legs);
-        %          for i = 1:legs-2
-        %             [t1, c1] = artinbraid(trees, i);
-        %             [t1, c2] = artinbraid(t1, i+1);
-        %             [t1, c3] = artinbraid(t1, i);
-        %
-        %             [t2, c4] = artinbraid(trees, i+1);
-        %             [t2, c5] = artinbraid(t2, i);
-        %             [t2, c6] = artinbraid(t2, i+1);
-        %
-        %             verifyEqual(testCase, ...
-        %                c1 * c2 * c3, c4 * c5 * c6, 'AbsTol', testCase.tol, ...
-        %                'Yang-Baxter equation not satisfied.');
-        %             verifyEqual(testCase, t1, t2, ...
-        %                'Yang-Baxter equation not satisfied.');
-        %          end
-        %       end
+                end
+            end
+        end
     end
-    
-    %    methods
-    %       function trees = generateFusionTrees(testCase, smallset, legs)
-    %          % generateFusionTrees - Generate some trees for testing.
-    %          %   trees = generateFusionTrees(testCase, smallset, legs)
-    %
-    %          rng(123);
-    %          args = cell(2, legs);
-    %          for i = 1:legs
-    %             args{1, i} = smallset(randperm(length(smallset), ...
-    %                randi([1 length(smallset)])));
-    %             args{2, i} = randi([0 1]);
-    %          end
-    %          trees = FusionTree.new(args{:});
-    %
-    %          % get reasonable amount of trees:
-    %          while length(trees) > testCase.maxTrees
-    %             coupleds = trees.coupled;
-    %             coupled = unique(trees.coupled);
-    %             coupled = coupled(randi([1 length(coupled)]));
-    %             lia = ismember(coupleds, coupled);
-    %             if all(lia)
-    %                break
-    %             end
-    %             trees.charges = trees.charges(~lia,:);
-    %             if ~isempty(trees.vertices)
-    %                trees.vertices = trees.vertices(~lia,:);
-    %             end
-    %             trees = sort(trees);
-    %          end
-    %       end
-    %    end
-    
 end

@@ -17,8 +17,13 @@ classdef BraidingStyle
     end
     
     methods
-        function bool = issymmetric(style)
+        function bool = istwistless(style)
             bool = style == BraidingStyle.Abelian || style == BraidingStyle.Bosonic;
+        end
+        
+        function bool = issymmetric(style)
+            bool = style == BraidingStyle.Abelian || style == BraidingStyle.Bosonic || ...
+                style == BraidingStyle.Fermionic;
         end
         
         function c = and(a, b)

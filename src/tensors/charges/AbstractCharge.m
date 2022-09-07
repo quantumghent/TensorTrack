@@ -437,8 +437,7 @@ classdef (Abstract) AbstractCharge
         end
         
         function p = parity(a)
-            if braidingstyle(a) == BraidingStyle.Bosonic || ...
-                    braidingstyle(a) == BraidingStyle.Abelian
+            if istwistless(braidingstyle(a))
                 p = false(size(a));
                 return
             end
