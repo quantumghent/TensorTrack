@@ -183,6 +183,8 @@ classdef SUN < AbstractCharge
         end
         
         function C = clebschgordan(a, b, c)
+            DISPLAY = false;
+            t_elapsed = tic;
             d1 = qdim(a);   d2 = qdim(b);   d3 = qdim(c);
             N = length(a.I);
             
@@ -190,8 +192,8 @@ classdef SUN < AbstractCharge
             Jplus2 = creation(b);
             
             eqs = zeros(N-1, d1, d2, d1, d2);
-            rows = double.empty(0, 3);
-            cols = double.empty(0, 2);
+            rows = false(N-1, d1, d2);
+            cols = false(d1, d2);
             
             basis_a = basis(a);
             weigth_a = pWeight(basis_a);
@@ -206,36 +208,26 @@ classdef SUN < AbstractCharge
                 w1 = weigth_a(m1, :);
                 w2 = w3 - w1 + wshift;
                 
-                for m2 = find(all(w2 == weigth_b, 2)).'
-                    cols = [cols; m1 m2];
+                m2list = all(w2 == weigth_b, 2);
+                cols(m1, m2list) = true;
+                for m2 = find(m2list).'
                     for l = 1:length(Jplus1)
                         m2_ = m2;
                         [m1_, ~, v] = find(Jplus1{l}(:, m1));
                         eqs(l, m1_, m2_, m1, m2) = eqs(l, m1_, m2_, m1, m2) + ...
                             reshape(v, 1, []);
-                        rows = [rows; [repmat(l, size(m1_)) m1_ repmat(m2_, size(m1_))]];
-%                         for k = 1:length(v)
-%                             rows = [rows; l m1_(k) m2_];
-%                             eqs(l, m1_(k), m2_, m1, m2) = eqs(l, m1_(k), m2_, m1, m2) + v(k);
-%                         end
+                        rows(l, m1_, m2_) = true;
                         m1_ = m1;
                         [m2_, ~, v] = find(Jplus2{l}(:, m2));
                         eqs(l, m1_, m2_, m1, m2) = eqs(l, m1_, m2_, m1, m2) + ...
                             reshape(v, 1, 1, []);
-                        rows = [rows; [repmat([l m1_], size(m2_)) m2_]];
-%                         for k = 1:length(v)
-%                             rows = [rows; l, m1_, m2_(k)];
-%                             eqs(l, m1_, m2_(k), m1, m2) = eqs(l, m1_, m2_(k), m1, m2) + v(k);
-%                         end
+                        rows(l, m1_, m2_) = true;
                     end
                 end
             end
-            rows = sortrows(unique(rows, 'rows'), size(rows, 2):-1:1);
             
-            rows_lin = rows(:,1) + (rows(:,2) - 1) * (N-1) + (rows(:,3) - 1) * (N-1) * d1;
-            cols_lin = cols(:,1) + (cols(:,2) - 1) * d1;
             eqs = reshape(eqs, (N-1) * d1 * d2, d1 * d2);
-            reduced_eqs = eqs(rows_lin, cols_lin);
+            reduced_eqs = eqs(rows(:), cols(:));
             
             solutions = null(reduced_eqs);
             N123 = size(solutions, 2);
@@ -244,15 +236,10 @@ classdef SUN < AbstractCharge
             solutions = leftorth(rref(solutions', 1e-12)', 'qrpos');
             
             C = zeros(d1 * d2, d3, N123);
-            for alpha = 1:N123
-                for i = 1:length(cols_lin)
-                    C(cols_lin(i), d3, alpha) = solutions(i, alpha);
-                end
-            end
+            C(cols, d3, :) = reshape(solutions, [], 1, N123);
             C = reshape(C, d1, d2, d3, N123);
-            %% lower weight CGC
             
-           
+            %% lower weight CGC
             basis_c = basis(c);
             weigth_c = pWeight(basis_c);
             
@@ -286,10 +273,6 @@ classdef SUN < AbstractCharge
                         for m3_ = m3_list.'
                             i = i + 1;
                             eqs(i, :) = reshape(Jmin3{l}(m3list, m3_), 1, jmax);
-%                             for j = 1:length(m3list)
-%                                 m3 = m3list(j);
-%                                 eqs(i, j) = Jmin3{l}(m3, m3_);
-%                             end
                             assert(known(m3_));
                             for w1_ = w1list.'
                                 m1_list = find(all(w1_.' == weigth_a, 2)).';
@@ -303,27 +286,18 @@ classdef SUN < AbstractCharge
                                 for m2_ = m2_list
                                     for m1_ = m1_list
                                         CGCcoeff = C(m1_, m2_, m3_, alpha);
-%                                         rhs(i, m1list, m2_) = CGCcoeff * ...
-%                                             reshape(full(Jmin1{l}(m1list, m1_)), 1, [], 1);
-%                                         rows = [rows; m1list(:) repmat(m2_, length(m1list), 1)];
                                         for m1 = m1list
                                             m2 = m2_;
                                             Jm1coeff = Jmin1{l}(m1, m1_);
                                             rhs(i, m1, m2) = rhs(i, m1, m2) + ...
                                                 Jm1coeff * CGCcoeff;
-%                                             rows = [rows; m1 m2];
                                         end
-%                                         rhs(i, m1_, m2list) = CGCcoeff * ...
-%                                             reshape(full(Jmin2{l}(m2list, m2_)), 1, 1, []);
-%                                         rows = [rows; repmat(m1_, length(m2list), 1) m2list(:)];
                                         for m2 = m2list
                                             m1 = m1_;
                                             Jm2coeff = Jmin2{l}(m2, m2_);
                                             rhs(i, m1, m2) = rhs(i, m1, m2) + ...
                                                 Jm2coeff * CGCcoeff;
-%                                             rows = [rows; m1 m2];
                                         end
-%                                         rows = [rows; combvec(m1list, m2list).'];
                                     end
                                 end
                                 rows(m1_list, m2list) = true;
@@ -333,13 +307,7 @@ classdef SUN < AbstractCharge
                     end
                     ieqs = pinv(eqs);
                     [rows1, rows2] = find(rows);
-%                     inds = rows(:,1) + (rows(:,2)-1) * d2;
                     
-%                     C = reshape(C, d1 * d2, d3, N123);
-%                     rhs = reshape(rhs, imax, d1 * d2);
-%                     C(inds, m3list, alpha) = (ieqs * rhs(:, inds)).';
-%                     C = reshape(C, d1, d2, d3, N123);
-%                     known(m3list) = true;
                     for j = 1:length(m3list)
                         m3 = m3list(j);
                         assert(~known(m3));
@@ -347,17 +315,19 @@ classdef SUN < AbstractCharge
                             C(rows1(k), rows2(k), m3, alpha) = ...
                                 ieqs(j, :) * rhs(:, rows1(k), rows2(k));
                         end
-%                         for ind = rows.'
-%                             C(ind(1), ind(2), m3, alpha) = ...
-%                                 ieqs(j, :) * rhs(:, ind(1), ind(2));
-% %                             for i = 1:imax
-% %                                 C(ind(1), ind(2), m3, alpha) = C(ind(1), ind(2), m3, alpha) + ...
-% %                                     ieqs(j, i) * rhs(i, ind(1), ind(2));
-% %                             end
-%                         end
                         known(m3) = true;
                     end
                 end
+            end
+            
+            t_elapsed = toc(t_elapsed);
+            if DISPLAY
+                fprintf('Generated SU(%d) Clebsch-Gordan Coefficient:\n', N);
+                fprintf('\t(%s) x (%s) -> (%s)\n', num2str(a.I), num2str(b.I), num2str(c.I));
+                fprintf('\ttime = %.2fs\n', t_elapsed);
+                [bytes, unit] = memsize(C);
+                fprintf('\tsize = %.2f%s\n', bytes, unit);
+                fprintf('\n');
             end
         end
         
@@ -487,4 +457,3 @@ classdef SUN < AbstractCharge
         end
     end
 end
-
