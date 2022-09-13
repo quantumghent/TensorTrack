@@ -241,7 +241,7 @@ classdef ComplexSpace < AbstractSpace
         
         function hashable = GetMD5_helper(spaces)
             % Helper function for hash algorithm. This converts the space object to a data
-            % structure which can be processed by :function:`GetMD5`.
+            % structure which can be processed by :func:`GetMD5`.
             %
             % Arguments
             % ---------
@@ -251,7 +251,7 @@ classdef ComplexSpace < AbstractSpace
             % Returns
             % -------
             % hashable : (1, :) int
-            %   data which can be accepted by :function:`GetMD5`.
+            %   data which can be accepted by :func:`GetMD5`.
             
             hashable = [spaces.dimensions spaces.isdual];
         end

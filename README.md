@@ -69,10 +69,12 @@ This is a package which aims to efficiently implement the various elementary alg
 Additionally, these tensors support a general global symmetries, in which case both memory and CPU usage are optimized. The framework is able to support both Abelian and non-Abelian symmetries, as well as symmetry groups with multiplicities, which can have bosonic or fermionic braiding rules.
 The design of the algorithms is chosen such that the inclusion of symmetries should not alter the code after the creation of the tensors. Currently, the following symmetries are implemented:
 
-* Z2
+* Z(N)
 * U1
-* SU2
+* A4
+* SU(N)
 * O2
+* Fermionic Z2
 * Direct product groups
 
 <p align="right">(<a href="#top">back to top</a>)</p>
