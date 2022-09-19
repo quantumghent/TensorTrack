@@ -841,7 +841,11 @@ classdef FusionTree < matlab.mixin.CustomDisplay
         end
         
         function style = fusionstyle(f)
-            style = f.charges.fusionstyle;
+            try
+            style = fusionstyle(f.charges);
+            catch
+                bla
+            end
         end
         
         
@@ -1106,10 +1110,7 @@ classdef FusionTree < matlab.mixin.CustomDisplay
             end
             
             if length(f) > 1
-                C = cell(size(f));
-                for i = 1:numel(f)
-                    C(i) = fusiontensor(f(i));
-                end
+                C = arrayfun(@fusiontensor, f);
                 return
             end
             

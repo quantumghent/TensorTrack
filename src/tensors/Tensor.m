@@ -37,6 +37,14 @@ classdef Tensor
             
             if nargin == 0, return; end
             
+            % t = Tensor(tensor)
+            if nargin == 1 && isa(varargin{1}, 'Tensor')
+                t.codomain = varargin{1}.codomain;
+                t.domain = varargin{1}.domain;
+                t.var = varargin{1}.var;
+                return
+            end
+            
             % t = Tensor(array)
             if nargin == 1 && isnumeric(varargin{1})
                 t.domain = [];
@@ -823,7 +831,7 @@ classdef Tensor
             % ---------
             % t : :class:`Tensor`
             %   input tensor.
-            % 
+            % uminus
             % a : numeric
             %   input scalar.
             %
@@ -952,7 +960,7 @@ classdef Tensor
             % Usage
             % -----
             % :code:`t = times(t, a)`
-            % :code:`t = t .* a`
+            % :code:`t uminus= t .* a`
             % :code:`t = a .* t`
             %
             % Arguments
@@ -1002,8 +1010,8 @@ classdef Tensor
             %
             % Usage
             % -----
-            % t = transpose(t, p, rank)
-            % t = t.'
+            % :code:`t = transpose(t, p, rank)`
+            % :code:`t = t.'`
             %
             % Arguments
             % ---------
@@ -1297,7 +1305,7 @@ classdef Tensor
                 t
                 p1 = 1:t.rank(1)
                 p2 = t.rank(1) + (1:t.rank(2))
-                alg {MustBeMember(alg, {'svd', 'qr'})} = 'svd'
+                alg {mustBeMember(alg, {'svd', 'qr'})} = 'svd'
                 atol = norm(t) * eps(underlyingType(t))
             end
             
@@ -2129,7 +2137,7 @@ classdef Tensor
             a_cell = mat2cell(a, dimsizes{:});
             
             % Locate non-empty blocks
-            [lia, locb] = ismember(trees.uncoupled, ...
+            [~, locb] = ismember(trees.uncoupled, ...
                 charges(s).', 'rows');
             
             % Fill output
@@ -2165,7 +2173,7 @@ classdef Tensor
         function disp(t)
             if isscalar(t)
                 r = t.rank;
-                fprintf('Rank (%d, %d) Tensor:\n\n', r(1), r(2));
+                fprintf('Rank (%d, %d) %s:\n\n', r(1), r(2), class(t));
                 s = space(t);
                 for i = 1:length(s)
                     fprintf('%d.\t', i);
