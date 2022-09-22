@@ -168,7 +168,7 @@ classdef TestFusionTree < matlab.unittest.TestCase
                             'Output trees are not allowed.');
                         
                         % compatible with fusiontensor
-                        if issymmetric(braidingstyle(f))
+                        if istwistless(braidingstyle(f))
                             a1_cell = fusiontensor(f);
                             a2_cell = fusiontensor(f1);
                             for j = 1:length(f)
