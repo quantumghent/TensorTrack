@@ -271,3 +271,11 @@ matlab_keep_package_prefix = False
 matlab_src_dir = repo_root
 primary_domain = 'mat'
 autoclass_content = 'class'
+
+
+# -- nbsphinx -----------------------------------------------
+nbsphinx_thumbnails = {
+    'examples/uniformMps/uniformMps': 'examples/uniformMps/img/leftOrth.svg',
+    'examples/uniformMps/localHamiltonians': 'examples/uniformMps/img/2minham.svg',
+    'examples/uniformMps/transferMatrices': 'examples/uniformMps/img/Z2.svg',
+}

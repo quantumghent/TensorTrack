@@ -38,9 +38,9 @@ classdef O2 < AbstractCharge
                 F = reshape(arrayfun(@Fsymbol, a, b, c, d, e, f), size(a));
                 return
             end
-            
-            if ~(Nsymbol(a, b, e) && Nsymbol(e, c, d) && ...
-                    Nsymbol(b, c, f) && Nsymbol(a, f, d))
+
+            if (~Nsymbol(a, b, e) || ~Nsymbol(e, c, d) || ...
+                    ~Nsymbol(b, c, f) || ~Nsymbol(a, f, d))
                 F = 0;
                 return
             end
@@ -278,7 +278,11 @@ classdef O2 < AbstractCharge
             d([a.j] ~= 0) = 2;
         end
         
-        function R = Rsymbol(a, b, c)
+        function R = Rsymbol(a, b, c, inv)
+            if nargin > 3 && inv
+                R = Rsymbol(b, a, c);
+                return
+            end
             R = Nsymbol(a, b, c);
             R([c.s] == 1 & [a.j] > 0) = -R([c.s] == 1 & [a.j] > 0);
         end

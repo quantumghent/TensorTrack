@@ -51,7 +51,7 @@ classdef (Abstract) AbstractBlock
             % (Abstract) Compute ```Y = permute(X, p) .* a + Y .* b```.
             % This method is the computationally critical method of this class, thus has
             % special cases for scalar multiplication (a == 0), addition (nargin == 4), and
-            % various optimisations when a == 1, b == 0 | b == 1. Additionally, this method
+            % various optimizations when a == 1, b == 0 | b == 1. Additionally, this method
             % should not be called directly as it should not perform any error checks.
             %
             % Arguments
@@ -59,13 +59,13 @@ classdef (Abstract) AbstractBlock
             % a : double
             %   scalar to multiply with X.
             %
-            % X : AbstractBlock
+            % X : :class:`AbstractBlock`
             %   list of source blocks.
             %
             % b : double
             %   scalar to multiply with Y.
             %
-            % Y : AbstractBlock
+            % Y : :class:`AbstractBlock`
             %   list of destination blocks.
             %
             % p : int
@@ -76,7 +76,7 @@ classdef (Abstract) AbstractBlock
             %
             % Returns
             % -------
-            % Y : AbstractBlock
+            % Y : :class:`AbstractBlock`
             %   Result of computing Y = permute(X, p) .* a + Y .* b.
             
             error('This method should be overloaded.');

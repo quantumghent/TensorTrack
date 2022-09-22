@@ -17,7 +17,7 @@ Additionally, for tensors which are invariant under general global symmetries, v
    :maxdepth: 2
 
    man/intro
-   man/tensors
+   man/tensor
    man/symmetries
 
 
@@ -35,4 +35,3 @@ Additionally, for tensors which are invariant under general global symmetries, v
    lib/tensors
    lib/utility
    lib/caches
-

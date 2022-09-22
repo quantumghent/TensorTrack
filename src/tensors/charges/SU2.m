@@ -20,8 +20,8 @@ classdef SU2 < AbstractCharge & uint8
         function a = conj(a)
         end
         
-        function [charges, vertices] = cumprod(a)
-            [charges, vertices] = cumprod@AbstractCharge(a);
+        function varargout = cumprod(a)
+            [varargout{1:nargout}] = cumprod@AbstractCharge(a);
         end
         
         function nu = frobeniusschur(a)

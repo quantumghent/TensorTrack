@@ -38,9 +38,17 @@ In summary, we consider a tensor to be an object which can be represented in eit
 These definitions are equivalent, and it is always possible to go from one to the other.
 The main reason for introducing both is that for some algorithms, one is more convenient than the other, and thus this conversion will prove useful.
 
+Creating and accessing tensors
+------------------------------
+
+There are several options provided for creating tensors, which are designed to either mimic the existing MATLAB constructors, or to be conveniently generalisable when dealing with symmetries. Almost each of these methods is a wrapper of some sorts around the general static constructor ``Tensor.new``:
+
+.. automethod:: src.tensors.Tensor.new
+    :noindex:
 
 Index manipulations
 -------------------
+
 
 
 Contractions 

@@ -92,7 +92,7 @@ classdef LRU < handle
             if isKey(cache.map, key)
                 dll_old = cache.map(key);
                 pop(dll_old);
-                cache.mem = cache.mem - memsize(dll_old.val{2});
+                cache.mem = cache.mem - memsize(dll_old.val{2}, 'B');
                 cache.map.remove(key);
             end
             
@@ -102,17 +102,24 @@ classdef LRU < handle
             cache.map(key) = dll_new;
             
             % update memory
-            cache.mem = cache.mem + memsize(val);
+            cache.mem = cache.mem + memsize(val, 'B');
             while cache.mem > cache.memlimit || length(cache.map) > cache.itemlimit
                 dll_oldest = -cache.sentinel;
                 pop(dll_oldest);
-                cache.mem = cache.mem - memsize(dll_oldest.val{2});
+                cache.mem = cache.mem - memsize(dll_oldest.val{2}, 'B');
                 cache.map.remove(key);
             end
+        end
+        
+        function disp(cache)
+            fprintf('LRU cache:\n');
+            fprintf('\tbytes = %.2f / %.2f %s\n', ...
+                cache.mem / 1024^2, cache.memlimit / 1024^2, 'MB');
+            fprintf('\titems = %d / %d\n', cache.map.Count, cache.itemlimit);
         end
     end
 end
 
-function b = memsize(x)
-b = numel(getByteStreamFromArray(x));
-end
+% function b = memsize(x)
+% b = numel(getByteStreamFromArray(x));
+% end

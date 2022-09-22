@@ -18,7 +18,7 @@ Symmetry sectors
 Fusion trees
 ------------
 
-.. automodule:: src.tensors.trees
+.. autoclass:: src.tensors.FusionTree
 
 
 Spaces
@@ -36,11 +36,6 @@ Kernels
 Tensors
 -------
 
-.. automodule:: src.tensors.tensors
+.. autoclass:: src.tensors.Tensor
 
-
-Arrays
-------
-
-.. automodule:: src.tensors.arrays
-
+.. autoclass:: src.tensors.SpTensor

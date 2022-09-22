@@ -1,5 +1,5 @@
 function wig = Wigner6j(j1,j2,j3,j4,j5,j6,ifs,ifcb)
-% Computes the Wigner $6j$ symbols
+% Computes the Wigner $$6j$$ symbols
 %
 % .. math::
 %
@@ -7,7 +7,7 @@ function wig = Wigner6j(j1,j2,j3,j4,j5,j6,ifs,ifcb)
 %       j_1 & j_2 & j_3 \\
 %       j_4 & j_5 & j_6
 %    \end{Bmatrix}
-% 
+%
 % or the recoupling matrix element
 %
 % .. math::
@@ -22,31 +22,32 @@ function wig = Wigner6j(j1,j2,j3,j4,j5,j6,ifs,ifcb)
 %
 % Usage
 % -----
-% :code:`W = Wigner6j(j1,j2,j3,j4,j5,j6,ifs,ifcb)`
-% :code:`Wigner6j(j1,j2,j3,j4,j5,j6)`
+% :code:`W = Wigner6j(j1, j2, j3, j4, j5, j6, ifs, ifcb)`
+%
+% :code:`Wigner6j(j1, j2, j3, j4, j5, j6)`
 %
 % Arguments
 % ---------
 % j1, j2, j3, j4, j5, j6
 %   set of six angular momenta, must be arrays of the same size
-% 
+%
 % Optional Arguments
 % ------------------
 % ifs
 %   the switch of the computational methods;
 %   although the central part of all the computations is based on the Racah formula, some details differ:
 %
-% 	- 0 - the symbolic (presumably accurate) computation with the double-precision output
-%  	- -1 - the same symbolic computation as ifs=0 but with the symbolic output (accurate
+%   - 0 - the symbolic (presumably accurate) computation with the double-precision output
+%   - -1 - the same symbolic computation as ifs=0 but with the symbolic output (accurate
 %     square root/rational-type equation, simplified)
-% 	- -2 - the same as :code:`ifs=-1` but without a final simplification of the symbolic
+%   - -2 - the same as :code:`ifs=-1` but without a final simplification of the symbolic
 %     expression, which can be time-consuming sometimes
-%  	- 1, 2 (default, recommended), 3 - numeric double-precision algorithms (see Notes below)
+%   - 1, 2 (default, recommended), 3 - numeric double-precision algorithms (see Notes below)
 %
 %     all other input values of ifs are set to the closest from the above list.
 % 
 % ifcb
-% 	if exists and is true, switches to computing the coupling matrix elements instead of the
+%   if exists and is true, switches to computing the coupling matrix elements instead of the
 %   $6j$-symbols (default :code:`false`)
 %
 % Returns

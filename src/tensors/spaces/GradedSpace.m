@@ -298,146 +298,21 @@ classdef GradedSpace < AbstractSpace
             end
         end
         
-%         
-%         
-%         
-%         function engine = update_hash(spaces, engine)
-%             engine = update_hash({spaces.charges, spaces.bonds, spaces.isdual}, engine);
-%         end
-%         
-%         function s = GetMD5_helper(data)
-%             s = {data.charges, data.bonds, data.isdual};
-%         end
-%         
-%         function bool = hassymmetry(codomain, domain)
-%             if isempty(codomain)
-%                 bool = ~isa(domain(1).charges, 'Z1');
-%                 return
-%             end
-%             bool = ~isa(codomain(1).charges, 'Z1');
-%         end
-%         
-%         function [engine, digest] = hash(spaces, engine)
-%             if nargin < 2 || isempty(engine)
-%                 engine = init_hash();
-%             end
-%             
-%             engine.update(uint8('CartesianSpace'));
-%             d = dim(spaces);
-%             if ~isempty(d)
-%                 engine.update(typecast(d, 'uint8'));
-%             end
-%             
-%             if nargout > 1
-%                 digest = engine.digest;
-%             end
-%         end
-%         
-%         function d = computedims(codomain, domain, charges)
-%             assert(length(codomain) + length(domain) == size(charges, 2));
-% 
-%             d = zeros(size(charges));
-%             for i = 1:size(d, 2)
-%                 if i <= length(codomain)
-%                     d(:, i) = dims(codomain(i), charges(:, i));
-%                 else
-%                     d(:, i) = dims(domain(end + 1 - (i - length(codomain))), charges(:, i));
-%                 end
-%             end
-%             if size(d, 2) == 1
-%                 if isempty(codomain)
-%                     d = [ones(size(d)) d];
-%                 else
-%                     d = [d ones(size(d))];
-%                 end
-%             end
-%         end
-%         
-%         function d = computedegeneracies(codomain, domain, charges)
-%             assert(length(codomain) + length(domain) == size(charges, 2));
-% 
-%             d = zeros(size(charges));
-%             for i = 1:size(d, 2)
-%                 if i <= length(codomain)
-%                     d(:, i) = degeneracy(codomain(i), charges(:, i));
-%                 else
-%                     d(:, i) = degeneracy(domain(end + 1 - (i - length(codomain))), charges(:, i));
-%                 end
-%             end
-%             if size(d, 2) == 1
-%                 if isempty(codomain)
-%                     d = [ones(size(d)) d];
-%                 else
-%                     d = [d ones(size(d))];
-%                 end
-%             end
-%         end
-%         
-%         function d = dim(spaces, charges)
-%             d = zeros(1, length(spaces));
-%             if nargin == 1
-%                 for i = 1:length(spaces)
-%                     d(i) = sum(dims(spaces(i)));
-%                 end
-%                 return
-%             end
-%             for i = 1:length(spaces)
-%                 d(i) = sum(dims(spaces(i), charges(:, i)));
-%             end
-%         end
-%         
-%         function d = degeneracy(space, charges)
-%             if nargin == 1 || isempty(charges)
-%                 d = space.bonds;
-%                 return
-%             end
-%             d = zeros(1, length(charges));
-%             [lia, locb] = ismember(charges, space.int_charges);
-%             d(lia) = space.bonds(locb(lia));
-%         end
-% %         
-% %         function d = dims(space, charges)
-% %             if nargin == 1 || isempty(charges)
-% %                 d = qdim(space.charges) .* space.bonds;
-% %                 return
-% %             end
-% %             d = zeros(1, length(charges));
-% %             [lia, locb] = ismember(charges, space.int_charges);
-% %             d(lia) = qdim(space.charges(locb(lia))) .* space.bonds(locb(lia));
-% %         end
-% %         
-% 
-% 
-%         
-%         function bools = eq(A, B)
-%             if isempty(A) && isempty(B)
-%                 bools = [];
-%                 return
-%             end
-%             if isscalar(A)
-%                 bools = false(size(B));
-%                 for i = 1:numel(B)
-%                     bools(i) = A.isdual == B(i).isdual && ...
-%                     all(A.bonds == B(i).bonds) && ...
-%                     all(A.charges == B(i).charges);
-%                 end
-%                 return
-%             end
-%             if isscalar(B)
-%                 bools = B == A;
-%                 return
-%             end
-%             
-%             assert(all(size(A) == size(B)));
-%             bools = false(size(A));
-%             for i = 1:numel(A)
-%                 bools(i) = A(i).isdual == B(i).isdual && ...
-%                     all(A(i).bonds == B(i).bonds) && ...
-%                     all(A(i).charges == B(i).charges);
-%             end
-%         end
-%         
-
+        function bool = ge(space1, space2)
+            bool = le(space2, space1);
+        end
+        
+        function bool = le(space1, space2)
+            assert(isscalar(space1) && isscalar(space2));
+            [lia, locb] = ismember(charges(space1), charges(space2));
+            if ~all(lia)
+                bool = false;
+                return
+            end
+            d1 = degeneracies(space1);
+            d2 = degeneracies(space2);
+            bool = all(d1 <= d2(locb));
+        end
         
         function style = braidingstyle(codomain, domain)
             if nargin == 1 || ~isempty(codomain)

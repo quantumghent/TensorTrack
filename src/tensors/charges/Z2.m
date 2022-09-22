@@ -10,7 +10,6 @@ classdef Z2 < AbstractCharge & logical
     %   See also AbstractCharge
     
     methods
-        
         function A = Asymbol(a, b, c)
             A = double(Nsymbol(a, b, c));
         end

@@ -251,9 +251,18 @@ classdef CartesianSpace < AbstractSpace
             bools = [spaces1.dimensions] == [spaces2.dimensions];
         end
         
+        function bool = ge(space1, space2)
+            bool = le(space2, space1);
+        end
+        
+        function bool = le(space1, space2)
+            assert(isscalar(space1) && isscalar(space2));
+            bool = degeneracies(space1) <= degeneracies(space2);
+        end
+        
         function hashable = GetMD5_helper(spaces)
             % Helper function for hash algorithm. This converts the space object to a data
-            % structure which can be processed by :function:`GetMD5`.
+            % structure which can be processed by :func:`GetMD5`.
             %
             % Arguments
             % ---------
@@ -263,14 +272,12 @@ classdef CartesianSpace < AbstractSpace
             % Returns
             % -------
             % hashable : (1, :) int
-            %   data which can be accepted by :function:`GetMD5`.
+            %   data which can be accepted by :func:`GetMD5`.
             
             hashable = [spaces.dimensions];
         end
         
         function disp(spaces)
-            % Custom display of spaces.
-            
             if isscalar(spaces)
                 fprintf('CartesianSpace of dimension %d:\n', spaces.dimensions);
                 return

@@ -7,7 +7,7 @@ function wig = Wigner3j(j1,j2,j3,m1,m2,m3,ifs,ifcb)
 %       j_1 & j_2 & j_3 \\
 %       m_1 & m_2 & m_3
 %    \end{pmatrix}
-% 
+%
 % or the Clebsch-Gordan coefficient
 %
 % .. math::
@@ -18,8 +18,9 @@ function wig = Wigner3j(j1,j2,j3,m1,m2,m3,ifs,ifcb)
 %
 % Usage
 % -----
-% :code:`W = Wigner3j(j1,j2,j3,m1,m2,m3,ifs,ifcb)`
-% :code:`Wigner3j(j1,j2,j3,m1,m2,m3)`
+% :code:`W = Wigner3j(j1, j2, j3, m1, m2, m3, ifs, ifcb)`
+%
+% :code:`Wigner3j(j1, j2, j3, m1, m2, m3)`
 %
 % Arguments
 % ---------
@@ -36,18 +37,18 @@ function wig = Wigner3j(j1,j2,j3,m1,m2,m3,ifs,ifcb)
 %   although the central part of all the computations is based on the Racah formula, some
 %   details differ:
 %
-% 	- 0: the symbolic (presumably accurate) computation with the double-precision output
-%  	- -1: the same symbolic computation as ifs=0 but with the symbolic output (accurate
+%   - 0: the symbolic (presumably accurate) computation with the double-precision output
+%   - -1: the same symbolic computation as ifs=0 but with the symbolic output (accurate
 %     square root/rational-type equation, simplified)
-% 	- -2: the same as :code:`ifs=-1` but without a final simplification of the symbolic
+%   - -2: the same as :code:`ifs=-1` but without a final simplification of the symbolic
 %     expression, which can be time-consuming sometimes
-%  	- 1: (default, recommended), 2, 3 - numeric double-precision algorithms (see Notes below)
+%   - 1: (default, recommended), 2, 3 - numeric double-precision algorithms (see Notes below)
 %   - 4: the symbolic computation with the double precision output, but cached.
 %
 %   all other input values of ifs are set to the closest from the above list.
 % 
 % ifcb
-% 	if exists and is true, switches to computing the Clebsch-Gordan coefficients instead of
+%   if exists and is true, switches to computing the Clebsch-Gordan coefficients instead of
 %   the $3j$-symbols (default :code:`false`)
 %
 % Returns

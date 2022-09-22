@@ -3,7 +3,7 @@
 <!-- PROJECT SHIELDS -->  
 <div align="center">
   
-  [![Documentation Status](https://readthedocs.org/projects/tensortrack/badge/?version=latest)](https://tensortrack.readthedocs.io/en/latest/index.html)
+  [![Documentation Status](https://readthedocs.org/projects/tensortrack/badge/?version=stable)](https://tensortrack.readthedocs.io/en/stable/?badge=stable)
   [![CI](https://github.com/quantumghent/TensorTrack/actions/workflows/CI.yml/badge.svg)](https://github.com/quantumghent/TensorTrack/actions/workflows/CI.yml)
   [![Codecov](https://codecov.io/gh/quantumghent/TensorTrack/branch/main/graph/badge.svg?token=1I0XEB69TQ)](https://codecov.io/gh/quantumghent/TensorTrack)
   [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -69,10 +69,12 @@ This is a package which aims to efficiently implement the various elementary alg
 Additionally, these tensors support a general global symmetries, in which case both memory and CPU usage are optimized. The framework is able to support both Abelian and non-Abelian symmetries, as well as symmetry groups with multiplicities, which can have bosonic or fermionic braiding rules.
 The design of the algorithms is chosen such that the inclusion of symmetries should not alter the code after the creation of the tensors. Currently, the following symmetries are implemented:
 
-* Z2
+* Z(N)
 * U1
-* SU2
+* A4
+* SU(N)
 * O2
+* Fermionic Z2
 * Direct product groups
 
 <p align="right">(<a href="#top">back to top</a>)</p>

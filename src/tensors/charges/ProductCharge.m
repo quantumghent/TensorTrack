@@ -116,8 +116,7 @@ classdef ProductCharge < AbstractCharge
                     end
             end
         end
-            
-        
+
         function varargout = subsref(prodcharge, s)
             % Overload indexing.
             %
@@ -363,11 +362,20 @@ classdef ProductCharge < AbstractCharge
         function [a, I] = sortrows(a, col, direction)
             arguments
                 a
-                col = 1:size(a, 2)
+                col (1,:) double = []
                 direction = 'ascend'
             end
+            
+            if nargin == 1 || isempty(col) || isequal(col, 1:size(a, 2))
+                [I, a.charges{:}] = simulsortrows(a.charges{:}, ...
+                    'Direction', direction);
+                return
+            end
+            
+            newcol = size(a.charges, 2) * (col(:) - 1) + (1:size(a.charges, 2));
             [I, a.charges{:}] = simulsortrows(a.charges{:}, ...
-                'Col', col, 'Direction', direction);
+                'Col', reshape(newcol, 1, []), ...
+                'Direction', direction);
         end
         
         function s = string(a)

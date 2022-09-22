@@ -44,12 +44,12 @@ classdef Z1 < AbstractCharge
         
         function bools = ne(A, B)
             if isscalar(A)
-                bools = true(size(B));
+                bools = false(size(B));
             elseif isscalar(B)
-                bools = true(size(A));
+                bools = false(size(A));
             else
                 assert(all(size(A) == size(B)), 'tensors:charges:SizeError');
-                bools = true(size(A));
+                bools = false(size(A));
             end
         end
         
