@@ -841,13 +841,16 @@ classdef FusionTree < matlab.mixin.CustomDisplay
         end
         
         function style = fusionstyle(f)
-            try
             style = fusionstyle(f.charges);
-            catch
-                bla
-            end
         end
         
+        function [lia, locb] = ismember(f1, f2)
+            if hasmultiplicity(fusionstyle(f1))
+                error('TBA');
+            end
+            
+            [lia, locb] = ismember(f1.charges, f2.charges, 'rows');
+        end
         
         function [f, p] = sort(f)
             % sort - Sort the fusion trees into canonical order.
@@ -929,7 +932,8 @@ classdef FusionTree < matlab.mixin.CustomDisplay
         function varargout = size(f, varargin)
             if nargin == 1
                 if nargout < 2
-                    varargout{1} = [1, size(f.charges, 1)];
+                    c = f.charges;
+                    varargout{1} = [1, size(c, 1)];
                 elseif nargout == 2
                     varargout = {1, size(f.charges, 1)};
                 else

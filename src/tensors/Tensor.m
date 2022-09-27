@@ -108,9 +108,17 @@ classdef Tensor
             if isnumeric(data), data = {data}; end
             
             if iscell(data)
-                t.var = fill_matrix_data(t.var, data, charges);
+                if isempty(charges)
+                    t.var = fill_matrix_data(t.var, data);
+                else
+                    t.var = fill_matrix_data(t.var, data, charges);
+                end
             else
-                t.var = fill_matrix_fun(t.var, data, charges);
+                if isempty(charges)
+                    t.var = fill_matrix_fun(t.var, data);
+                else
+                    t.var = fill_matrix_fun(t.var, data, charges);
+                end
             end
         end
         
@@ -310,7 +318,8 @@ classdef Tensor
             
             arguments
                 kwargs.Rank
-                kwargs.Mode = 'matrix'
+                kwargs.Mode {mustBeMember(kwargs.Mode, {'matrix', 'tensor'})} ...
+                    = 'matrix'
             end
             
             % Parse special constructors
@@ -355,38 +364,37 @@ classdef Tensor
             
             % Fill tensor
             if ~isempty(fun)
-                if strcmp(kwargs.Mode, 'matrix')
-                    t = fill_matrix(t, fun);
-                elseif strcmp(kwargs.Mode, 'tensor')
-                    t = fill_tensor(t, fun);
-                else
-                    error('tensors:ArgumentError', 'Unknown options for Mode');
+                switch kwargs.Mode
+                    case 'matrix'
+                        t = fill_matrix(t, fun);
+                    case 'tensor'
+                        t = fill_tensor(t, fun);
                 end
             end
         end
 
         function t = zeros(varargin)
-            t = Tensor.new(@(dims, charge) zeros(dims), varargin{:});
+            t = Tensor.new(@zeros, varargin{:});
         end
         
         function t = ones(varargin)
-            t = Tensor.new(@(dims, charge) ones(dims), varargin{:});
+            t = Tensor.new(@ones, varargin{:});
         end
         
         function t = eye(varargin)
-            t = Tensor.new(@(dims, charge) eye(dims), varargin{:});
+            t = Tensor.new(@eye, varargin{:});
         end
         
         function t = rand(varargin)
-            t = Tensor.new(@(dims, charge) rand(dims), varargin{:});
+            t = Tensor.new(@rand, varargin{:});
         end
         
         function t = randc(varargin)
-            t = Tensor.new(@(dims, charge) randc(dims), varargin{:});
+            t = Tensor.new(@randc, varargin{:});
         end
         
         function t = randnc(varargin)
-            t = Tensor.new(@(dims, charge) randnc(dims), varargin{:});
+            t = Tensor.new(@randnc, varargin{:});
         end
     end
     
@@ -436,6 +444,53 @@ classdef Tensor
         
         function varargout = matrixblocks(t)
             [varargout{1:nargout}] = matrixblocks(t.var);
+        end
+        
+        function style = braidingstyle(t)
+            style = braidingstyle(t.codomain, t.domain);
+        end
+        
+        function style = fusionstyle(t)
+            style = fusionstyle(t.codomain, t.domain);
+        end
+        
+        function tdst = insert_onespace(tsrc, i, dual)
+            arguments
+                tsrc
+                i = nspaces(tsrc)
+                dual = false
+            end
+            
+            spaces = insertone(space(tsrc), i, dual);
+            data = matrixblocks(tsrc);
+            
+            r = rank(tsrc);
+            if i <= r(1)
+                r(1) = r(1) + 1;
+            else
+                r(2) = r(2) + 1;
+            end
+            tdst = Tensor(spaces(1:r(1)), spaces(r(1)+1:end)');
+            tdst.var = fill_matrix_data(tdst.var, data);
+        end
+        
+        function tdst = embed(tsrc, tdst)
+            
+            bsrc = tensorblocks(tsrc);
+            fsrc = fusiontrees(tsrc);
+            bdst = tensorblocks(tdst);
+            fdst = fusiontrees(tdst);
+            
+            [lia, locb] = ismember(fsrc, fdst);
+            nsp = nspaces(tdst);
+            
+            for i = find(lia).'
+                sz = min(size(bsrc{i}, 1:nsp), size(bdst{locb(i)}, 1:nsp));
+                inds = arrayfun(@(x) 1:x, sz, 'UniformOutput', false);
+                bdst{locb(i)}(inds{:}) = bsrc{i}(inds{:});
+            end
+            
+            tdst.var = fill_tensor_data(tdst.var, bdst);
         end
     end
     
@@ -559,6 +614,10 @@ classdef Tensor
                         'Subtraction with scalars only defined for square tensors.');
                     I = t1(i).eye(t1(i).codomain, t1(i).domain);
                     t1(i).var = t1(i).var - I.var .* t2(i);
+                elseif iszero(t2(i))
+                    continue;
+                elseif iszero(t1(i))
+                    t1(i) = -t2(i);
                 else
                     assert(isequal(t1(i).domain, t2(i).domain) && ...
                         isequal(t1(i).codomain, t2(i).codomain), 'tensors:SpaceMismatch', ...
@@ -590,7 +649,6 @@ classdef Tensor
             t = inv(t1) * t2;
         end
             
-        
         function t = mrdivide(t1, t2)
             % Right division of tensors.
             %
@@ -689,6 +747,7 @@ classdef Tensor
                 case {1, 2, Inf}
                     n = 0;
                     for i = 1:numel(t)
+                        if iszero(t(i)), continue; end
                         mblocks = matrixblocks(t(i).var);
                         for j = 1:length(mblocks)
                             n = max(norm(mblocks{j}, p), n);
@@ -698,6 +757,7 @@ classdef Tensor
                 case 'fro'
                     n = 0;
                     for i = 1:numel(t)
+                        if iszero(t(i)), continue; end
                         [mblocks, mcharges] = matrixblocks(t(i).var);
                         qdims = qdim(mcharges);
                         for j = 1:length(mblocks)
@@ -727,6 +787,10 @@ classdef Tensor
                         'Addition with scalars only defined for square tensors.');
                     I = t1(i).eye(t1(i).codomain, t1(i).domain);
                     t1(i).var = t1(i).var + I.var .* t2(i);
+                elseif iszero(t2(i))
+                    continue;
+                elseif iszero(t1(i))
+                    t1(i) = t2(i);
                 else
                     assert(isequal(t1(i).domain, t2(i).domain) && ...
                         isequal(t1(i).codomain, t2(i).codomain), 'tensors:SpaceMismatch', ...
@@ -915,7 +979,7 @@ classdef Tensor
                     assert(isequal(A_.domain, B_.codomain), 'tensors:SpaceMismatch', ...
                         'Contracted spaces incompatible.');
                     if ~isempty(A_.codomain) || ~isempty(B_.domain) 
-                        med.C = Tensor(A_.codomain, B_.domain);
+                        med.C = Tensor.zeros(A_.codomain, B_.domain);
                     else
                         med.C = [];
                     end
@@ -932,6 +996,7 @@ classdef Tensor
                 else
                     C.var = mul(C.var, varA, varB);
                 end
+                assert(~isnan(norm(C)));
                 return
             end
             
@@ -1030,6 +1095,12 @@ classdef Tensor
             %   transposed output tensor.
             
             error('tensors:TBA', 'This method has not been implemented.');
+        end
+        
+        function t = twist(t, i)
+            if ~istwistless(braidingstyle(t))
+                error('TBA');
+            end
         end
         
         function t = uplus(t)
@@ -1493,6 +1564,10 @@ classdef Tensor
             U.var = fill_matrix_data(U.var, Us, dims.charges);
             S.var = fill_matrix_data(S.var, Ss, dims.charges);
             V.var = fill_matrix_data(V.var, Vs, dims.charges);
+            
+            if nargout <= 1
+                U = S;
+            end
         end
     end
     
@@ -1752,6 +1827,10 @@ classdef Tensor
             end
         end
         
+        function bool = iszero(t)
+            bool = isempty(t.var);
+        end
+        
         function r = cond(t, p)
             % Condition number with respect to inversion. This is defined as
             % :math:`||t|| * ||t^{-1}||` in the p-norm. For well conditioned
@@ -1874,10 +1953,10 @@ classdef Tensor
             b_vec = vectorize(b);
             b_sz = size(b_vec);
             
-            if ~isempty(x0)
+            if ~isempty(x0) && ~iszero(x0)
                 x0_vec = vectorize(x0);
             else
-                x0_vec = [];
+                x0_vec = zeros(b_sz);
             end
             
             % Convert input operators to handle vectors
@@ -2038,15 +2117,29 @@ classdef Tensor
             
             options.KrylovDim = min(sz(1), options.KrylovDim);
             
-            [varargout{1:nargout}] = eigs(A_fun, sz(1), howmany, sigma, ...
+            [V, D, flag] = eigs(A_fun, sz(1), howmany, sigma, ...
                 'Tolerance', options.Tol, 'MaxIterations', options.MaxIter, ...
                 'SubspaceDimension', options.KrylovDim, 'IsFunctionSymmetric', ...
-                options.IsSymmetric, 'StartVector', x0_vec);
-            if nargout > 1
+                options.IsSymmetric, 'StartVector', x0_vec, ...
+                'Display', options.Verbosity == 3);
+            
+            if nargout <= 1
+                varargout = {D};
+            elseif nargout == 2
+                varargout{2} = D;
                 for i = howmany:-1:1
-                    V(:, i) = devectorize(varargout{1}(:, i), x0);
+                    varargout{1}(:, i) = devectorize(V(:, i), x0);
                 end
-                varargout{1} = V;
+            end
+            
+            if flag && options.Verbosity > 0
+                warning('eigsolve did not converge.');
+            end
+            
+            if options.Verbosity > 1
+                if flag
+                    fprintf('eigsolve converged.\n');
+                end 
             end
         end
         

@@ -129,24 +129,33 @@ classdef MatrixBlock < AbstractBlock
             
             %% General case: addition with permutation
             % tensor indexing to matrix indexing
-            rrx = rankrange(X(1).rank);
-            rry = rankrange(Y(1).rank);
+            rx = X(1).rank;
+            ry = Y(1).rank;
+            rrx = rankrange(rx);
+            rry = rankrange(ry);
             p_eff(rry) = rrx(p);
+            p_eff_1 = p_eff(1:ry(1));
+            p_eff_2 = p_eff((1:ry(2)) + ry(1));
             
             % extract small tensor blocks
             doA = a ~= 1;
             vars_in = cell(size(map, 1), 1);
             offset = 0;
+            
+            Xrowsizes = {X.rowsizes};
+            Xcolsizes = {X.colsizes};
+            Xtdims = {X.tdims};
+            Xvar = {X.var};
             for i = 1:length(X)
-                rowsz = X(i).rowsizes;
-                colsz = X(i).colsizes;
+                rowsz = Xrowsizes{i};
+                colsz = Xcolsizes{i};
                 
-                var_in = X(i).var;
+                var_in = Xvar{i};
                 if doA, var_in = a .* var_in; end
                 
-                oldtdims = X(i).tdims(:, rrx);
-                newmdims = [prod(X(i).tdims(:, p_eff(1:Y(1).rank(1))), 2) ...
-                    prod(X(i).tdims(:, p_eff((1:Y(1).rank(2)) + Y(1).rank(1))), 2)];
+                oldtdims = Xtdims{i}(:, rrx);
+                newmdims = [prod(oldtdims(:, p_eff_1), 2) ...
+                    prod(oldtdims(:, p_eff_2), 2)];
                 
                 for k = 1:length(colsz) - 1
                     for j = 1:length(rowsz) - 1
@@ -173,11 +182,13 @@ classdef MatrixBlock < AbstractBlock
             end
             
             % inject small tensor blocks
+            Yrowsizes = {Y.rowsizes};
+            Ycolsizes = {Y.colsizes};
             if b == 0
                 offset = 0;
                 for i = 1:length(Y)
-                    rows = length(Y(i).rowsizes) - 1;
-                    cols = length(Y(i).colsizes) - 1;
+                    rows = length(Yrowsizes{i}) - 1;
+                    cols = length(Ycolsizes{i}) - 1;
                     if rows < cols
                         m = cell(rows, 1);
                         for n = 1:rows
@@ -199,8 +210,8 @@ classdef MatrixBlock < AbstractBlock
             if b == 1
                 offset = 0;
                 for i = 1:length(Y)
-                    rows = length(Y(i).rowsizes) - 1;
-                    cols = length(Y(i).colsizes) - 1;
+                    rows = length(Yrowsizes{i}) - 1;
+                    cols = length(Ycolsizes{i}) - 1;
                     if rows < cols
                         m = cell(rows, 1);
                         for n = 1:rows
@@ -221,8 +232,8 @@ classdef MatrixBlock < AbstractBlock
             
             offset = 0;
             for i = 1:length(Y)
-                rows = length(Y(i).rowsizes) - 1;
-                cols = length(Y(i).colsizes) - 1;
+                rows = length(Yrowsizes{i}) - 1;
+                    cols = length(Ycolsizes{i}) - 1;
                 if rows < cols
                     m = cell(rows, 1);
                     for n = 1:rows
@@ -265,8 +276,22 @@ classdef MatrixBlock < AbstractBlock
             % C : MatrixBlock
             %   Result of computing C = (A .* a) * (B .* b)
             
-            [indA, locA] = ismember([C.charge], [A.charge]);
-            [indB, locB] = ismember([C.charge], [B.charge]);
+            Acharge = [A.charge];
+            Bcharge = [B.charge];
+            Ccharge = [C.charge];
+            
+            if isequal(Acharge, Ccharge)
+                indA = true(size(A));
+                locA = 1:length(A);
+            else
+                [indA, locA] = ismember_sorted(Ccharge, Acharge);
+            end
+            if isequal(Bcharge, Ccharge)
+                indB = true(size(B));
+                locB = 1:length(B);
+            else
+                [indB, locB] = ismember_sorted(Ccharge, Bcharge);
+            end
             
             if nargin == 3 || (a == 1 && b == 1)
                 for i = find(indA & indB)
@@ -372,7 +397,7 @@ classdef MatrixBlock < AbstractBlock
         function b = fill_matrix_fun(b, fun, charges)
             if nargin < 3 || isempty(charges)
                 for i = 1:length(b)
-                    b(i).var = fun(size(b(i).var), b(i).charge);
+                    b(i).var = fun(size(b(i).var));
                 end
             else
                 [lia, locb] = ismember(charges, [b.charge]);
@@ -380,6 +405,28 @@ classdef MatrixBlock < AbstractBlock
                     b(i).var = fun(size(b(i).var), b(i).charge);
                 end
             end
+        end
+        
+        function b = fill_tensor_data(b, data)
+            ctr = 0;
+            p = rankrange(b(1).rank);
+            
+            for i = 1:length(b)
+                rowsz = b(i).rowsizes;
+                colsz = b(i).colsizes;
+                for k = 1:length(colsz) - 1
+                    for j = 1:length(rowsz) - 1
+                        ctr = ctr + 1;
+                        b(i).var(rowsz(j)+1:rowsz(j+1), colsz(k)+1:colsz(k+1)) = ...
+                            reshape(permute(data{ctr}, p), ...
+                            rowsz(j+1)-rowsz(j), colsz(k+1)-colsz(k));
+                    end
+                end
+            end
+        end
+        
+        function b = fill_tensor_fun(b, fun, trees)
+            
         end
         
         function Y = minus(X, Y)

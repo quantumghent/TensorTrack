@@ -686,6 +686,55 @@ classdef (Abstract) AbstractCharge
                     reshape(repmat(X{i}, size(Y, 2), 1), size(X{i}, 1), [])];
             end
         end
+        
+        function [lia, locb] = ismember_sorted(a, b)
+            if isempty(a) || isempty(b)
+                lia = false(size(a));
+                locb = zeros(size(a));
+                return
+            end
+            
+            if isscalar(a) || isscalar(b)
+                if any(size(a) == numel(a)) && any(size(b) == numel(b))
+                    lia = a == b;
+                else
+                    lia = a(:) == b(:);
+                end
+                
+                if ~any(lia)
+                    lia = false(size(a));
+                    locb = zeros(size(a));
+                    return
+                end
+                if ~isscalar(b)
+                    locb = find(lia);
+                    locb = locb(1);
+                    lia = any(lia);
+                else
+                    locb = double(lia);
+                end
+                return
+            end
+            
+            [sortab, indsortab] = sort([a(:); b(:)]);
+            d = sortab(1:end-1) == sortab(2:end);
+            ndx1 = indsortab(d);
+            
+            if nargout <= 1
+                lia = ismember(1:length(a), ndx1);
+            else
+                szuA = length(a);
+                d = find(d);
+                [lia, locb] = ismember(1:szuA, ndx1);
+                newd = d(locb(lia));
+                where = indsortab(newd+1) - szuA;
+                locb(lia) = where;
+            end
+            lia = reshape(lia, size(a));
+            if nargout > 1
+                locb = reshape(locb, size(a));
+            end
+        end
     end
     
     methods

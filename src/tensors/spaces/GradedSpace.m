@@ -3,7 +3,7 @@ classdef GradedSpace < AbstractSpace
     
     %% Constructors
     methods
-        function spaces = GradedSpace(dimensions, isdual)
+        function spaces = GradedSpace(dimensions, dual)
             % Construct an array of vector spaces.
             %
             % Repeating Arguments
@@ -12,7 +12,7 @@ classdef GradedSpace < AbstractSpace
             %   internal structure of the vector space, with fields 'charges' and
             %   'degeneracies'.
             %
-            % isdual : (1, 1) logical
+            % dual : (1, 1) logical
             %   flag to denote dual spaces.
             %
             % Returns
@@ -22,7 +22,7 @@ classdef GradedSpace < AbstractSpace
             
             arguments (Repeating)
                 dimensions (1, 1) struct
-                isdual (1, 1) logical
+                dual (1, 1) logical
             end
             
             if nargin == 0
@@ -44,11 +44,19 @@ classdef GradedSpace < AbstractSpace
                     dimensions{i}.degeneracies = dimensions{i}.degeneracies(I);
                 end
                 
-                args = [dimensions; isdual];
+                args = [dimensions; dual];
             end
             
             spaces = spaces@AbstractSpace(args{:});
         end
+        
+        function space = one(spaces)
+            space = GradedSpace(...
+                struct('charges', one(spaces(1).dimensions.charges), 'degeneracies', 1), ...
+                false);
+        end
+        
+        
     end
     
     methods (Static)
@@ -58,9 +66,9 @@ classdef GradedSpace < AbstractSpace
             %
             % Usage
             % -----
-            % spaces = GradedSpace.new(charges, degeneracies, isdual, ...)
+            % spaces = GradedSpace.new(charges, degeneracies, dual, ...)
             %
-            % spaces = GradedSpace.new(dimensions, isdual, ...)
+            % spaces = GradedSpace.new(dimensions, dual, ...)
             %
             % Repeating Arguments
             % -------------------
@@ -73,7 +81,7 @@ classdef GradedSpace < AbstractSpace
             % degeneracies : int
             %   degeneracies for the internal structure of the space.
             %
-            % isdual : logical
+            % dual : logical
             %   a variable which indicates if a space is dual.
             %
             % Returns
@@ -119,14 +127,14 @@ classdef GradedSpace < AbstractSpace
             % c : (:, :) :class:`AbstractCharge`
             %   list of charge combinations, where each row is an entry.
             
-            if spaces(1).isdual
+            if isdual(spaces(1))
                 c = conj(spaces(1).dimensions.charges);
             else
                 c = spaces(1).dimensions.charges;
             end
             
             for i = 2:length(spaces)
-                if spaces(i).isdual
+                if isdual(spaces(i))
                     c = combvec(c, conj(spaces(i).dimensions.charges));
                 else
                     c = combvec(c, spaces(i).dimensions.charges);
@@ -193,7 +201,7 @@ classdef GradedSpace < AbstractSpace
             args = cell(2, sum(rank));
             for i = 1:size(args, 2)
                 args{1, i} = charges(spaces(i));
-                args{2, i} = spaces(i).isdual;
+                args{2, i} = spaces(i).dual;
             end
             
             trees = FusionTree.new(rank, args{:});
@@ -257,6 +265,18 @@ classdef GradedSpace < AbstractSpace
             space = GradedSpace(newdimensions, false);
         end
         
+        function spaces = insertone(spaces, i, dual)
+            arguments
+                spaces
+                i = length(spaces)
+                dual = false
+            end
+            
+            trivialspace = one(spaces);
+            if dual, trivialspace = conj(trivialspace); end
+            spaces = [spaces(1:i) trivialspace spaces(i+1:end)];
+        end
+        
         
         %% Utility
         function bools = eq(spaces1, spaces2)
@@ -277,7 +297,7 @@ classdef GradedSpace < AbstractSpace
                 return
             end
             
-            bools = [spaces1.isdual] == [spaces2.isdual];
+            bools = [spaces1.dual] == [spaces2.dual];
             
             if isscalar(spaces2)
                 for i = 1:length(spaces1)
@@ -296,6 +316,10 @@ classdef GradedSpace < AbstractSpace
                         isequal(spaces1(i).dimensions, spaces2(i).dimensions);
                 end
             end
+        end
+        
+        function bools = ne(spaces1, spaces2)
+            bools = ~(spaces1 == spaces2);
         end
         
         function bool = ge(space1, space2)
@@ -378,6 +402,24 @@ classdef GradedSpace < AbstractSpace
                     
             end
         end
+        
+        function space = plus(space, space2)
+            assert(isscalar(space) && isscalar(space2));
+            assert(space.dual == space2.dual);
+            
+            c = charges(space2);
+            d = degeneracies(space2);
+            [lia, locb] = ismember(c, charges(space));
+            for i = find(lia)'
+                space.dimensions.degeneracies(locb(i)) = d(i) + ...
+                    space.dimensions.degeneracies(locb(i));
+            end
+            [space.dimensions.charges, p] = sort([space.dimensions.charges, ...
+                c(~lia)]);
+            space.dimensions.degeneracies = [space.dimensions.degeneracies, ...
+                d(~lia)];
+            space.dimensions.degeneracies = space.dimensions.degeneracies(p);
+        end
     end
 
     methods
@@ -386,10 +428,10 @@ classdef GradedSpace < AbstractSpace
             if isscalar(spaces)
                 fprintf('%s GradedSpace of dimension %d:\n', ...
                     class(spaces.dimensions.charges), dims(spaces));
-                title_str = strjust(pad(["isdual", "charges", "degeneracies"]), 'right');
+                title_str = strjust(pad(["dual", "charges", "degeneracies"]), 'right');
                 charge_str = strjust(pad([string(spaces.dimensions.charges)
                     string(spaces.dimensions.degeneracies)]), 'center');
-                fprintf('\t%s:\t%s\n', title_str(1), string(spaces.isdual));
+                fprintf('\t%s:\t%s\n', title_str(1), string(spaces.dual));
                 fprintf('\t%s:\t%s\n', title_str(2), join(charge_str(1, :), char(9)));
                 fprintf('\t%s:\t%s\n', title_str(3), join(charge_str(2, :), char(9)));
                 return
