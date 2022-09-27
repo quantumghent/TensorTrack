@@ -8,7 +8,7 @@ classdef TestTensor < matlab.unittest.TestCase
     methods (TestClassSetup)
         function classSetup(tc)
             orig = Options.CacheEnabled;
-            Options.CacheEnabled(false);
+            Options.CacheEnabled(true);
             tc.addTeardown(@Options.CacheEnabled, orig); 
         end
     end
@@ -172,6 +172,12 @@ classdef TestTensor < matlab.unittest.TestCase
             tc.assertTrue(isapprox(tensorprod(t1, t2, [1 2], [2 1]), ...
                 tensorprod(double(t1), double(t2), [1 2], [2 1]), ...
                 'AbsTol', tc.tol, 'RelTol', tc.tol));
+            
+            A = Tensor.randnc(spaces(1), spaces(1:2));
+            C = Tensor.randnc(spaces(1), spaces(1));
+            AC = contract(A, [-1 -2 1], C, [1 -3]);
+            
+            tc.assertTrue(isapprox(double(AC), contract(double(A), [-1 -2 1], double(C), [1 -3])));
         end
         
         function orthogonalize(tc, spaces)
