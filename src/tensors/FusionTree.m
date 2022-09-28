@@ -774,6 +774,45 @@ classdef FusionTree < matlab.mixin.CustomDisplay
             [f, p] = sort(f);
             c = c(:, p);
         end
+        
+        function [c, f] = twist(f, i, inv)
+            % Compute the coefficients that twist legs.
+            %
+            % Arguments
+            % ---------
+            % f : :class:`FusionTree`
+            %   tree to repartition.
+            %
+            % i : int or logical
+            %   indices of legs to twist.
+            %
+            % inv : logical
+            %   flag to determine inverse twisting.
+            %
+            % Returns
+            % -------
+            % c : sparse double
+            %   matrix of coefficients that transform input to output trees.
+            %   `f(i) --> c(i,j) * f(j)`
+            %
+            % f : :class:`FusionTree`
+            %   twisted trees in canonical form.
+            
+            arguments
+                f
+                i
+                inv = false
+            end
+            
+            if istwistless(braidingstyle(f))
+                c = speye(length(f));
+                return
+            end
+            
+            theta = prod(twist(f.uncoupled(:, i)), 2);
+            if inv, theta = conj(theta); end
+            c = spdiags(theta, 0, length(f), length(f));
+        end
     end
     
     
@@ -782,6 +821,7 @@ classdef FusionTree < matlab.mixin.CustomDisplay
         function style = braidingstyle(f)
             style = f.charges.braidingstyle;
         end
+        
         function bool = isallowed(f)
             if ~hasmultiplicity(fusionstyle(f))
                 if f.rank(1) == 0

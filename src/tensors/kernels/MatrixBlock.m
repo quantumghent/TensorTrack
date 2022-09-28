@@ -92,7 +92,7 @@ classdef MatrixBlock < AbstractBlock
             
             %% Special case 2: addition without permutation
             if nargin == 4 || (isempty(p) && isempty(map)) || ...
-                    (all(p == 1:length(p)) && all(X(1).rank == Y(1).rank))
+                    (all(p == 1:length(p)) && isequal(map, speye(size(map))))
                 % reduce to scalar multiplication
                 if b == 0   % a ~= 0 -> case 1
                     Y = X .* a;
@@ -154,8 +154,7 @@ classdef MatrixBlock < AbstractBlock
                 if doA, var_in = a .* var_in; end
                 
                 oldtdims = Xtdims{i}(:, rrx);
-                newmdims = [prod(oldtdims(:, p_eff_1), 2) ...
-                    prod(oldtdims(:, p_eff_2), 2)];
+                newmdims = [prod(oldtdims(:, p_eff_1), 2) prod(oldtdims(:, p_eff_2), 2)];
                 
                 for k = 1:length(colsz) - 1
                     for j = 1:length(rowsz) - 1

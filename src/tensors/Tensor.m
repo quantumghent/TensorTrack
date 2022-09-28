@@ -698,35 +698,37 @@ classdef Tensor
             % C : :class:`Tensor`
             %   output tensor.
             
-            szA = size(A);
-            szB = size(B);
-            assert(szA(2) == szB(1));
-            
-            % Scalar multiplications
-            if isnumeric(A) || isnumeric(B)
+            if ~isscalar(A) || ~isscalar(B)
+                szA = size(A);
+                szB = size(B);
+                assert(szA(2) == szB(1));
+                
+                % Tensor multiplications
                 for i = szA(1):-1:1
                     for j = szB(2):-1:1
-                        C(i,j) = A(i, 1) .* B(1, j);
+                        C(i,j) = A(i, 1) * B(1, j);
                         for k = 2:szA(2)
-                            C(i,j) = C(i,j) + A(i, k) .* B(k, j);
+                            C(i,j) = C(i,j) + A(i, k) * B(k, j);
                         end
                     end
                 end
                 return
             end
             
-            % Tensor multiplications
-            for i = szA(1):-1:1
-                for j = szB(2):-1:1
-                    C(i,j) = tensorprod(A(i, 1), B(1, j), ...
-                        rank(A(i, 1), 1) + (1:rank(A(i, 1), 2)), ...
-                        rank(B(1, j), 1):-1:1);
-                    for k = 2:szA(2)
-                        C(i,j) = C(i,j) + tensorprod(A(i, k), B(k, j), ...
-                            rank(A(i, k), 1) + (1:rank(A(i, k), 2)), ...
-                            rank(B(k, j), 1):-1:1);
-                    end
-                end
+            if isnumeric(A) || isnumeric(B)
+                C = A .* B;
+                return
+            end
+            
+            assert(isequal(A.domain, B.codomain), 'tensors:SpaceMismatch', ...
+                'Multiplied spaces incompatible.');
+            if ~isempty(A.codomain) || ~isempty(B.domain)
+                C = Tensor.zeros(A.codomain, B.domain);
+                C.var = mul(C.var, A.var, B.var);
+            else
+                Ablocks = matrixblocks(A.var);
+                Bblocks = matrixblocks(B.var);
+                C = horzcat(Ablocks{:}) * vertcat(Bblocks{:});
             end
         end
         
@@ -976,9 +978,16 @@ classdef Tensor
                 med = get(cache, key);
                 if isempty(med)
                     med = struct;
+                    
                     A_ = similar(@(x,charge) uninit(x), A, iA, 'Rank', rA);
                     med.varA = A_.var;
-                    med.mapA = permute(fusiontrees(A), iA, rA);
+                    [med.mapA, f] = permute(fusiontrees(A), iA, rA);
+                    for i = rA(1) + (1:rA(2))
+                        if ~isdual(space(A_, i))
+                            [c2, f] = twist(f, i);
+                            med.mapA = med.mapA * c2;
+                        end
+                    end
                     
                     B_ = similar(@(x,charge) uninit(x), B, iB, 'Rank', rB);
                     med.varB = B_.var;
@@ -1008,6 +1017,10 @@ classdef Tensor
             end
             
             A = permute(A, iA, rA);
+            for i = rA(1) + (1:rA(2))
+                if ~isdual(space(A, i)), A = twist(A, i); end
+            end
+%             A = twist(A, [false(1, length(A.codomain)) ~isdual(A.domain')]);
             B = permute(B, iB, rB);
             
             assert(isequal(A.domain, B.codomain), 'tensors:SpaceMismatch', ...
@@ -1104,10 +1117,51 @@ classdef Tensor
             error('tensors:TBA', 'This method has not been implemented.');
         end
         
-        function t = twist(t, i)
-            if ~istwistless(braidingstyle(t))
-                error('TBA');
+        function t = twist(t, i, inv)
+            % Twist the spaces of a tensor.
+            %
+            % Arguments
+            % ---------
+            % t : :class:`Tensor`
+            %   input tensor.
+            %
+            % i : (1, :) int or logical
+            %   indices to twist.
+            %
+            % inv : logical
+            %   flag to indicate inverse twisting.
+            %
+            % Returns
+            % -------
+            % t : :class:`Tensor`
+            %   permuted tensor with desired rank.
+            
+            arguments
+                t
+                i
+                inv = false
             end
+            
+            if isempty(i) || ~any(i) || istwistless(braidingstyle(t)) 
+                return
+            end
+            
+            persistent cache
+            if isempty(cache), cache = LRU; end
+            
+            if Options.CacheEnabled()
+                key = GetMD5({GetMD5_helper(t.codomain), GetMD5_helper(t.domain), i, inv}, ...
+                    'Array', 'hex');
+                med = get(cache, key);
+                if isempty(med)
+                    med = twist(fusiontrees(t), i, inv);
+                    cache = set(cache, key, med);
+                end
+            else
+                med = twist(fusiontrees(t), i, inv);
+            end
+            
+            t.var = axpby(1, t.var, 0, t.var, 1:nspaces(t), med);
         end
         
         function t = uplus(t)
