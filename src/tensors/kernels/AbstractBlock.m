@@ -34,13 +34,30 @@ classdef (Abstract) AbstractBlock
                 return
             end
             
-            if braidingstyle(codomain, domain) == BraidingStyle.Abelian && ...
-                    fusionstyle(codomain, domain) == FusionStyle.Unique
-                X = AbelianBlock(codomain, domain);
-                return
-            end
+            persistent cache
+            if isempty(cache), cache = LRU; end
             
-            X = MatrixBlock(codomain, domain);
+            if Options.CacheEnabled()
+                key = GetMD5({codomain, domain}, 'Array', 'hex');
+                med = get(cache, key);
+                if isempty(med)
+                    if braidingstyle(codomain, domain) == BraidingStyle.Abelian && ...
+                            fusionstyle(codomain, domain) == FusionStyle.Unique
+                        med = AbelianBlock(codomain, domain);
+                    else
+                        med = MatrixBlock(codomain, domain);
+                    end
+                    cache = set(cache, key, med);
+                end
+            else
+                if braidingstyle(codomain, domain) == BraidingStyle.Abelian && ...
+                        fusionstyle(codomain, domain) == FusionStyle.Unique
+                    med = AbelianBlock(codomain, domain);
+                else
+                    med = MatrixBlock(codomain, domain);
+                end
+            end
+            X = med;
         end
     end
     

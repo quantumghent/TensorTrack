@@ -996,7 +996,6 @@ classdef Tensor
                 else
                     C.var = mul(C.var, varA, varB);
                 end
-                assert(~isnan(norm(C)));
                 return
             end
             
