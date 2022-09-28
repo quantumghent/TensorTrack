@@ -426,14 +426,15 @@ classdef GradedSpace < AbstractSpace
         function disp(spaces)
             % Custom display of spaces.
             if isscalar(spaces)
-                fprintf('%s GradedSpace of dimension %d:\n', ...
-                    class(spaces.dimensions.charges), dims(spaces));
-                title_str = strjust(pad(["dual", "charges", "degeneracies"]), 'right');
-                charge_str = strjust(pad([string(spaces.dimensions.charges)
-                    string(spaces.dimensions.degeneracies)]), 'center');
-                fprintf('\t%s:\t%s\n', title_str(1), string(spaces.dual));
-                fprintf('\t%s:\t%s\n', title_str(2), join(charge_str(1, :), char(9)));
-                fprintf('\t%s:\t%s\n', title_str(3), join(charge_str(2, :), char(9)));
+                fprintf('%s', string(spaces));
+%                 fprintf('%s GradedSpace of dimension %d:\n', ...
+%                     class(spaces.dimensions.charges), dims(spaces));
+%                 title_str = strjust(pad(["dual", "charges", "degeneracies"]), 'right');
+%                 charge_str = strjust(pad([string(spaces.dimensions.charges)
+%                     string(spaces.dimensions.degeneracies)]), 'center');
+%                 fprintf('\t%s:\t%s\n', title_str(1), string(spaces.dual));
+%                 fprintf('\t%s:\t%s\n', title_str(2), join(charge_str(1, :), char(9)));
+%                 fprintf('\t%s:\t%s\n', title_str(3), join(charge_str(2, :), char(9)));
                 return
             end
             
@@ -446,6 +447,18 @@ classdef GradedSpace < AbstractSpace
                 disp(spaces(i));
                 fprintf('\n');
             end
+        end
+        
+        function s = string(spaces)
+            title_str = strjust(pad(["dual", "charges", "degeneracies"]), 'right');
+            charge_str = strjust(pad([string(spaces.dimensions.charges)
+                string(spaces.dimensions.degeneracies)]), 'center');
+            s = sprintf(...
+                '%s GradedSpace of dimension %d:\n\t%s:\t%s\n\t%s:\t%s\n\t%s:\t%s\n', ...
+                class(spaces.dimensions.charges), dims(spaces), ...
+                title_str(1), string(spaces.dual), ...
+                title_str(2), join(charge_str(1, :), char(9)), ...
+                title_str(3), join(charge_str(2, :), char(9)));
         end
     end
     
