@@ -45,6 +45,14 @@ classdef Tensor
                 return
             end
             
+            % t = Tensor(tensor)
+            if nargin == 1 && isa(varargin{1}, 'Tensor')
+                t.codomain = varargin{1}.codomain;
+                t.domain = varargin{1}.domain;
+                t.var = varargin{1}.var;
+                return
+            end
+            
             % t = Tensor(array)
             if nargin == 1 && isnumeric(varargin{1})
                 t.domain = [];

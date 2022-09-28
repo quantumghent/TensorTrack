@@ -301,6 +301,7 @@ classdef FusionTree < matlab.mixin.CustomDisplay
                 for j = 1:length(ia2)
                     blocks{j} = Rsymbol(abc(j, 1), abc(j, 2), abc(j, 3), inv);
                 end
+
                 f.charges = f.charges(order, [2 1 3:end]);
                 f.vertices = f.vertices(order, :);
                 f.isdual(1:2) = f.isdual([2 1]);
