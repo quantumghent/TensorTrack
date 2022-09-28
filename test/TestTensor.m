@@ -8,7 +8,7 @@ classdef TestTensor < matlab.unittest.TestCase
     methods (TestClassSetup)
         function classSetup(tc)
             orig = Options.CacheEnabled;
-            Options.CacheEnabled(true);
+            Options.CacheEnabled(false);
             tc.addTeardown(@Options.CacheEnabled, orig); 
         end
     end
@@ -188,7 +188,7 @@ classdef TestTensor < matlab.unittest.TestCase
             p2 = [1 5];
             tc.assumeTrue(spaces(3) * spaces(4) * spaces(2) >= spaces(1)' * spaces(5)')
             
-            for alg = ["qr", "qrpos", "polar", "svd" "ql" "qlpos"]
+            for alg = ["qr", "qrpos", "polar", "svd", "ql", "qlpos"]
                 [Q, R] = leftorth(t, p1, p2, alg);
                 
                 assertTrue(tc, ...
@@ -218,7 +218,7 @@ classdef TestTensor < matlab.unittest.TestCase
             tc.assumeTrue(spaces(3) * spaces(4) <= spaces(1)' * spaces(2)' * spaces(5)');
             p1 = [3 4];
             p2 = [2 1 5];
-            for alg = ["lq", "lqpos", "polar", "svd" "rq" "rqpos"]
+            for alg = ["lq", "lqpos", "polar", "svd", "rq", "rqpos"]
                 [L, Q] = rightorth(t, p1, p2, alg);
                 
                 assertTrue(tc, ...
@@ -297,4 +297,3 @@ classdef TestTensor < matlab.unittest.TestCase
         end
     end
 end
-
