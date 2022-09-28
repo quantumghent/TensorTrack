@@ -13,7 +13,7 @@ else
     props = properties(in);
     bytes = 0;
     for ii = 1:length(props)
-        bytes = bytes + memsize(in.(thisprop), 'B');
+        bytes = bytes + memsize({in.(props{ii})}, 'B');
     end
 end
 
