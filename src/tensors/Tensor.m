@@ -2166,6 +2166,7 @@ classdef Tensor
                 'largestreal', 'smallestreal', 'bothendsreal', ...
                 'largestimag', 'smallestimag', 'bothendsimag'}), ...
                 'tensors:ArgumentError', 'Invalid choice of eigenvalue selector.');
+            nargoutchk(0, 3);
             
             x0_vec = vectorize(x0);
             sz = size(x0_vec);
@@ -2187,10 +2188,16 @@ classdef Tensor
             if nargout <= 1
                 varargout = {D};
             elseif nargout == 2
+                for i = howmany:-1:1
+                    varargout{1}(:, i) = devectorize(V(:, i), x0);
+                end
+                varargout{2} = D;
+            else
                 varargout{2} = D;
                 for i = howmany:-1:1
                     varargout{1}(:, i) = devectorize(V(:, i), x0);
                 end
+                varargout{3} = flag;
             end
             
             if flag && options.Verbosity > 0

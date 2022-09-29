@@ -190,7 +190,7 @@ classdef ComplexSpace < AbstractSpace
             %   fused space.
             
             space.dimensions = space.dimensions * space2.dimensions;
-            space.isdual = false;
+            space.dual = false;
         end
         
         function space = prod(spaces)
