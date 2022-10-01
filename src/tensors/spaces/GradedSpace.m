@@ -55,8 +55,6 @@ classdef GradedSpace < AbstractSpace
                 struct('charges', one(spaces(1).dimensions.charges), 'degeneracies', 1), ...
                 false);
         end
-        
-        
     end
     
     methods (Static)
@@ -459,6 +457,18 @@ classdef GradedSpace < AbstractSpace
                 title_str(1), string(spaces.dual), ...
                 title_str(2), join(charge_str(1, :), char(9)), ...
                 title_str(3), join(charge_str(2, :), char(9)));
+        end
+        
+        function complexspaces = ComplexSpace(gradedspaces)
+            d = num2cell(dims(gradedspaces));
+            isdual = num2cell([gradedspaces.dual]);
+            args = [d; isdual];
+            complexspaces = ComplexSpace(args{:});
+        end
+        
+        function cartesianspaces = CartesianSpace(gradedspaces)
+            d = num2cell(dims(gradedspaces));
+            cartesianspaces = CartesianSpace(d{:});
         end
     end
     

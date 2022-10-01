@@ -45,14 +45,6 @@ classdef Tensor
                 return
             end
             
-            % t = Tensor(tensor)
-            if nargin == 1 && isa(varargin{1}, 'Tensor')
-                t.codomain = varargin{1}.codomain;
-                t.domain = varargin{1}.domain;
-                t.var = varargin{1}.var;
-                return
-            end
-            
             % t = Tensor(array)
             if nargin == 1 && isnumeric(varargin{1})
                 t.domain = [];
@@ -2310,6 +2302,19 @@ classdef Tensor
             end
             
             a = cell2mat(a_cell);
+        end
+        
+        function tdst = desymmetrize(tsrc, mode)
+            arguments
+                tsrc
+                mode {mustBeMember(mode, {'Cartesian', 'Complex'})} = 'Complex'
+            end
+            
+            tdst = repartition(Tensor(double(tsrc)), rank(tsrc));
+            if strcmp(mode, 'Complex')
+                if ~isempty(tsrc.domain), tdst.domain = ComplexSpace(tsrc.domain); end
+                if ~isempty(tsrc.codomain), tdst.codomain = ComplexSpace(tsrc.codomain); end
+            end
         end
     end
     
