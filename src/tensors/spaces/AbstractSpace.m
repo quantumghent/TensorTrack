@@ -3,12 +3,12 @@ classdef (Abstract) AbstractSpace
     
     properties (Access = protected)
         dimensions                      % Specification of the internal dimensions
-        isdual (1,1) logical = false    % Flag to indicate if the space is a dual space
+        dual (1,1) logical = false    % Flag to indicate if the space is a dual space
     end
     
     %% Constructors
     methods
-        function spaces = AbstractSpace(dimensions, isdual)
+        function spaces = AbstractSpace(dimensions, dual)
             % Construct an array of vector spaces.
             %
             % Repeating Arguments
@@ -26,20 +26,20 @@ classdef (Abstract) AbstractSpace
             
             arguments (Repeating)
                 dimensions
-                isdual
+                dual
             end
             
             if nargin == 0, return; end
             
             for i = length(dimensions):-1:1
                 spaces(i).dimensions = dimensions{i};
-                spaces(i).isdual = isdual{i};
+                spaces(i).dual = dual{i};
             end
         end
     end
     
     methods (Static)
-        function spaces = new(dimensions, isdual)
+        function spaces = new(dimensions, dual)
             % Construct a vector space. This is a utility method to be able to access the
             % constructor of a subclass.
             %
@@ -48,7 +48,7 @@ classdef (Abstract) AbstractSpace
             % dimensions : int or struct
             %   a variable which represents the internal dimension of the space.
             %
-            % isdual : logical
+            % dual : logical
             %   a variable which indicates if a space is dual.
             %
             % Returns
@@ -63,6 +63,10 @@ classdef (Abstract) AbstractSpace
     
     %% Structure
     methods
+        function f = isdual(space)
+            f = [space.dual];
+        end
+        
         function c = charges(spaces)
             % Compute all charge combinations of a space. If no internal structure is
             % present, this yields an empty result.
@@ -179,7 +183,7 @@ classdef (Abstract) AbstractSpace
             %   dual spaces.
             
             for i = 1:length(spaces)
-                spaces(i).isdual = ~spaces(i).isdual;
+                spaces(i).dual = ~spaces(i).dual;
             end
         end
         
@@ -301,7 +305,7 @@ classdef (Abstract) AbstractSpace
             % hashable : cell
             %   data which can be accepted by :func:`GetMD5`.
             
-            hashable = {spaces.dimensions, spaces.isdual};
+            hashable = {spaces.dimensions, spaces.dual};
         end
     end
 end

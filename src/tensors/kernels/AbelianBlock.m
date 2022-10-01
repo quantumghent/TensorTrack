@@ -19,31 +19,38 @@ classdef AbelianBlock < MatrixBlock
             
             %% General case: addition with permutation
             % tensor indexing to matrix indexing
-            rrx = rankrange(X(1).rank);
-            rry = rankrange(Y(1).rank);
+            rx = X(1).rank;
+            ry = Y(1).rank;
+            rrx = rankrange(rx);
+            rry = rankrange(ry);
             p_eff(rry) = rrx(p);
+            p_eff_1 = p_eff(1:ry(1));
+            p_eff_2 = p_eff((1:ry(2)) + ry(1));
             
             % extract small tensor blocks
             doA = a ~= 1;
-            vars = cell(size(map, 1), 1);
+            vars_in = cell(size(map, 1), 1);
             offset = 0;
+            
+            Xrowsizes = {X.rowsizes};
+            Xcolsizes = {X.colsizes};
+            Xtdims = {X.tdims};
+            Xvar = {X.var};
             for i = 1:length(X)
-                rowsz = X(i).rowsizes;
-                colsz = X(i).colsizes;
+                rowsz = Xrowsizes{i};
+                colsz = Xcolsizes{i};
                 
-                var_in = X(i).var;
+                var_in = Xvar{i};
                 if doA, var_in = a .* var_in; end
                 
-                oldtdims = X(i).tdims(:, rrx);
-                newmdims = [prod(X(i).tdims(:, p_eff(1:Y(1).rank(1))), 2) ...
-                    prod(X(i).tdims(:, p_eff((1:Y(1).rank(2)) + Y(1).rank(1))), 2)];
+                oldtdims = Xtdims{i}(:, rrx);
+                newmdims = [prod(oldtdims(:, p_eff_1), 2) prod(oldtdims(:, p_eff_2), 2)];
                 
                 for k = 1:length(colsz) - 1
                     for j = 1:length(rowsz) - 1
                         ind = j + (k-1) * (length(rowsz) - 1);
                         offset = offset + 1;
-                        
-                        vars{offset} = reshape(permute(reshape(...
+                        vars_in{offset} = reshape(permute(reshape(...
                             var_in(rowsz(j)+1:rowsz(j+1), colsz(k)+1:colsz(k+1)), ...
                             oldtdims(ind, :)), ...
                             p_eff), ...
@@ -53,8 +60,11 @@ classdef AbelianBlock < MatrixBlock
             end
             
             % apply map
-            [row, col] = find(map);
-            vars(col) = vars(row);
+            vars_out = cell(size(map, 2), 1);
+            [rows, cols, vals] = find(map);
+            for i = 1:length(vals)
+                vars_out{cols(i)} = vals(i) * vars_in{rows(i)};
+            end
             
             % inject small tensor blocks
             if b == 0
@@ -65,13 +75,13 @@ classdef AbelianBlock < MatrixBlock
                     if rows < cols
                         m = cell(rows, 1);
                         for n = 1:rows
-                            m{n} = cat(2, vars{offset + n + ((1:cols)-1) * rows});
+                            m{n} = cat(2, vars_out{offset + n + ((1:cols)-1) * rows});
                         end
                         Y(i).var = cat(1, m{:});
                     else
                         m = cell(cols, 1);
                         for n = 1:cols
-                            m{n} = cat(1, vars{offset + (n-1) * rows + (1:rows)});
+                            m{n} = cat(1, vars_out{offset + (n-1) * rows + (1:rows)});
                         end
                         Y(i).var = cat(2, m{:});
                     end
@@ -88,13 +98,13 @@ classdef AbelianBlock < MatrixBlock
                     if rows < cols
                         m = cell(rows, 1);
                         for n = 1:rows
-                            m{n} = cat(2, vars{offset + n + ((1:cols)-1) * rows});
+                            m{n} = cat(2, vars_out{offset + n + ((1:cols)-1) * rows});
                         end
                         Y(i).var = Y(i).var + cat(1, m{:});
                     else
                         m = cell(cols, 1);
                         for n = 1:cols
-                            m{n} = cat(1, vars{offset + (n-1) * rows + (1:rows)});
+                            m{n} = cat(1, vars_out{offset + (n-1) * rows + (1:rows)});
                         end
                         Y(i).var = Y(i).var + cat(2, m{:});
                     end
@@ -110,128 +120,18 @@ classdef AbelianBlock < MatrixBlock
                 if rows < cols
                     m = cell(rows, 1);
                     for n = 1:rows
-                        m{n} = cat(2, vars{offset + n + ((1:cols)-1) * rows});
+                        m{n} = cat(2, vars_out{offset + n + ((1:cols)-1) * rows});
                     end
                     Y(i).var = b .* Y(i).var + cat(1, m{:});
                 else
                     m = cell(cols, 1);
                     for n = 1:cols
-                        m{n} = cat(1, vars{offset + (n-1) * rows + (1:rows)});
+                        m{n} = cat(1, vars_out{offset + (n-1) * rows + (1:rows)});
                     end
                     Y(i).var = b .* Y(i).var + cat(2, m{:});
                 end
                 offset = offset + rows * cols;
             end
-            
-%             rrx = rankrange(x(1).rank);
-%             rry = rankrange(y(1).rank);
-%             p_eff(rry) = rrx(p);
-            
-%             %% extract blocks
-%             doA = a ~= 1;
-%             vars = cell(1, size(map, 1));
-%             offset = 0;
-%             for block = x
-%                 rowsz = block.rowsizes;
-%                 colsz = block.colsizes;
-%                 
-%                 if doA
-%                     varA = a .* block.var;
-%                 else
-%                     varA = block.var;
-%                 end
-%                 
-%                 olddims = block.tdims(:, rrx);
-%                 newdims = [prod(olddims(:, p_eff(1:y(1).rank(1))), 2) ...
-%                     prod(olddims(:, p_eff(y(1).rank(1) + (1:y(1).rank(2)))), 2)];
-%                 for k = 1:length(colsz) - 1
-%                     for j = 1:length(rowsz) - 1
-%                         ind = j + (k-1) * (length(rowsz) - 1);
-%                         offset = offset + 1;
-%                         %                         vars{offset} = varA(rowsz(j)+1:rowsz(j+1), colsz(k)+1:colsz(k+1));
-%                         %                         vars{offset} = reshape(vars{offset}, olddims(ind, :));
-%                         %                         vars{offset} = permute(vars{offset}, p_eff);
-%                         %                         vars{offset} = reshape(vars{offset}, newdims(ind, :));
-%                         
-%                         % less readible but faster
-%                         vars{offset} = reshape(permute(reshape(...
-%                             varA(rowsz(j)+1:rowsz(j+1), colsz(k)+1:colsz(k+1)), ...
-%                             olddims(ind, :)), p_eff), ...
-%                             newdims(ind, :));
-%                     end
-%                 end
-%             end
-%             
-%             %% apply map
-%             [row, col] = find(map);
-%             vars(col) = vars(row);
-%             
-%             %% inject blocks
-%             if b == 0
-%                 offset = 0;
-%                 for i = 1:length(y)
-%                     rows = length(y(i).rowsizes) - 1;
-%                     cols = length(y(i).colsizes) - 1;
-%                     if rows < cols
-%                         m = cell(rows, 1);
-%                         for n = 1:rows
-%                             m{n} = cat(2, vars{offset + n + ((1:cols)-1) * rows});
-%                         end
-%                         y(i).var = cat(1, m{:});
-%                     else
-%                         m = cell(cols, 1);
-%                         for n = 1:cols
-%                             m{n} = cat(1, vars{offset + (n-1) * rows + (1:rows)});
-%                         end
-%                         y(i).var = cat(2, m{:});
-%                     end
-%                     offset = offset + rows * cols;
-%                 end
-%                 return
-%             end
-%             
-%             if b == 1
-%                 offset = 0;
-%                 for i = 1:length(y)
-%                     rows = length(y(i).rowsizes) - 1;
-%                     cols = length(y(i).colsizes) - 1;
-%                     if rows < cols
-%                         m = cell(rows, 1);
-%                         for n = 1:rows
-%                             m{n} = cat(2, vars{offset + n + ((1:cols)-1) * rows});
-%                         end
-%                         y(i).var = y(i).var + cat(1, m{:});
-%                     else
-%                         m = cell(cols, 1);
-%                         for n = 1:cols
-%                             m{n} = cat(1, vars{offset + (n-1) * rows + (1:rows)});
-%                         end
-%                         y(i).var = y(i).var + cat(2, m{:});
-%                     end
-%                     offset = offset + rows * cols;
-%                 end
-%                 return
-%             end
-%             
-%             offset = 0;
-%             for i = 1:length(y)
-%                 rows = length(y(i).rowsizes) - 1;
-%                 cols = length(y(i).colsizes) - 1;
-%                 if rows < cols
-%                     m = cell(rows, 1);
-%                     for n = 1:rows
-%                         m{n} = cat(2, vars{offset + n + ((1:cols)-1) * rows});
-%                     end
-%                     y(i).var = b .* y(i).var + cat(1, m{:});
-%                 else
-%                     m = cell(cols, 1);
-%                     for n = 1:cols
-%                         m{n} = cat(1, vars{offset + (n-1) * rows + (1:rows)});
-%                     end
-%                     y(i).var = b .* y(i).var + cat(2, m{:});
-%                 end
-%                 offset = offset + rows * cols;
-%             end
         end
 
         function typename = underlyingType(b)

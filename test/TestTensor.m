@@ -138,6 +138,7 @@ classdef TestTensor < matlab.unittest.TestCase
         end
         
         function multiplication_via_conversion(tc, spaces)
+            tc.assumeTrue(istwistless(braidingstyle(spaces)));
             t1 = Tensor.randnc(spaces(1), spaces(2));
             t2 = Tensor.randnc(spaces(2), spaces(3));
             
@@ -166,12 +167,34 @@ classdef TestTensor < matlab.unittest.TestCase
         end
         
         function tensorprod_via_conversion(tc, spaces)
+            tc.assumeTrue(istwistless(braidingstyle(spaces)));
             t1 = Tensor.randnc([], spaces(1:2));
             t2 = Tensor.randnc(spaces(1:2), []);
             
             tc.assertTrue(isapprox(tensorprod(t1, t2, [1 2], [2 1]), ...
                 tensorprod(double(t1), double(t2), [1 2], [2 1]), ...
                 'AbsTol', tc.tol, 'RelTol', tc.tol));
+            
+            A = Tensor.randnc(spaces(1), spaces(1:2));
+            C = Tensor.randnc(spaces(1), spaces(1));
+            AC = contract(A, [-1 -2 1], C, [1 -3]);
+            
+            tc.assertTrue(isapprox(double(AC), contract(double(A), [-1 -2 1], double(C), [1 -3])));
+        end
+        
+        function contract_order(tc, spaces)
+            A = Tensor.randnc(spaces(1:2), spaces(1)');
+            r = Tensor.randnc(spaces(1)', spaces(1)');
+            
+            args = {A, r, conj(A); [-1 2 1], [1 3], [-2 2 3]};
+            
+            r1 = contract(args{:}, 'Rank', rank(r));
+            for p = perms(1:3)'
+                args2 = args(:, p);
+                r2 = contract(args2{:}, 'Rank', rank(r));
+                tc.assertTrue(isapprox(r1, r2), ...
+                    'Contraction order should leave result invariant.');
+            end
         end
         
         function orthogonalize(tc, spaces)
@@ -182,7 +205,7 @@ classdef TestTensor < matlab.unittest.TestCase
             p2 = [1 5];
             tc.assumeTrue(spaces(3) * spaces(4) * spaces(2) >= spaces(1)' * spaces(5)')
             
-            for alg = ["qr", "qrpos", "polar", "svd" "ql" "qlpos"]
+            for alg = ["qr", "qrpos", "polar", "svd", "ql", "qlpos"]
                 [Q, R] = leftorth(t, p1, p2, alg);
                 
                 assertTrue(tc, ...
@@ -212,7 +235,7 @@ classdef TestTensor < matlab.unittest.TestCase
             tc.assumeTrue(spaces(3) * spaces(4) <= spaces(1)' * spaces(2)' * spaces(5)');
             p1 = [3 4];
             p2 = [2 1 5];
-            for alg = ["lq", "lqpos", "polar", "svd" "rq" "rqpos"]
+            for alg = ["lq", "lqpos", "polar", "svd", "rq", "rqpos"]
                 [L, Q] = rightorth(t, p1, p2, alg);
                 
                 assertTrue(tc, ...
@@ -291,4 +314,3 @@ classdef TestTensor < matlab.unittest.TestCase
         end
     end
 end
-

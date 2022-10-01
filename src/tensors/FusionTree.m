@@ -301,6 +301,7 @@ classdef FusionTree < matlab.mixin.CustomDisplay
                 for j = 1:length(ia2)
                     blocks{j} = Rsymbol(abc(j, 1), abc(j, 2), abc(j, 3), inv);
                 end
+
                 f.charges = f.charges(order, [2 1 3:end]);
                 f.vertices = f.vertices(order, :);
                 f.isdual(1:2) = f.isdual([2 1]);
@@ -773,6 +774,45 @@ classdef FusionTree < matlab.mixin.CustomDisplay
             [f, p] = sort(f);
             c = c(:, p);
         end
+        
+        function [c, f] = twist(f, i, inv)
+            % Compute the coefficients that twist legs.
+            %
+            % Arguments
+            % ---------
+            % f : :class:`FusionTree`
+            %   tree to repartition.
+            %
+            % i : int or logical
+            %   indices of legs to twist.
+            %
+            % inv : logical
+            %   flag to determine inverse twisting.
+            %
+            % Returns
+            % -------
+            % c : sparse double
+            %   matrix of coefficients that transform input to output trees.
+            %   `f(i) --> c(i,j) * f(j)`
+            %
+            % f : :class:`FusionTree`
+            %   twisted trees in canonical form.
+            
+            arguments
+                f
+                i
+                inv = false
+            end
+            
+            if istwistless(braidingstyle(f))
+                c = speye(length(f));
+                return
+            end
+            
+            theta = prod(twist(f.uncoupled(:, i)), 2);
+            if inv, theta = conj(theta); end
+            c = spdiags(theta, 0, length(f), length(f));
+        end
     end
     
     
@@ -781,6 +821,7 @@ classdef FusionTree < matlab.mixin.CustomDisplay
         function style = braidingstyle(f)
             style = f.charges.braidingstyle;
         end
+        
         function bool = isallowed(f)
             if ~hasmultiplicity(fusionstyle(f))
                 if f.rank(1) == 0
@@ -841,13 +882,16 @@ classdef FusionTree < matlab.mixin.CustomDisplay
         end
         
         function style = fusionstyle(f)
-            try
             style = fusionstyle(f.charges);
-            catch
-                bla
-            end
         end
         
+        function [lia, locb] = ismember(f1, f2)
+            if hasmultiplicity(fusionstyle(f1))
+                error('TBA');
+            end
+            
+            [lia, locb] = ismember(f1.charges, f2.charges, 'rows');
+        end
         
         function [f, p] = sort(f)
             % sort - Sort the fusion trees into canonical order.
@@ -929,7 +973,8 @@ classdef FusionTree < matlab.mixin.CustomDisplay
         function varargout = size(f, varargin)
             if nargin == 1
                 if nargout < 2
-                    varargout{1} = [1, size(f.charges, 1)];
+                    c = f.charges;
+                    varargout{1} = [1, size(c, 1)];
                 elseif nargout == 2
                     varargout = {1, size(f.charges, 1)};
                 else

@@ -279,7 +279,7 @@ classdef CartesianSpace < AbstractSpace
         
         function disp(spaces)
             if isscalar(spaces)
-                fprintf('CartesianSpace of dimension %d:\n', spaces.dimensions);
+                fprintf('CartesianSpace of dimension %d\n', spaces.dimensions);
                 return
             end
             
@@ -290,6 +290,18 @@ classdef CartesianSpace < AbstractSpace
                 disp(spaces(i));
                 fprintf('\n');
             end
+        end
+        
+        function s = string(spaces)
+            if numel(spaces) > 1
+                s = strings(size(spaces));
+                for i = 1:numel(spaces)
+                    s(i) = string(spaces);
+                end
+                return
+            end
+            
+            s = sprintf('CartesianSpace of dimension %d', spaces.dimensions);
         end
     end    
 end

@@ -11,7 +11,7 @@ import re
 docs_src = os.path.abspath(os.path.dirname(__file__))  # docs source folder
 docs_root = os.path.abspath(os.path.join(docs_src, '..'))  # docs root folder
 repo_root = os.path.abspath(os.path.join(docs_src, '..', '..'))  # repo root folder
-GITHUBBASE = 'https://github.com/lkdvos/TensorTrack'  # repo link
+GITHUBBASE = 'https://github.com/QuantumGhent/TensorTrack'  # repo link
 
 # -- Project information
 
@@ -67,7 +67,7 @@ master_doc = 'index'
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = None
+language = 'en'
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'default'
