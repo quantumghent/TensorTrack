@@ -389,6 +389,10 @@ classdef Tensor
             t = Tensor.new(@rand, varargin{:});
         end
         
+        function t = randn(varargin)
+            t = Tensor.new(@randn, varargin{:});
+        end
+        
         function t = randc(varargin)
             t = Tensor.new(@randc, varargin{:});
         end
@@ -438,8 +442,9 @@ classdef Tensor
             f = fusiontrees(t.codomain, t.domain);
         end
         
-        function b = tensorblocks(t)
+        function [b, f] = tensorblocks(t)
             b = tensorblocks(t.var);
+            if nargout > 1, f = fusiontrees(t); end
         end
         
         function varargout = matrixblocks(t)
