@@ -17,11 +17,11 @@ We will use a graphical representation of such a tensor as an object with severa
 
 Nevertheless, for our purpose it will often be useful to be able to think of such an abstract object as a map, or thus as a matrix.
 For this, we additionally specify the rank of the tensor ``[n1 n2]``, which results in a partition of the indices into ``n1`` left and ``n2`` right indices, which we will call **codomain** and **domain** respectively.
-If we then reshape the original array into a matrix. ``m = reshape(t, prod(sz(1:n1)), prod(sz((1:n2)+n1)))``.
+If we then reshape the original array into a matrix. :code:`m = reshape(t, prod(sz(1:n1)), prod(sz((1:n2)+n1)))`.
 With this definition however, we still run into issues when we want to perform something like matrix multiplication.
 As MATLAB uses column-major ordering of array elements, ``reshape`` effectively groups indices together from left to right, where the left index is changing the fastest.
 If we then multiply two tensors, we connect the domain (right indices) of the first tensor with the codomain (left indices) of the second, and note that the counter-clockwise ordering of our indices now causes the domain indices to be grouped bottom-to-top, while the codomain indices are grouped top-to-bottom.
-Thus, in order for our matrix multiplication to be consistent, we reverse the order of the domain indices, and define the tensor map as ``m = reshape(permute(t, [1:n1 n1+flip(1:n2)]), prod(sz(1:n1)), prod(sz(n1+(1:n2))``.
+Thus, in order for our matrix multiplication to be consistent, we reverse the order of the domain indices, and define the tensor map as :code:`m = reshape(permute(t, [1:n1 n1+flip(1:n2)]), prod(sz(1:n1)), prod(sz(n1+(1:n2))`.
 
 The mathematical origin of this unfortunate permutation is found when considering the dual of a tensor product of spaces, which is isomorphic to the tensor product of the dual spaces, but reversed.
 In other words, we start out with a tensor as follows:
@@ -250,7 +250,7 @@ In order to only change the partition without permuting indices, :code:`repartit
 
 .. note:: 
     
-    While the partition of tensor indices might seem of no importance for tensors without internal structure, it can still have non-trivial consequences.
+    While the partition of tensor indices might seem of little importance for tensors without internal structure, it can still have non-trivial consequences.
     This is demonstrated by comparing the ``matrixblocks`` and the ``tensorblocks`` before and after repartitioning.
 
 Contractions 

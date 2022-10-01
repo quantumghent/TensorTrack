@@ -244,61 +244,6 @@ classdef GtPattern
         
         
     end
-    
-    methods (Static)
-        function pat = GeneratePatterns(I)
-            %GENERATEPATTERNS Generate all possible GtPatterns for a given SU(N) charge.
-            %   pat = GeneratePatterns(charge)
-            %       generates all allowed GtPatterns.
-            
-            
-            %% Special case length 1
-            N = length(I);
-            if N == 1
-                pat = GtPattern(1, I(:));
-                return
-            end
-            
-            
-            %% Special case length 2
-            if N == 2
-                i1 = I(2):I(1);
-                L = length(i1);
-                M = zeros(2, 2, L);
-                M(1, :, :) = repmat(I, 1, 1, L);
-                M(2, 1, :) = i1;
-                pat = GtPattern(2, M);
-                return
-            end
-            
-            
-            %% Special case length 3
-            % if N == 3
-            %
-            %
-            %
-            %     return;
-            % end
-            
-            
-            %% Generate all possible weight combinations of one level lower
-            newIs = cell(1, N-1);
-            for ii = 1:N-1
-                newIs{ii} = I(ii+1):I(ii);
-            end
-            
-            
-            %% Generate patterns
-            pat = [];
-            
-            for newI = CombVec(newIs{N-1:-1:1})
-                newPat = GtPattern.GeneratePatterns(flip(newI));
-                pat = [pat, appendRow(newPat, I)];
-            end
-            
-            
-        end
-    end
 end
 
 

@@ -220,6 +220,23 @@ classdef (Abstract) AbstractSpace
             error('tensors:AbstractMethod', 'This method should be overloaded.');
         end
         
+        function space = plus(space1, space2)
+            % Find the direct sum of two spaces.
+            %
+            % Arguments
+            % ---------
+            % space1, space2 : (1,1) :class:`AbstractSpace`
+            %   input spaces.
+            %
+            % Returns
+            % -------
+            % space : (1,1) :class:`AbstractSpace`
+            %   direct sum space.
+            
+            
+            error('tensors:AbstractMethod', 'This method should be overloaded.');
+        end 
+        
         function space = prod(spaces)
             % Fuse a product space to a single space.
             %

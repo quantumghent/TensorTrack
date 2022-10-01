@@ -352,55 +352,6 @@ classdef GradedSpace < AbstractSpace
             end
         end
         
-        function bool = hascharge(spaces, charges)
-            mustBeEqualLength(spaces, charges);
-            bool = false(1, length(space));
-            for i = 1:length(space)
-                bool(i) = any(space.charges{1} == charge(i));
-            end
-        end
-        
-        function space = fuse(spaces)
-            space = spaces(1);
-            if length(spaces) == 1
-                return
-            end
-            
-            allcharges = combcharges(spaces, []).';
-            degeneracies = computedegeneracies(spaces, [], allcharges);
-            
-            switch fusionstyle(allcharges)
-                case FusionStyle.Unique
-                    fusedcharges = prod(allcharges, 2);
-                    fusedbonds = prod(degeneracies, 2);
-                    
-                    [newcharges, ~, ic] = unique(fusedcharges);
-                    newbonds = zeros(size(newcharges));
-                    for i = 1:length(newcharges)
-                        newbonds(i) = sum(fusedbonds(ic == i));
-                    end
-                    space = GradedSpace(newcharges, newbonds, false);
-                    
-                otherwise
-                    fusedbonds = prod(degeneracies, 2);
-                    fusedcharges_cell = cell(size(allcharges, 1), 1);
-                    fusedbonds_cell = cell(size(fusedcharges_cell));
-                    for i = 1:size(allcharges, 1)
-                        [fusedcharges_cell{i}, N] = prod(allcharges(i, :));
-                        fusedbonds_cell{i} = fusedbonds(i) .* N;
-                    end
-                    
-                    fusedbonds = horzcat(fusedbonds_cell{:});
-                    [newcharges, ~, ic] = unique(horzcat(fusedcharges_cell{:}));
-                    newbonds = zeros(size(newcharges));
-                    for i = 1:length(newcharges)
-                        newbonds(i) = sum(fusedbonds(ic == i));
-                    end
-                    space = GradedSpace(newcharges, newbonds, false);
-                    
-            end
-        end
-        
         function space = plus(space, space2)
             assert(isscalar(space) && isscalar(space2));
             assert(space.dual == space2.dual);
