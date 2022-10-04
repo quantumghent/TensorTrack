@@ -565,8 +565,10 @@ classdef Tensor
             % t : :class:`Tensor`
             %   adjoint tensor.
             
-            [t.codomain, t.domain] = swapvars(t.codomain, t.domain);
-            t.var = t.var';
+            for i = 1:numel(t)
+                [t(i).codomain, t(i).domain] = swapvars(t(i).codomain, t(i).domain);
+                t(i).var = t(i).var';
+            end
         end
         
         function d = dot(t1, t2)
