@@ -40,6 +40,7 @@ end
 arguments
     kwargs.Conj (1, :) logical = false(size(tensors))
     kwargs.Rank = []
+    kwargs.Debug = false
 end
 
 assert(length(kwargs.Conj) == length(tensors));
@@ -50,6 +51,8 @@ for i = 1:length(tensors)
             'Tensors:TBA', 'Traces not implemented.');
     end
 end
+
+debug = kwargs.Debug;
 
 % Special case for single input tensor
 if nargin == 2
@@ -76,13 +79,13 @@ partialtrees = num2cell(1:length(tensors));
 tree = generatetree(partialtrees, contractindices);
 
 % contract all subtrees
-[A, ia, ca] = contracttree(tensors, indices, kwargs.Conj, tree{1});
-[B, ib, cb] = contracttree(tensors, indices, kwargs.Conj, tree{2});
+[A, ia, ca] = contracttree(tensors, indices, kwargs.Conj, tree{1}, debug);
+[B, ib, cb] = contracttree(tensors, indices, kwargs.Conj, tree{2}, debug);
 
 % contract last pair
 [dimA, dimB] = contractinds(ia, ib);
 
-if Options.Debug
+if debug
     contractcheck(A, ia, ca, B, ib, cb);
 end
 
@@ -128,7 +131,7 @@ end
 tree = generatetree(partialtrees, contractindices);
 end
 
-function [C, ic, cc] = contracttree(tensors, indices, conjlist, tree)
+function [C, ic, cc] = contracttree(tensors, indices, conjlist, tree, debug)
 
 if isnumeric(tree)
     C = tensors{tree};    
@@ -137,11 +140,11 @@ if isnumeric(tree)
     return
 end
 
-[A, ia, ca] = contracttree(tensors, indices, conjlist, tree{1});
-[B, ib, cb] = contracttree(tensors, indices, conjlist, tree{2});
+[A, ia, ca] = contracttree(tensors, indices, conjlist, tree{1}, debug);
+[B, ib, cb] = contracttree(tensors, indices, conjlist, tree{2}, debug);
 [dimA, dimB] = contractinds(ia, ib);
 
-if Options.Debug
+if debug
     contractcheck(A, ia, ca, B, ib, cb);
 end
 

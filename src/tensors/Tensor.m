@@ -39,9 +39,12 @@ classdef Tensor
             
             % t = Tensor(tensor)
             if nargin == 1 && isa(varargin{1}, 'Tensor')
-                t.codomain = varargin{1}.codomain;
-                t.domain = varargin{1}.domain;
-                t.var = varargin{1}.var;
+                for i = numel(varargin{1}):-1:1
+                    t(i).codomain = varargin{1}(i).codomain;
+                    t(i).domain = varargin{1}(i).domain;
+                    t(i).var = varargin{1}(i).var;
+                end
+                t = reshape(t, size(varargin{1}));
                 return
             end
             
@@ -159,9 +162,9 @@ classdef Tensor
             if isnumeric(data), data = {data}; end
             
             if iscell(data)
-                t.var = fill_tensor_data(t.var, data, trees);
+                t.var = fill_tensor_data(t.var, data);
             else
-                t.var = fill_tensor_fun(t.var, data, trees);
+                t.var = fill_tensor_fun(t.var, data);
             end
         end
         
@@ -543,7 +546,9 @@ classdef Tensor
             % t : :class:`Tensor`
             %   conjugate tensor.
             
-            t = permute(t', nspaces(t):-1:1, rank(t));
+            for i = 1:numel(t)
+                t(i) = permute(t(i)', nspaces(t(i)):-1:1, rank(t(i)));
+            end
         end
         
         function t = ctranspose(t)

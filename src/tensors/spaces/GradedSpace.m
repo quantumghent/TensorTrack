@@ -272,7 +272,7 @@ classdef GradedSpace < AbstractSpace
             
             trivialspace = one(spaces);
             if dual, trivialspace = conj(trivialspace); end
-            spaces = [spaces(1:i) trivialspace spaces(i+1:end)];
+            spaces = [spaces(1:i-1) trivialspace spaces(i:end)];
         end
         
         
