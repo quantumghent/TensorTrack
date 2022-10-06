@@ -8,7 +8,7 @@ classdef TestTensor < matlab.unittest.TestCase
     methods (TestClassSetup)
         function classSetup(tc)
             orig = Options.CacheEnabled;
-            Options.CacheEnabled(false);
+            Options.CacheEnabled(true);
             tc.addTeardown(@Options.CacheEnabled, orig); 
         end
     end
@@ -100,14 +100,14 @@ classdef TestTensor < matlab.unittest.TestCase
             for i = 0:5
                 ps = perms(1:nspaces(t1)).';
                 for p = ps(:, randperm(size(ps, 2), min(size(ps, 2), 20)))
-                    t3 = permute(t1, p.', [i 5-i]);
+                    t3 = tpermute(t1, p.', [i 5-i]);
                     tc.assertTrue(all(dims(t1, p.') == dims(t3)), ...
                         'Incorrect size after permutation.');
                     tc.assertTrue(...
                         isapprox(norm(t1), norm(t3), 'AbsTol', tc.tol, 'RelTol', tc.tol), ...
                         'Permute should preserve norms.')
                     
-                    t4 = permute(t2, p.', [i 5-i]);
+                    t4 = tpermute(t2, p.', [i 5-i]);
                     tc.assertTrue(all(dims(t2, p.') == dims(t4)), ...
                         'Incorrect size after permutation.');
                     tc.assertTrue(...
@@ -126,7 +126,7 @@ classdef TestTensor < matlab.unittest.TestCase
             for k = 0:nspaces(t)
                 ps = perms(1:nspaces(t)).';
                 for p = ps(:, randperm(size(ps, 2), min(size(ps, 2), 10)))
-                    t2 = permute(t, p.', [k nspaces(t)-k]);
+                    t2 = tpermute(t, p.', [k nspaces(t)-k]);
                     a2 = double(t2);
                     tc.assertTrue(all(dims(t2) == size(a2, 1:nspaces(t))));
                     tc.assertTrue(all(dims(t2) == size(a, p.')));
@@ -209,7 +209,7 @@ classdef TestTensor < matlab.unittest.TestCase
                 [Q, R] = leftorth(t, p1, p2, alg);
                 
                 assertTrue(tc, ...
-                    isapprox(Q * R, permute(t, [p1 p2], [length(p1) length(p2)]), ...
+                    isapprox(Q * R, tpermute(t, [p1 p2], [length(p1) length(p2)]), ...
                     'AbsTol', tc.tol, 'RelTol', tc.tol), ...
                     sprintf('Q and R not a valid %s factorization.', alg));
                 
@@ -239,7 +239,7 @@ classdef TestTensor < matlab.unittest.TestCase
                 [L, Q] = rightorth(t, p1, p2, alg);
                 
                 assertTrue(tc, ...
-                    isapprox(L * Q, permute(t, [p1 p2], [length(p1) length(p2)]), ...
+                    isapprox(L * Q, tpermute(t, [p1 p2], [length(p1) length(p2)]), ...
                     'AbsTol', tc.tol, 'RelTol', tc.tol), ...
                     sprintf('Q and R not a valid %s factorization.', alg));
                 
@@ -268,7 +268,7 @@ classdef TestTensor < matlab.unittest.TestCase
             for alg = ["qr", "svd"]
                 N = leftnull(t, [3 4 2], [1 5], alg);
                 
-                assertTrue(tc, norm(N' * permute(t, [3 4 2 1 5], [3 2])) < ...
+                assertTrue(tc, norm(N' * tpermute(t, [3 4 2 1 5], [3 2])) < ...
                     100 * eps(norm(t)), ...
                     'N should be a left nullspace.');
                 assertTrue(tc, isisometry(N, 'left', ...
@@ -280,7 +280,7 @@ classdef TestTensor < matlab.unittest.TestCase
             %% Right nullspace
             for alg = ["lq", "svd"]
                 N = rightnull(t, [3 4], [2 1 5], alg);
-                assertTrue(tc, norm(permute(t, [3 4 2 1 5], [2 3]) * N') < ...
+                assertTrue(tc, norm(tpermute(t, [3 4 2 1 5], [2 3]) * N') < ...
                     100 * eps(norm(t)), ...
                     'N should be a right nullspace.');
                 assertTrue(tc, isisometry(N, 'right', ...
@@ -292,7 +292,7 @@ classdef TestTensor < matlab.unittest.TestCase
         function singularvalues(tc, spaces)
             t = Tensor.randnc(spaces, []);
             [U, S, V] = tsvd(t, [3 4 2], [1 5]);
-            assertTrue(tc, isapprox(permute(t, [3 4 2 1 5], [3 2]), U * S * V), ...
+            assertTrue(tc, isapprox(tpermute(t, [3 4 2 1 5], [3 2]), U * S * V), ...
                 'USV should be a factorization.');
             assertTrue(tc, isisometry(U), ...
                 'U should be an isometry.');

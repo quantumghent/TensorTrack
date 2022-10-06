@@ -462,6 +462,36 @@ classdef Tensor
             style = fusionstyle(t.codomain, t.domain);
         end
         
+%         function t = horzcat(varargin)
+%             sp = space(varargin{1}, [1, 3:nspaces(varargin{1})]);
+%             for i = 2:length(varargin)
+%                 sp2 = space(varargin{2}, [1, 3:nspaces(varargin{1})]);
+%                 assert(isequal(sp, sp2), 'tensors:SpaceMismatch', ...
+%                     'hozcat tensors may only differ in the second space.');
+%             end
+%             t = builtin('horzcat', varargin{:});
+%         end
+%         
+%         function t = vertcat(varargin)
+%             sp = space(varargin{1}, 2:nspaces(varargin{1}));
+%             for i = 2:length(varargin)
+%                 sp2 = space(varargin{2}, 2:nspaces(varargin{1}));
+%                 assert(isequal(sp, sp2), 'tensors:SpaceMismatch', ...
+%                     'vertcat tensors may only differ in the first space.');
+%             end
+%             t = builtin('vertcat', varargin{:});
+%         end
+%         
+%         function t = cat(dim, varargin)
+%             sp = space(varargin{1}, [1:dim-1 dim+1:nspaces(varargin{1})]);
+%             for i = 2:length(varargin)
+%                 sp2 = space(varargin{2}, [1:dim-1 dim+1:nspaces(varargin{1})]);
+%                 assert(isequal(sp, sp2), 'tensors:SpaceMismatch', ...
+%                     'cat tensors may only differ in the concatenated dimension.');
+%             end
+%             t = builtin('cat', dim, varargin{:});
+%         end
+        
         function tdst = insert_onespace(tsrc, i, dual)
             arguments
                 tsrc
@@ -547,7 +577,70 @@ classdef Tensor
             %   conjugate tensor.
             
             for i = 1:numel(t)
-                t(i) = permute(t(i)', nspaces(t(i)):-1:1, rank(t(i)));
+                t(i) = tpermute(t(i)', nspaces(t(i)):-1:1, rank(t(i)));
+            end
+        end
+        
+        function C = contract(tensors, indices, kwargs)
+            arguments (Repeating)
+                tensors
+                indices (1, :) {mustBeInteger}
+            end
+            
+            arguments
+                kwargs.Conj (1, :) logical = false(size(tensors))
+                kwargs.Rank = []
+                kwargs.Debug = false
+            end
+            
+            assert(length(kwargs.Conj) == length(tensors));
+            
+            for i = 1:length(tensors)
+                if length(indices{i}) > 1
+                    assert(length(unique(indices{i})) == length(indices{i}), ...
+                        'Tensors:TBA', 'Traces not implemented.');
+                end
+            end
+            
+            debug = kwargs.Debug;
+            
+            % Special case for single input tensor
+            if nargin == 2
+                [~, order] = sort(indices{1}, 'descend');
+                C = tensors{1};
+                if kwargs.Conj
+                    C = tpermute(C', order(length(order):-1:1), kwargs.Rank);
+                else
+                    C = tpermute(C, order, kwargs.Rank);
+                end
+                return
+            end
+            
+            % Generate trees
+            contractindices = cellfun(@(x) x(x > 0), indices, 'UniformOutput', false);
+            partialtrees = num2cell(1:length(tensors));
+            tree = generatetree(partialtrees, contractindices);
+            
+            % contract all subtrees
+            [A, ia, ca] = contracttree(tensors, indices, kwargs.Conj, tree{1}, debug);
+            [B, ib, cb] = contracttree(tensors, indices, kwargs.Conj, tree{2}, debug);
+            
+            % contract last pair
+            [dimA, dimB] = contractinds(ia, ib);
+            
+            if debug, contractcheck(A, ia, ca, B, ib, cb); end
+            
+            C = tensorprod(A, B, dimA, dimB, ca, cb, 'NumDimensionsA', length(ia));
+            ia(dimA) = [];  ib(dimB) = [];
+            ic = [ia ib];
+            
+            % permute last tensor
+            if ~isempty(ic) && length(ic) > 1
+                [~, order] = sort(ic, 'descend');
+                if isempty(kwargs.Rank)
+                    kwargs.Rank = [length(order) 0];
+                end
+                C = tpermute(C, order, kwargs.Rank);
             end
         end
         
@@ -814,7 +907,7 @@ classdef Tensor
             end
         end
         
-        function t = permute(t, p, r)
+        function t = tpermute(t, p, r)
             % Permute the spaces of a tensor.
             %
             % Arguments
@@ -835,8 +928,16 @@ classdef Tensor
             
             arguments
                 t
-                p = 1:nspaces(t)
-                r = rank(t)
+                p = []
+                r = []
+            end
+            
+            if ~isscalar(t)
+                for i = 1:numel(t)
+                    t(i) = tpermute(t(i), p, r);
+                end
+                t = permute(t, p);
+                return
             end
             
             if isempty(p), p = 1:nspaces(t); end
@@ -893,7 +994,7 @@ classdef Tensor
             end
             
             assert(sum(r) == sum(rank(t)), 'tensors:ValueError', 'Invalid new rank.');
-            t = permute(t, 1:nspaces(t), r);
+            t = tpermute(t, 1:nspaces(t), r);
         end
         
         function t = rdivide(t, a)
@@ -951,7 +1052,53 @@ classdef Tensor
                 dimB
                 ca = false
                 cb = false
-                options.NumDimensionsA
+                options.NumDimensionsA = ndims(A)
+            end
+            
+            if ~isscalar(A) || ~isscalar(B)
+                szA = size(A, 1:options.NumDimensionsA);
+                szB = size(B, 1:max(ndims(B), max(dimB)));
+                
+                assert(all(szA(dimA) == szB(dimB)), 'tensors:SizeMismatch', ...
+                    'Invalid contraction sizes.');
+                
+                uncA = 1:length(szA); uncA(dimA) = [];
+                uncB = 1:length(szB); uncB(dimB) = [];
+                
+                if isempty(uncA)
+                    if isempty(uncB)
+                        szC = [1 1];
+                    elseif length(uncB) == 1
+                        szC = [1 szB(uncB)];
+                    else
+                        szC = szB(uncB);
+                    end
+                elseif isempty(uncB)
+                    if length(uncA) == 1
+                        szC = [szA(uncA) 1];
+                    else
+                        szC = szA(uncA);
+                    end
+                else
+                    szC = [szA(uncA) szB(uncB)];
+                end
+                
+                A = reshape(permute(A, [uncA dimA]), prod(szA(uncA)), prod(szA(dimA)));
+                B = reshape(permute(B, [dimB, uncB]), prod(szB(dimB)), prod(szB(uncB)));
+                
+                for i = prod(szA(uncA)):-1:1
+                    for j = prod(szB(uncB)):-1:1
+                        C(i,j) = tensorprod(A(i,1), B(1,j), dimA, dimB, ca, cb, ...
+                            'NumDimensionsA', options.NumDimensionsA);
+                        for k = 2:prod(szA(dimA))
+                            C(i,j) = C(i,j) + ...
+                                tensorprod(A(i,k), B(k,j), dimA, dimB, ca, cb, ...
+                                'NumDimensionsA', options.NumDimensionsA);
+                        end
+                    end
+                end
+                C = reshape(C, szC);
+                return
             end
             
             uncA = 1:nspaces(A);    uncA(dimA) = [];
@@ -1020,12 +1167,12 @@ classdef Tensor
                 return
             end
             
-            A = permute(A, iA, rA);
+            A = tpermute(A, iA, rA);
             for i = rA(1) + (1:rA(2))
                 if ~isdual(space(A, i)), A = twist(A, i); end
             end
 %             A = twist(A, [false(1, length(A.codomain)) ~isdual(A.domain')]);
-            B = permute(B, iB, rB);
+            B = tpermute(B, iB, rB);
             
             assert(isequal(A.domain, B.codomain), 'tensors:SpaceMismatch', ...
                 'Contracted spaces incompatible.');
@@ -1138,7 +1285,7 @@ classdef Tensor
             % Returns
             % -------
             % t : :class:`Tensor`
-            %   permuted tensor with desired rank.
+            %   twisted tensor with desired rank.
             
             arguments
                 t
@@ -1256,7 +1403,7 @@ classdef Tensor
         
         function [Q, R] = leftorth(t, p1, p2, alg)
             % Factorize a tensor into an orthonormal basis `Q` and remainder `R`, such that
-            % :code:`permute(t, [p1 p2], [length(p1) length(p2)]) = Q * R`.
+            % :code:`tpermute(t, [p1 p2], [length(p1) length(p2)]) = Q * R`.
             %
             % Usage
             % -----
@@ -1300,7 +1447,7 @@ classdef Tensor
             if isempty(p1), p1 = 1:rank(t, 1); end
             if isempty(p2), p2 = rank(t, 1) + (1:rank(t,2)); end
             
-            t = permute(t, [p1 p2], [length(p1) length(p2)]);
+            t = tpermute(t, [p1 p2], [length(p1) length(p2)]);
             
             dims = struct;
             [mblocks, dims.charges] = matrixblocks(t);
@@ -1336,7 +1483,7 @@ classdef Tensor
         
         function [R, Q] = rightorth(t, p1, p2, alg)
             % Factorize a tensor into an orthonormal basis `Q` and remainder `L`, such that
-            % :code:`permute(t, [p1 p2], [length(p1) length(p2)]) = L * Q`.
+            % :code:`tpermute(t, [p1 p2], [length(p1) length(p2)]) = L * Q`.
             %
             % Usage
             % -----
@@ -1380,7 +1527,7 @@ classdef Tensor
             if isempty(p1), p1 = 1:rank(t, 1); end
             if isempty(p2), p2 = rank(t, 1) + (1:rank(t,2)); end
             
-            t = permute(t, [p1 p2], [length(p1) length(p2)]);
+            t = tpermute(t, [p1 p2], [length(p1) length(p2)]);
             
             dims = struct;
             [mblocks, dims.charges] = matrixblocks(t);
@@ -1415,7 +1562,7 @@ classdef Tensor
         
         function N = leftnull(t, p1, p2, alg, atol)
             % Compute the left nullspace of a tensor, such that
-            % :code:`N' * permute(t, [p1 p2], [length(p1) length(p2)]) = 0`.
+            % :code:`N' * tpermute(t, [p1 p2], [length(p1) length(p2)]) = 0`.
             %
             % Arguments
             % ---------
@@ -1448,7 +1595,7 @@ classdef Tensor
             if isempty(p1), p1 = 1:rank(t, 1); end
             if isempty(p2), p2 = rank(t, 1) + (1:rank(t, 2)); end
             
-            t = permute(t, [p1 p2], [length(p1) length(p2)]);
+            t = tpermute(t, [p1 p2], [length(p1) length(p2)]);
             
             dims = struct;
             [mblocks, dims.charges] = matrixblocks(t);
@@ -1466,7 +1613,7 @@ classdef Tensor
         
         function N = rightnull(t, p1, p2, alg, atol)
              % Compute the right nullspace of a tensor, such that
-            % :code:`permute(t, [p1 p2], [length(p1) length(p2)]) * N = 0`.
+            % :code:`tpermute(t, [p1 p2], [length(p1) length(p2)]) * N = 0`.
             %
             % Arguments
             % ---------
@@ -1499,7 +1646,7 @@ classdef Tensor
             if isempty(p1), p1 = 1:rank(t, 1); end
             if isempty(p2), p2 = rank(t, 1) + (1:rank(t, 2)); end
             
-            t = permute(t, [p1 p2], [length(p1) length(p2)]);
+            t = tpermute(t, [p1 p2], [length(p1) length(p2)]);
             
             dims = struct;
             [mblocks, dims.charges] = matrixblocks(t);
@@ -1518,7 +1665,7 @@ classdef Tensor
         function [U, S, V, eta] = tsvd(t, p1, p2, trunc)
             % Compute the singular value decomposition of a tensor. This computes left and
             % right isometries U and V, and a non-negative diagonal tensor S such that
-            % norm(permute(t, [p1 p2], [length(p1) length(p2)]) - U * S * V) = 0
+            % :code:`norm(tpermute(t, [p1 p2], [length(p1) length(p2)]) - U * S * V) = 0`
             % Additionally, the dimension of S can be truncated in such a way to minimize
             % this norm, which gives the truncation error eta.
             %
@@ -1552,7 +1699,7 @@ classdef Tensor
             % -------
             % U, S, V : :class:`Tensor`
             %   left isometry U, non-negative diagonal S and right isometry V that satisfy
-            %   U * S * V = permute(t, [p1 p2], [length(p1) length(p2)]).
+            %   :code:`U * S * V = tpermute(t, [p1 p2], [length(p1) length(p2)])`.
             %
             % eta : numeric
             %   truncation error.
@@ -1566,7 +1713,7 @@ classdef Tensor
                 trunc.TruncSpace
             end
             
-            t = permute(t, [p1 p2], [length(p1) length(p2)]);
+            t = tpermute(t, [p1 p2], [length(p1) length(p2)]);
             
             dims = struct;
             [mblocks, dims.charges] = matrixblocks(t);
@@ -2356,7 +2503,15 @@ classdef Tensor
                 for i = 1:length(s)
                     fprintf('%d.\t', i);
                     disp(s(i));
-                    fprintf('\n');
+                end
+                fprintf('\n');
+                
+                [blocks, charges] = matrixblocks(t);
+                for i = 1:length(blocks)
+                    if ~isempty(blocks)
+                        fprintf('charge %s:\n', string(charges(i)));
+                    end
+                    disp(blocks{i});
                 end
             else
                 builtin('disp', t);

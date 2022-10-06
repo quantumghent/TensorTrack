@@ -804,6 +804,8 @@ classdef FusionTree < matlab.mixin.CustomDisplay
                 inv = false
             end
             
+            if isempty(f), c = []; return; end
+            
             if istwistless(braidingstyle(f))
                 c = speye(length(f));
                 return
