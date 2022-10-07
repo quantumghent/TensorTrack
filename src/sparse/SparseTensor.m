@@ -9,7 +9,6 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor
     
     methods
         function t = SparseTensor(varargin)
-            
             if nargin == 0 || (nargin == 1 && isempty(varargin{1}))
                 return;
                 
@@ -69,19 +68,202 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor
             t.sz = t.sz(p);
         end
         
-        function t = tpermute(t, p, r)
-            for i = 1:numel(t.var)
-                t.var(i) = tpermute(t.var(i), p, r);
-            end
-            t = permute(t, p);
-        end
-        
         function t = reshape(t, sz)
             assert(prod(sz) == prod(t.sz), ...
                 'sparse:argerror', 'To reshape the number of elements must not change.');
             
             t.ind = sub2sub(sz, t.sz, t.ind);
             t.sz = sz;
+        end
+        
+        function B = full(A)
+            inds = ind2sub_(A.sz, 1:prod(A.sz));
+            
+            [lia, locb] = ismember(inds, A.ind, 'rows');
+            B(lia) = A.var(locb(lia));
+            
+            if ~all(lia)
+                s = arrayfun(@(i) space(A, i), 1:ndims(A), 'UniformOutput', false);
+                r = rank(A.var(1));
+                for i = find(~lia).'
+                    allspace = arrayfun(@(j) s{j}(inds(i, j)), 1:length(s));
+                    B(i) = Tensor.zeros(allspace(1:r(1)), allspace(r(1)+1:end)');
+                end
+            end
+            B = reshape(B, A.sz);
+        end
+        
+        function s = space(t, i)
+            assert(isscalar(i), 'sparse:argerror', ...
+                'Can only obtain spaces for single index.');
+            for j = size(t, i):-1:1
+                el = t.var(find(t.ind(:, i), 1));
+                if isempty(el)
+                    warning('cannot deduce space.');
+                    continue;
+                end
+                s(j) = space(t.var(find(t.ind(:, i) == j, 1)), i);
+            end
+        end
+        
+        function n = ndims(A)
+            n = length(A.sz);
+        end
+         
+        function sz = size(a, i)
+            if nargin == 1
+                sz = a.sz;
+                return
+            end
+            
+            sz = ones(1, max(i));
+            sz(1:length(a.sz)) = a.sz;
+            sz = sz(i);
+        end
+        
+        function disp(t)
+            nz = nnz(t);
+            if nz == 0
+                fprintf('all-zero %s of size %s\n', class(t), ...
+                    regexprep(mat2str(t.sz), {'\[', '\]', '\s+'}, {'', '', 'x'}));
+                return
+            end
+            
+            fprintf('%s of size %s with %d nonzeros:\n', class(t), ...
+                regexprep(mat2str(t.sz), {'\[', '\]', '\s+'}, {'', '', 'x'}), nz);
+            
+            spc = floor(log10(max(double(t.ind), [], 1))) + 1;
+            if numel(spc) == 1
+                fmt = strcat("\t(%", num2str(spc(1)), "u)");
+            else
+                fmt = strcat("\t(%", num2str(spc(1)), "u,");
+                for i = 2:numel(spc) - 1
+                    fmt = strcat(fmt, "%", num2str(spc(i)), "u,");
+                end
+                fmt = strcat(fmt, "%", num2str(spc(end)), "u)");
+            end
+            
+            for i = 1:nz
+                fprintf('%s\t\t', compose(fmt, t.ind(i,:)));
+                disp(t.var(i));
+                fprintf('\n');
+            end
+        end
+        
+        function type = underlyingType(a)
+            if isempty(a.var)
+                type = 'double';
+            else
+                type = underlyingType(a.var);
+            end
+        end
+        
+        function bool = issparse(~)
+            bool = true;
+        end
+        
+        function n = nnz(t)
+            n = length(t.var);
+        end
+    end
+    
+    %% Linear Algebra
+    methods
+        function a = conj(a)
+            if ~isempty(a.var)
+                a.var = conj(a.var);
+            end
+        end
+        
+        function d = dot(a, b)
+            [~, ia, ib] = intersect(a.ind, b.ind, 'rows');
+            if isempty(ia), d = 0; return; end
+            d = dot(a.var(ia), b.var(ib));
+        end
+            
+        function a = minus(a, b)
+            assert(isequal(size(a), size(b)), ...
+                'sparse:dimerror', 'input dimensions incompatible.');
+            if isempty(b.ind), return; end
+            if isempty(a.ind), a = -b; return; end
+            
+            [lia, locb] = ismember(b.ind, a.ind, 'rows');
+            a.var(locb(lia)) = a.var(locb(lia)) - b.var(lia);
+            if ~all(lia)
+                a.var = [a.var; -b.var(~lia)];
+                a.ind = [a.ind; b.ind(~lia, :)];
+            end
+        end
+        
+        function c = mtimes(a, b)
+            szA = a.sz;
+            szB = b.sz;
+            assert(length(szA) == 2 && length(szB) == 2, 'sparse:argerror', ...
+                'mtimes only defined for matrices.');
+            assert(szA(2) == szB(1), 'sparse:dimerror', ...
+                'incompatible sizes for mtimes.');
+            
+            cvar = [];
+            cind = double.empty(0, 2);
+            
+            for k = 1:size(a, 2)
+                rowlinds = a.ind(:, 2) == k;
+                if ~any(rowlinds), continue; end
+                
+                collinds = b.ind(:, 1) == k;
+                if ~any(collinds), continue; end
+                
+                rowinds = find(rowlinds);
+                colinds = find(collinds);
+                
+                for i = rowinds.'
+                    av = a.var(i);
+                    ai = a.ind(i, 1);
+                    for j = colinds.'
+                        bv = b.var(j);
+                        bj = b.ind(j, 2);
+                        
+                        
+                        mask = all([ai bj] == cind, 2);
+                        if any(mask)
+                            cvar(mask) = cvar(mask) + av * bv;
+                        else
+                            cvar(end+1) = av * bv;
+                            cind = [cind; ai bj];
+                        end
+                    end
+                end
+            end
+            c = SparseTensor(cind, cvar, [szA(1) szB(2)]);
+        end
+        
+        function n = norm(t, p)
+            arguments
+                t
+                p = 'fro'
+            end
+            
+            if isempty(t.var), n = 0; return; end
+            n = norm(t.var);
+        end
+        
+        function t = normalize(t)
+            if isempty(t.var)
+                warning('sparse:empty', 'cannot normalize an empty tensor.');
+            end
+            t = t .* (1 / norm(t));
+        end
+        
+        function a = plus(a, b)
+            assert(isequal(size(a), size(b)), ...
+                'sparse:dimerror', 'input dimensions incompatible.');
+            if isempty(b.ind), return; end
+            if isempty(a.ind), a = b; return; end
+            
+            [lia, locb] = ismember(b.ind, a.ind, 'rows');
+            a.var(locb(lia)) = a.var(locb(lia)) + b.var(lia);
+            a.var = [a.var; b.var(~lia)];
+            a.ind = [a.ind; b.ind(~lia, :)];
         end
         
         function C = tensorprod(A, B, dimA, dimB, ca, cb, options)
@@ -162,129 +344,81 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor
             if size(Cind, 1) == prod(szC), C = full(C); end
         end
         
-        function B = full(A)
-            inds = ind2sub_(A.sz, 1:prod(A.sz));
-            
-            [lia, locb] = ismember(inds, A.ind, 'rows');
-            B(lia) = A.var(locb(lia));
-            
-            if ~all(lia)
-                s = arrayfun(@(i) space(A, i), 1:ndims(A), 'UniformOutput', false);
-                r = rank(A.var(1));
-                for i = find(~lia).'
-                    allspace = arrayfun(@(j) s{j}(inds(i, j)), 1:length(s));
-                    B(i) = Tensor.zeros(allspace(1:r(1)), allspace(r(1)+1:end)');
+        function t = times(t1, t2)
+            if isnumeric(t1)
+                if isempty(t2.var)
+                    t = t2;
+                    return
                 end
-            end
-            B = reshape(B, A.sz);
-        end
-        
-        function s = space(t, i)
-            assert(isscalar(i), 'sparse:argerror', ...
-                'Can only obtain spaces for single index.');
-            for j = size(t, i):-1:1
-                el = t.var(find(t.ind(:, i), 1));
-                if isempty(el)
-                    warning('cannot deduce space.');
-                    continue;
-                end
-                s(j) = space(t.var(find(t.ind(:, i) == j, 1)), i);
-            end
-        end
-        
-        function n = ndims(A)
-            n = length(A.sz);
-        end
-        
-        function c = mtimes(a, b)
-            szA = a.sz;
-            szB = b.sz;
-            assert(length(szA) == 2 && length(szB) == 2, 'sparse:argerror', ...
-                'mtimes only defined for matrices.');
-            assert(szA(2) == szB(1), 'sparse:dimerror', ...
-                'incompatible sizes for mtimes.');
-            
-            cvar = [];
-            cind = double.empty(0, 2);
-            
-            for k = 1:size(a, 2)
-                rowlinds = a.ind(:, 2) == k;
-                if ~any(rowlinds), continue; end
-                
-                collinds = b.ind(:, 1) == k;
-                if ~any(collinds), continue; end
-                
-                rowinds = find(rowlinds);
-                colinds = find(collinds);
-                
-                for i = rowinds.'
-                    av = a.var(i);
-                    ai = a.ind(i, 1);
-                    for j = colinds.'
-                        bv = b.var(j);
-                        bj = b.ind(j, 2);
-                        
-                        
-                        mask = all([ai bj] == cind, 2);
-                        if any(mask)
-                            cvar(mask) = cvar(mask) + av * bv;
-                        else
-                            cvar(end+1) = av * bv;
-                            cind = [cind; ai bj];
-                        end
-                    end
-                end
-            end
-            c = SparseTensor(cind, cvar, [szA(1) szB(2)]);
-        end
-        
-        function sz = size(a, i)
-            if nargin == 1
-                sz = a.sz;
+                t = t2;
+                t.var = t1 .* t.var;
                 return
             end
             
-            sz = ones(1, max(i));
-            sz(1:length(a.sz)) = a.sz;
-            sz = sz(i);
-        end
-        
-        function disp(t)
-            nz = size(t.var, 1);
-            if nz == 0
-                fprintf('all-zero %s of size %s\n', class(t), ...
-                    regexprep(mat2str(t.sz), {'\[', '\]', '\s+'}, {'', '', 'x'}));
+            if isnumeric(t2)
+                t = t2 .* t1;
                 return
             end
             
-            fprintf('%s of size %s with %d nonzeros:\n', class(t), ...
-                regexprep(mat2str(t.sz), {'\[', '\]', '\s+'}, {'', '', 'x'}), nz);
-            
-            spc = floor(log10(max(double(t.ind), [], 1))) + 1;
-            if numel(spc) == 1
-                fmt = strcat("\t(%", num2str(spc(1)), "u)");
-            else
-                fmt = strcat("\t(%", num2str(spc(1)), "u,");
-                for i = 2:numel(spc) - 1
-                    fmt = strcat(fmt, "%", num2str(spc(i)), "u,");
-                end
-                fmt = strcat(fmt, "%", num2str(spc(end)), "u)");
+            if isscalar(t1) && ~isscalar(t2)
+                t1 = repmat(t1, size(t2));
+            elseif isscalar(t2) && ~isscalar(t1)
+                t2 = repmat(t2, size(t1));
             end
             
-            for i = 1:nz
-                fprintf('%s\t\t', compose(fmt, t.ind(i,:)));
-                disp(t.var(i));
-                fprintf('\n');
-            end 
+            assert(isequal(size(t1), size(t2)), 'sparse:dimerror', ...
+                'incompatible input sizes.');
+            
+            if ~issparse(t1)
+                if isempty(t2.var)
+                    t = t2;
+                    return
+                end
+                
+                idx = sub2ind_(t2.sz, t2.ind);
+                t = t2;
+                t.var = t1(idx) .* t.var;
+                return
+            end
+            
+            if ~issparse(t2)
+                if isempty(t1.var)
+                    t = t1;
+                    return
+                end
+                
+                idx = sub2ind_(t1.sz, t1.ind);
+                t = t1;
+                t.var = t.var .* t2(idx);
+                return
+            end
+            
+            [inds, ia, ib] = intersect(t1.ind, t2.ind, 'rows');
+            t = SparseTensor(inds, t1.var(ia) .* t2.var(ib), t1.sz);
+        end
+        
+        function t = tpermute(t, p, r)
+            for i = 1:numel(t.var)
+                t.var(i) = tpermute(t.var(i), p, r);
+            end
+            t = permute(t, p);
+        end
+        
+        function a = uminus(a)
+            if ~isempty(a.var), a.var = -a.var; end
+        end
+        
+        function a = uplus(a)
         end
     end
+    
     
     %% Indexing
     methods
         function t = subsref(t, s)
             assert(length(s) == 1, 'sparse:index', 'only single level indexing allowed');
             assert(strcmp(s.type, '()'), 'sparse:index', 'only () indexing allowed');
-
+            
             n = size(s.subs, 2);
             if n == 1 % linear indexing
                 [s.subs{1:size(t.sz, 2)}] = ind2sub(t.sz, s.subs{1});

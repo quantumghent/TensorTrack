@@ -89,7 +89,6 @@ classdef TestTensor < matlab.unittest.TestCase
             end
         end
         
-        
         function permute_via_inner(tc, spaces)
             rng(213);
             t1 = Tensor.rand(spaces, []);

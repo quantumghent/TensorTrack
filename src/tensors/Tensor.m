@@ -684,16 +684,25 @@ classdef Tensor
             % d : double
             %   scalar dot product of the two tensors.
             
-            assert(isequal(t1.domain, t2.domain) && isequal(t1.codomain, t2.codomain), ...
-                'tensors:SpaceMismatch', ...
-                'Dot product only defined for tensors of equal structure.');
-
+            assert(isequal(size(t1), size(t2)), 'tensors:dimerror', ...
+                'input tensors must have the same size.');
+            
             d = 0;
-            [mblocks1, mcharges] = matrixblocks(t1.var);
-            mblocks2 = matrixblocks(t2.var);
-            qdims = qdim(mcharges);
-            for i = 1:length(t1.var)
-                d = d + qdims(i) * sum(conj(mblocks1{i}) .* mblocks2{i}, 'all');
+            for i = 1:numel(t1)
+                assert(isequal(t1(i).domain, t2(i).domain) && ...
+                    isequal(t1(i).codomain, t2(i).codomain), ...
+                    'tensors:SpaceMismatch', ...
+                    'dot product only defined for tensors of equal structure.');
+                [mblocks1, mcharges] = matrixblocks(t1(i).var);
+                mblocks2 = matrixblocks(t2(i).var);
+                qdims = qdim(mcharges);
+                for j = 1:length(mblocks1)
+                    try
+                    d = d + qdims(j) * sum(conj(mblocks1{j}) .* mblocks2{j}, 'all');
+                    catch
+                        bla
+                    end
+                end
             end
         end
         
@@ -1213,7 +1222,15 @@ classdef Tensor
             %   output tensor.
             
             if isnumeric(t), [t, a] = swapvars(t, a); end
-            t.var = times(t.var, a);
+            if isscalar(a) && ~isscalar(t)
+                a = repmat(a, size(t));
+            else
+                assert(isequal(size(a), size(t)), 'tensors:dimerror', ...
+                    'input sizes incompatible.');
+            end
+            for i = 1:numel(t)
+                t(i).var = times(t(i).var, a(i));
+            end
         end
         
         function tr = trace(t)
@@ -1320,7 +1337,9 @@ classdef Tensor
         end
         
         function t = uminus(t)
-            t.var = -t.var;
+            for i = 1:numel(t)
+                t(i).var = -t(i).var;
+            end
         end
     end
     
@@ -2468,6 +2487,10 @@ classdef Tensor
             end
             
             a = cell2mat(a_cell);
+        end
+        
+        function a = sparse(t)
+            a = SparseTensor(t);
         end
         
         function tdst = desymmetrize(tsrc, mode)
