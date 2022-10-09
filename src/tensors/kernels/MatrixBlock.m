@@ -19,6 +19,9 @@ classdef MatrixBlock < AbstractBlock
             rank = [length(codomain) length(domain)];
             
             trees = fusiontrees(codomain, domain);
+            assert(~isempty(trees), 'tensors:empty', ...
+                'no fusion channels available for the given spaces.');
+            
             [c, ~, ic] = unique(trees.coupled);
             uncoupled = trees.uncoupled;
             
