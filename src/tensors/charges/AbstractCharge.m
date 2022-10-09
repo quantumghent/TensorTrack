@@ -590,7 +590,8 @@ classdef (Abstract) AbstractCharge
                 charges = [];
                 vertices = [];
                 for i = 1:size(a, 2)
-                    [chargepart, vertexpart] = cumprod(a(:, i));
+                    [chargepart, vertexpart] = cumprod(...
+                        subsref(a, substruct('()', {':', i})));
                     charges = horzcat(charges, chargepart);
                     vertices = horzcat(vertices, vertexpart);
                 end
@@ -605,17 +606,20 @@ classdef (Abstract) AbstractCharge
                 end
                 
                 if length(a) == 2
-                    f = a(1) * a(2);
-                    charges = [repmat(a(1), 1, length(f)); f];
+                    f = subsref(a, substruct('()', {1})) * subsref(a, substruct('()', {2}));
+                    charges = [repmat(subsref(a, substruct('()', {1})), 1, length(f)); f];
                     vertices = [];
                     return
                 end
                 
-                part = cumprod(a(1:end-1));
+                part = cumprod(subsref(a, substruct('()', {1:length(a)-1})));
                 charges = [];
                 for i = 1:size(part, 2)
-                    f = part(end, i) * a(end);
-                    charges = [charges [repmat(part(:, i), 1, length(f)); f]];
+                    f = subsref(part, substruct('()', {size(part, 1), i})) * ...
+                        subsref(a, substruct('()', {length(a)}));
+                    charges = [charges ...
+                        [repmat(subsref(part, substruct('()', {size(part, 1), i})), ...
+                        1, length(f)); f]];
                 end
                 vertices = [];
                 return
@@ -630,9 +634,10 @@ classdef (Abstract) AbstractCharge
             if length(a) == 2
                 charges = [];
                 vertices = [];
-                for f = a(1) * a(2)
-                    N = Nsymbol(a(1), a(2), f);
-                    charges = [charges repmat([a(1); f], 1, N)]; 
+                for f = subsref(a, substruct('()', {1})) * subsref(a, substruct('()', {2}))
+                    N = Nsymbol(subsref(a, substruct('()', {1})), ...
+                        subsref(a, substruct('()', {2})), f);
+                    charges = [charges repmat([subsref(a, substruct('()', {1})); f], 1, N)]; 
                     vertices = [vertices 1:N];
                 end
                 return
@@ -642,9 +647,12 @@ classdef (Abstract) AbstractCharge
             charges = [];
             vertices = [];
             for i = 1:size(chargepart, 2)
-                for f = chargepart(end, i) * a(end)
-                    N = Nsymbol(chargepart(end, i), a(end), f);
-                    charges = [charges, repmat([chargepart(:, i); f], 1, N)];
+                for f = subsref(chargepart, substruct('()', {size(chargepart, 1), i})) * ...
+                        subsref(a, substruct('()', {length(a)}))
+                    N = Nsymbol(subsref(chargepart, substruct('()', {size(chargepart, 1), i})), ...
+                        subsref(a, substruct('()', {length(a)})), f);
+                    charges = [charges, ...
+                        repmat([subsref(chargepart, substruct('()', {':', i})); f], 1, N)];
                     vertices = [vertices [repmat(vertexpart(:, i), 1, N); 1:N]];
                 end
             end

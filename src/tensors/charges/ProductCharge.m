@@ -108,11 +108,68 @@ classdef ProductCharge < AbstractCharge
                         N = ones(size(d));
                     end
                     
-                otherwise
-                    if nargout > 1
-                        [d, N] = prod@AbstractCharge(a, dim);
-                    else
-                        d = prod@AbstractCharge(a, dim);
+                case FusionStyle.Simple
+                    d = subsref(a, substruct('()', {1}));
+                    N = 1;
+                    for i = 2:length(a)
+                        a_i = subsref(a, substruct('()', {i}));
+                        d_ = subsref(d, substruct('()', {1})) * ...
+                            a_i;
+                        if nargout > 1
+                            N_(1:length(d_)) = N(1);
+                        end
+                        
+                        for j = 2:length(d)
+                            c = subsref(d, substruct('()', {j})) * ...
+                                a_i;
+                            d_ = [d_ c];
+                            if nargout > 1
+                                N_(end + (1:length(c))) = N(j);
+                            end
+                        end
+                        
+                        if nargout < 2
+                            d = unique(d_);
+                        else
+                            [d, ~, ic] = unique(d_);
+                            N = zeros(size(d));
+                            for i = 1:length(N)
+                                N(i) = sum(N_(ic == i));
+                            end
+                        end
+                    end
+                    
+                case FusionStyle.Generic
+                    error('TBA');
+                    d = a(1);
+                    N = 1;
+                    for i = 2:length(a)
+                        d_ = d(1) * a(i);
+                        if nargout > 1
+                            N_ = N(1) .* ...
+                                Nsymbol(repmat(d(1), 1, length(d_)), ...
+                                repmat(a(i), 1, length(d_)), d_);
+                        end
+                        
+                        for j = 2:length(d)
+                            c = d(j) * a(i);
+                            d_(end + (1:length(c))) = c;
+                            if nargout > 1
+                                N_(end + (1:length(c))) = N(j) .* ...
+                                    Nsymbol(repmat(d(j), 1, length(c)), ...
+                                    repmat(a(i), 1, length(c)), c);
+                            end
+                        end
+                        
+                        if nargout < 2
+                            d = unique(d_);
+                        else
+                            [d, ~, ic] = unique(d_);
+                            N = zeros(size(d));
+                            for i = 1:length(N)
+                                N(i) = sum(N_(ic == i));
+                            end
+                        end
                     end
             end
         end
@@ -291,6 +348,11 @@ classdef ProductCharge < AbstractCharge
             end
         end
         
+        function c = intersect(a, b)
+            c = subsref(a, substruct('()', ...
+                {mod(find(reshape(a, [], 1) == reshape(b, 1, [])) - 1, length(a)) + 1}));
+        end
+        
         function F = Fsymbol(a, b, c, d, e, f)
             if hasmultiplicity(fusionstyle(a))
                 error('Not implemented yet.');
@@ -301,6 +363,74 @@ classdef ProductCharge < AbstractCharge
             for i = 2:length(a.charges)
                 F = F .* Fsymbol(a.charges{i}, b.charges{i}, c.charges{i}, ...
                     d.charges{i}, e.charges{i}, f.charges{i});
+            end
+        end
+        
+        function F = Fmatrix(a, b, c, d, e, f)
+            % Compute the full recoupling matrix from ``e`` to ``f``.
+            %
+            % .. todo::
+            %   Add proper definition?
+            %
+            % Usage
+            % -----
+            % :code:`F = Fmatrix(a, b, c, d, e, f)` computes the matrix between all allowed
+            % channels.
+            % 
+            % Arguments
+            % ---------
+            % a, b, c : :class:`.AbstractCharge`
+            %   charges being fused
+            % d : :class:`.AbstractCharge`
+            %   total charges
+            % e : :class:`.AbstractCharge` (1, \*)
+            %   intermediate charges before recoupling
+            % f : :class:`.AbstractCharge` (1, \*)
+            %   intermediate charge after recoupling
+            %
+            % Returns
+            % -------
+            % F : :class:`double` (\*, \*, \*, \*)
+            %   recoupling matrix between all allowed channels
+            if a.fusionstyle == FusionStyle.Unique
+                if nargin < 5, e = a * b; end
+                if nargin < 6, f = b * c; end
+                F = Fsymbol(a, b, c, d, e, f);
+                return
+            end
+            
+            if nargin < 5, e = intersect(a * b, conj(c * conj(d))); end
+            if nargin < 6, f = intersect(b * c, conj(conj(d) * a)); end
+            
+            if hasmultiplicity(a.fusionstyle)
+                Fblocks = cell(length(f), length(e));
+                for i = 1:length(e)
+                    for j = 1:length(f)
+                        Fblocks{j, i} = Fsymbol(a, b, c, d, ...
+                            subsref(e, substruct('()', {i})), ...
+                            subsref(f, substruct('()', {j})));
+                        sz = size(Fblocks{j, i}, 1:4);
+                        Fblocks{j, i} = reshape(Fblocks{j, i}, ...
+                            sz(1) * sz(2), sz(3) * sz(4)).';
+                    end
+                end
+                F = cell2mat(Fblocks);
+                return
+            end
+            
+            F = zeros(length(f), length(e));
+            for i = 1:length(e)
+                for j = 1:length(f)
+                    F(j, i) = Fsymbol(a, b, c, d, ...
+                        subsref(e, substruct('()', {i})), ...
+                        subsref(f, substruct('()', {j})));
+                end
+            end
+        end
+        
+        function disp(a)
+            for i = 1:length(a.charges)
+                disp(a.charges{i});
             end
         end
         
@@ -323,23 +453,30 @@ classdef ProductCharge < AbstractCharge
             
             assert(isscalar(a) && isscalar(b))
             charges = cell(size(a.charges));
-            charges{1} = a.charges{1} * b.charges{1};
+            ctr = 1;
             for i = 1:length(charges)
                 charges{i} = a.charges{i} * b.charges{i};
+                n = numel(charges{i});
+                charges{i} = reshape(repmat(reshape(charges{i}, 1, []), ctr, 1), 1, []);
+                for j = 1:i-1
+                    charges{j} = repmat(charges{j}, 1, n);
+                end
+                ctr = ctr * n;
             end
-            
-            for i = 2:length(charges)
-                n1 = length(charges{i-1});
-                n2 = length(charges{i});
-                charges{i-1} = repmat(charges{i}, 1, n2);
-                charges{i} = reshape(repmat(charges{i}, n1, 1), 1, []);
-            end
+            c = ProductCharge(charges{:});
         end
         
         function bool = ne(a, b)
             bool = a.charges{1} ~= b.charges{1};
             for i = 2:length(a.charges)
                 bool = bool | a.charges{i} ~= b.charges{i};
+            end
+        end
+        
+        function d = qdim(a)
+            d = qdim(a.charges{1});
+            for i = 2:length(a.charges)
+                d = d .* qdim(a.charges{i});
             end
         end
         
