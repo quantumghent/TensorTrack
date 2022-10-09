@@ -162,6 +162,10 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor
             bool = true;
         end
         
+        function bool = isscalar(t)
+            bool = prod(t.sz) == 1;
+        end
+        
         function n = nnz(t)
             n = length(t.var);
         end
@@ -415,22 +419,31 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor
     
     %% Indexing
     methods
-        function t = subsref(t, s)
-            assert(length(s) == 1, 'sparse:index', 'only single level indexing allowed');
-            assert(strcmp(s.type, '()'), 'sparse:index', 'only () indexing allowed');
+        function i = end(t, k, n)
+            if n == 1
+                i = prod(t.sz);
+                return
+            end
             
-            n = size(s.subs, 2);
+            assert(n == length(t.sz), 'sparse:index', 'invalid amount of indices.')
+            i = t.sz(k);
+        end
+        
+        function t = subsref(t, s)
+            assert(strcmp(s(1).type, '()'), 'sparse:index', 'only () indexing allowed');
+            
+            n = size(s(1).subs, 2);
             if n == 1 % linear indexing
-                [s.subs{1:size(t.sz, 2)}] = ind2sub(t.sz, s.subs{1});
+                [s(1).subs{1:size(t.sz, 2)}] = ind2sub_(t.sz, s(1).subs{1});
             else
                 assert(n == size(t.sz, 2), 'sparse:index', ...
                     'number of indexing indices must match tensor size.');
             end
             f = true(size(t.ind, 1), 1);
-            newsz = zeros(1, size(s.subs, 2));
+            newsz = zeros(1, size(s(1).subs, 2));
             
-            for i = 1:size(s.subs, 2)
-                A = s.subs{i};
+            for i = 1:size(s(1).subs, 2)
+                A = s(1).subs{i};
                 if strcmp(A, ':')
                     newsz(i) = t.size(i);
                     continue;
@@ -453,6 +466,10 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor
             if ~isempty(t.ind)
                 t.ind = t.ind(f, :);
                 t.var = t.var(f);
+            end
+            if length(s) > 1
+                assert(isscalar(t))
+                t = subsref(t.var, s(2:end));
             end
         end
         
