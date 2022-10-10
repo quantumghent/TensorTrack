@@ -572,6 +572,7 @@ classdef (Abstract) AbstractCharge
             %   explanation
             % vertices : type
             %   explanation
+            
             if a.fusionstyle == FusionStyle.Unique
                 charges = a;
                 for i = 2:size(charges, 1)
@@ -618,7 +619,7 @@ classdef (Abstract) AbstractCharge
                     f = subsref(part, substruct('()', {size(part, 1), i})) * ...
                         subsref(a, substruct('()', {length(a)}));
                     charges = [charges ...
-                        [repmat(subsref(part, substruct('()', {size(part, 1), i})), ...
+                        [repmat(subsref(part, substruct('()', {1:size(part, 1), i})), ...
                         1, length(f)); f]];
                 end
                 vertices = [];
