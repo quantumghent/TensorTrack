@@ -58,6 +58,10 @@ classdef ProductCharge < AbstractCharge
             a = cat(1, a, varargin{:});
         end
         
+        function s = GetMD5_helper(a)
+            s = cellfun(@GetMD5_helper, a.charges, 'UniformOutput', false);
+        end
+        
         function varargout = size(prodcharge, varargin)
             [varargout{1:nargout}] = size(prodcharge.charges{1}, varargin{:});
         end
@@ -492,6 +496,16 @@ classdef ProductCharge < AbstractCharge
             end
         end
         
+        function bool = issorted(a)
+            [a, p] = sort(a);
+            bool = isequal(p, (1:length(a)).');
+        end
+        
+        function bool = issortedrows(a)
+            [p, ~] = simulsortrows(a.charges{:});
+            bool = isequal(p, (1:size(a.charges{1}, 1)).');
+        end
+        
         function [a, I] = sort(a, varargin)
             [I, a.charges{:}] = simulsort(a.charges{:}, varargin{:});
         end
@@ -509,9 +523,9 @@ classdef ProductCharge < AbstractCharge
                 return
             end
             
-            newcol = size(a.charges, 2) * (col(:) - 1) + (1:size(a.charges, 2));
+            newcol = reshape(col + (((1:length(a.charges)).' - 1) .* size(a, 2)), 1, []);
             [I, a.charges{:}] = simulsortrows(a.charges{:}, ...
-                'Col', reshape(newcol, 1, []), ...
+                'Col', newcol, ...
                 'Direction', direction);
         end
         
