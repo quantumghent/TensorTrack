@@ -77,7 +77,7 @@ if kwargs.Dimension == 1
     end
 else
     for k = length(arrays)-1:-1:1
-        for i = 1:size(I, 2)
+        for i = 1:size(I, 1)
             varargout{k}(i, :) = arrays{k}(i, I(i, :));
         end
     end
@@ -113,7 +113,7 @@ for n = length(arrays)-1:-1:1
         
         % permute index
         for i = 1:size(I, 1)
-            I(i, :) = I(i, I_(:, i));
+            I(i, :) = I(i, I_(i, :));
         end
     end
 end
