@@ -1,10 +1,10 @@
-classdef (InferiorClasses = {?Tensor}) SparseTensor
+classdef (InferiorClasses = {?Tensor, ?MpsTensor}) SparseTensor < AbstractTensor
     % Class for multi-dimensional sparse objects.
     
     properties (Access = private)
         ind = []
         sz = []
-        var (:, 1)
+        var (:, 1) Tensor = Tensor.empty(0, 1);
     end
     
     methods
@@ -14,21 +14,21 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor
                 
             elseif nargin == 1  % cast from existing object
                 source = varargin{1};
-                switch class(source)
-                    case 'SparseTensor'
-                        t.ind = source.ind;
-                        t.sz = source.sz;
-                        t.var = source.var;
-                        
-                    case 'Tensor'
-                        t.sz = ones(1, nspaces(source(1)));
-                        t.sz(1:ndims(source)) = size(source);
-                        
-                        t.ind = ind2sub_(t.sz, 1:numel(source));
-                        t.var = source(:);
-                        
-                    otherwise
-                        error('sparse:ArgError', 'Unknown syntax.');
+                
+                if isa(source, 'SparseTensor')
+                    t.ind = source.ind;
+                    t.sz = source.sz;
+                    t.var = source.var;
+                    
+                elseif isa(source, 'Tensor')
+                    t.sz = ones(1, nspaces(source(1)));
+                    t.sz(1:ndims(source)) = size(source);
+                    
+                    t.ind = ind2sub_(t.sz, 1:numel(source));
+                    t.var = source(:);
+                    
+                else
+                    error('sparse:ArgError', 'Unknown syntax.');
                 end
                 
             elseif nargin == 2  % indices and values
@@ -43,17 +43,21 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor
                 
             elseif nargin == 3  % indices, values and size
                 ind = varargin{1};
-                var = reshape(varargin{2}, [], 1);
-                if isscalar(var), var = repmat(var, size(ind, 1), 1); end
-                assert(size(ind, 1) == size(var, 1), 'sparse:argerror', ...
-                    'indices and values must be the same size.');
-                sz = reshape(varargin{3}, 1, []);
-                assert(isempty(ind) || size(ind, 2) == length(sz), 'sparse:argerror', ...
-                    'number of indices does not match size vector.');
-                assert(isempty(ind) || all(max(ind, [], 1) <= sz), 'sparse:argerror', ...
-                    'indices must not exceed size vector.');
+                if ~isempty(ind) && ~isempty(varargin{2})
+                    var = reshape(varargin{2}, [], 1);
+                    if isscalar(var), var = repmat(var, size(ind, 1), 1); end
+                    assert(size(ind, 1) == size(var, 1), 'sparse:argerror', ...
+                        'indices and values must be the same size.');
+                    sz = reshape(varargin{3}, 1, []);
+                    assert(isempty(ind) || size(ind, 2) == length(sz), 'sparse:argerror', ...
+                        'number of indices does not match size vector.');
+                    assert(isempty(ind) || all(max(ind, [], 1) <= sz), 'sparse:argerror', ...
+                        'indices must not exceed size vector.');
+                    t.var = var;
+                else
+                    sz = reshape(varargin{3}, 1, []);
+                end
                 t.ind = ind;
-                t.var = var;
                 t.sz = sz;
                 
             else
@@ -71,9 +75,9 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor
         function t = reshape(t, sz)
             assert(prod(sz) == prod(t.sz), ...
                 'sparse:argerror', 'To reshape the number of elements must not change.');
-            
-            t.ind = sub2sub(sz, t.sz, t.ind);
-            t.sz = sz;
+            idx = sub2ind_(t.sz, t.ind);
+            t.ind = ind2sub_(sz, idx);
+            t.sz  = sz;
         end
         
         function B = full(A)
@@ -106,10 +110,26 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor
             end
         end
         
+        function n = nspaces(A)
+            if nnz(A) == 0
+                n = ndims(A);
+            else
+                n = nspaces(A.var(1));
+            end
+        end
+        
         function n = ndims(A)
             n = length(A.sz);
         end
-         
+        
+        function r = rank(A)
+            if nnz(A) == 0
+                r = [ndims(A) 0];
+            else
+                r = rank(A.var(1));
+            end
+        end
+        
         function sz = size(a, i)
             if nargin == 1
                 sz = a.sz;
@@ -169,6 +189,46 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor
         function n = nnz(t)
             n = length(t.var);
         end
+        
+        function bools = eq(a, b)
+            arguments
+                a SparseTensor
+                b SparseTensor
+            end
+            
+            if isscalar(a) && isscalar(b)
+                bools = (isempty(a.var) && isempty(b.var)) || ...
+                    (~isempty(a.var) && ~isempty(b.var) && a.var == b.var);
+                return
+            end
+            
+            if isscalar(a)
+                if nnz(a) == 0
+                    bools = true(size(b));
+                    if nnz(b) ~= 0
+                        bools(sub2ind_(b.sz, b.ind)) = false;
+                    end
+                else
+                    bools = false(size(b));
+                    bools(sub2ind_(b.sz, b.ind)) = a.var == b.var;
+                end
+                return
+            end
+            
+            if isscalar(b)
+                bools = b == a;
+                return
+            end
+            
+            assert(isequal(size(a), size(b)), 'sparse:dimerror', ...
+                'input sizes incompatible');
+            bools = true(size(a.inds));
+            [inds, ia, ib] = intersect(a.ind, b.ind, 'rows');
+            
+            bools(sub2ind_(a.sz, a.ind)) = false;
+            bools(sub2ind_(b.sz, b.ind)) = false;
+            bools(sub2ind_(a.sz, inds)) = a.var(ia) == b.var(ib);
+        end
     end
     
     %% Linear Algebra
@@ -186,17 +246,7 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor
         end
             
         function a = minus(a, b)
-            assert(isequal(size(a), size(b)), ...
-                'sparse:dimerror', 'input dimensions incompatible.');
-            if isempty(b.ind), return; end
-            if isempty(a.ind), a = -b; return; end
-            
-            [lia, locb] = ismember(b.ind, a.ind, 'rows');
-            a.var(locb(lia)) = a.var(locb(lia)) - b.var(lia);
-            if ~all(lia)
-                a.var = [a.var; -b.var(~lia)];
-                a.ind = [a.ind; b.ind(~lia, :)];
-            end
+            a = a + (-b);
         end
         
         function c = mtimes(a, b)
@@ -259,8 +309,23 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor
         end
         
         function a = plus(a, b)
-            assert(isequal(size(a), size(b)), ...
+            n = max(ndims(a), ndims(b));
+            assert(isequal(size(a, 1:n), size(b, 1:n)), ...
                 'sparse:dimerror', 'input dimensions incompatible.');
+            
+            if ~issparse(a)
+                if nnz(b) > 0
+                    idx = sub2ind_(b.sz, b.ind);
+                    a(idx) = a(idx) + b.var;
+                end
+                return
+            end
+            
+            if ~issparse(b)
+                a = b + a;
+                return
+            end
+            
             if isempty(b.ind), return; end
             if isempty(a.ind), a = b; return; end
             
@@ -308,44 +373,57 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor
                 szC = [szA(uncA) szB(uncB)];
             end
             
-            Cvar = A.var.empty(0, 1);
-            Cind = double.empty(0, length(uncA) + length(uncB));
+            A = reshape(permute(A, [uncA dimA]), [prod(szA(uncA)), prod(szA(dimA))]);
+            B = reshape(permute(B, [dimB uncB]), [prod(szB(dimB)), prod(szB(uncB))]);
             
-            ks = unique([A.ind(:, dimA); B.ind(:, dimB)], 'rows');
-            
-            for k = ks.'
-                rowlinds = all(A.ind(:, dimA) == k.', 2);
-                if ~any(rowlinds), continue; end
-                
-                collinds = all(B.ind(:, dimB) == k.', 2);
-                if ~any(collinds), continue; end
-                
-                rowinds = find(rowlinds);
-                colinds = find(collinds);
-                
-                for i = rowinds.'
-                    av = A.var(i);
-                    ai = A.ind(i, uncA);
-                    for j = colinds.'
-                        bv = B.var(j);
-                        bj = B.ind(j, uncB);
-                        
-                        mask = all([ai bj] == Cind, 2);
-                        if any(mask)
-                            Cvar(mask) = Cvar(mask) + ...
-                                tensorprod(av, bv, dimA, dimB, ...
-                                'NumDimensionsA', options.NumDimensionsA);
-                        else
-                            Cvar(end+1) = tensorprod(av, bv, dimA, dimB, ...
-                                'NumDimensionsA', options.NumDimensionsA);
-                            Cind = [Cind; ai bj];
+            if isempty(uncA) && isempty(uncB)
+                C = 0;
+                if nnz(A) > 0 && nnz(B) > 0
+                    for i = 1:size(A, 1)
+                        for j = 1:size(B, 2)
+                            for k = 1:size(A, 2)
+                                Aind = all(A.ind == [i k], 2);
+                                if ~any(Aind), continue; end
+                                Bind = all(B.ind == [k j], 2);
+                                if ~any(Bind), continue; end
+                                
+                                C = C + ...
+                                    tensorprod(A.var(Aind), B.var(Bind), dimA, dimB, ...
+                                    'NumDimensionsA', options.NumDimensionsA);
+                            end
                         end
                     end
                 end
+            else
+                Cvar = A.var.empty(0, 1);
+                Cind = double.empty(0, length(uncA) + length(uncB));
+
+                if nnz(A) > 0 && nnz(B) > 0
+                    for i = 1:size(A, 1)
+                        for j = 1:size(B, 2)
+                            for k = 1:size(A, 2)
+                                Aind = all(A.ind == [i k], 2);
+                                if ~any(Aind), continue; end
+                                Bind = all(B.ind == [k j], 2);
+                                if ~any(Bind), continue; end
+                                if ~isempty(Cind) && all(Cind(end,:) == [i j], 2)
+                                    Cvar(end) = Cvar(end) + ...
+                                        tensorprod(A.var(Aind), B.var(Bind), dimA, dimB, ...
+                                        'NumDimensionsA', options.NumDimensionsA);
+                                else
+                                    Cvar(end+1) = ...
+                                        tensorprod(A.var(Aind), B.var(Bind), dimA, dimB, ...
+                                        'NumDimensionsA', options.NumDimensionsA);
+                                    Cind = [Cind; [i j]];
+                                end
+                            end
+                        end
+                    end
+                end
+
+                C = reshape(SparseTensor(Cind, Cvar, [size(A,1) size(B,2)]), szC);
+                if size(Cind, 1) == prod(szC), C = full(C); end
             end
-            
-            C = SparseTensor(Cind, Cvar, szC);
-            if size(Cind, 1) == prod(szC), C = full(C); end
         end
         
         function t = times(t1, t2)
@@ -408,6 +486,12 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor
             t = permute(t, p);
         end
         
+        function t = twist(t, i)
+            if nnz(t) > 0
+                t.var = twist(t.var, i);
+            end
+        end
+        
         function a = uminus(a)
             if ~isempty(a.var), a.var = -a.var; end
         end
@@ -434,7 +518,8 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor
             
             n = size(s(1).subs, 2);
             if n == 1 % linear indexing
-                [s(1).subs{1:size(t.sz, 2)}] = ind2sub_(t.sz, s(1).subs{1});
+                I = ind2sub_(t.sz, s(1).subs{1});
+                s(1).subs = arrayfun(@(x) I(:,x), 1:width(I), 'UniformOutput',false);
             else
                 assert(n == size(t.sz, 2), 'sparse:index', ...
                     'number of indexing indices must match tensor size.');
@@ -459,8 +544,8 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor
                     f = and(f, P(B + 1));
                     [~, ~, temp] = unique([A(:); t.ind(f, i)], 'stable');
                     t.ind(f, i) = temp(nA+1:end);
-                    newsz(i) = nA;
                 end
+                newsz(i) = nA;
             end
             t.sz = newsz;
             if ~isempty(t.ind)
@@ -475,6 +560,11 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor
         
         function t = subsasgn(t, s, v)
             assert(strcmp(s(1).type, '()'), 'sparse:index', 'only () indexing allowed');
+            
+            if length(s(1).subs) == 1
+                I = ind2sub_(t.sz, s(1).subs{1});
+                s(1).subs = arrayfun(@(x) I(:,x), 1:width(I), 'UniformOutput',false);
+            end
             assert(length(s(1).subs) == size(t.sz, 2), 'sparse:index', ...
                 'number of indexing indices must match tensor size.');
             
@@ -488,17 +578,69 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor
                 subsize(i) = length(s(1).subs{i});
             end
             if isscalar(v), v = repmat(v, subsize); end
-            subs = combvec(s(1).subs{:});
-            for i = 1:size(subs, 1)
-                idx = find(all(t.ind == subs(i, :), 2));
-                if isempty(idx)
-                    t.ind = [t.ind; subs];
-                    t.var = [t.var; v(i)];
-                else
-                    t.var(idx) = v(i);
+            subs = combvec(s(1).subs{:}).';
+            
+            if isempty(t.ind)
+                t.ind = subs;
+                t.var = v(:);
+            else
+                for i = 1:size(subs, 1)
+                    idx = find(all(t.ind == subs(i, :), 2));
+                    if isempty(idx)
+                        t.ind = [t.ind; subs];
+                        t.var = [t.var; full(v(i))];
+                    else
+                        t.var(idx) = v(i);
+                    end
                 end
             end
             t.sz = max(t.sz, cellfun(@max, s(1).subs));
+        end
+        
+        function [I, J, V] = find(t, k, which)
+            arguments
+                t
+                k = []
+                which = 'first'
+            end
+            
+            if isempty(t.ind)
+                I = [];
+                J = [];
+                V = [];
+                return
+            end
+            
+            [inds, p] = sortrows(t.ind, width(t.ind):-1:1);
+            
+            if ~isempty(k)
+                if strcmp(which, 'first')
+                    inds = inds(1:k, :);
+                    p = p(1:k);
+                else
+                    inds = inds(end:-1:end-k+1, :);
+                    p = p(end:-1:end-k+1);
+                end
+            end
+            
+            if nargout < 2
+                I = sub2ind_(t.sz, inds);
+                return
+            end
+            
+            subs = sub2sub([t.sz(1) prod(t.sz(2:end))], t.sz, t.ind);
+            I = subs(:,1);
+            J = subs(:,2);
+            
+            if nargout > 2
+                V = t.var(p);
+            end
+        end
+        
+        function t = sortinds(t)
+            if isempty(t), return; end
+            [t.ind, p] = sortrows(t.ind, width(t.ind):-1:1);
+            t.var = t.var(p);
         end
     end
 end

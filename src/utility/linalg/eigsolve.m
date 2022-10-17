@@ -16,6 +16,7 @@ arguments
     kwargs.DeflateDim
     kwargs.ReOrth = 2
     kwargs.NoBuild
+    kwargs.Verbosity = Verbosity.warn
 end
 
 % Input validations
@@ -24,6 +25,9 @@ if ~isfield(kwargs, 'NoBuild')
 end
 if ~isfield(kwargs, 'DeflateDim')
     kwargs.DeflateDim = max(round(3/5 * kwargs.KrylovDim), howmany);
+else
+    assert(kwargs.DeflateDim < kwargs.KrylovDim, 'eigsolve:argerror', ...
+        'Deflate size should be smaller than krylov dimension.')
 end
 if ~isa(A, 'function_handle')
     A = @(x) A * x;
@@ -50,19 +54,21 @@ while ctr_outer < kwargs.MaxIter
         
         V(1:length(v), ctr_inner) = v;
         v = A(v);
-        H(:, ctr_inner) = V' * v;
+        H(1:ctr_inner, ctr_inner) = V(:, 1:ctr_inner)' * v;
         v = v - V * H(:, ctr_inner);
         
         % reorthogonalize new vector
         if ctr_inner >= kwargs.ReOrth
-            c = V' * v;
-            H(:, ctr_inner) = H(:, ctr_inner) + c;
-            v = v - V * c;
+            c = V(:, 1:ctr_inner)' * v;
+            H(1:ctr_inner, ctr_inner) = H(1:ctr_inner, ctr_inner) + c;
+            v = v - V(:, 1:ctr_inner) * c;
         end
         
         % normalize
         beta = norm(v, 'fro');
         v = v / beta;
+        
+        if ctr_inner == kwargs.KrylovDim, break; end
         
         if ctr_inner >= howmany
             invariantsubspace = beta < eps(underlyingType(beta))^(3/4);
@@ -74,12 +80,22 @@ while ctr_outer < kwargs.MaxIter
             if ~mod(ctr_inner, kwargs.NoBuild)
                 [U, lambda] = eig(H(1:ctr_inner, 1:ctr_inner), 'vector');
                 select = selecteigvals(lambda, howmany, which);
-                conv = beta * norm(U(ctr_inner, select), Inf);
+                conv = max(abs(beta * U(ctr_inner, select)));
                 
                 if conv < kwargs.Tol
                     V = V(:, 1:ctr_inner) * U(:, select);
                     D = diag(lambda(select));
+                    if kwargs.Verbosity >= Verbosity.conv
+                        fprintf('Conv %2d (%2d/%2d): error = %.5e.\n', ctr_outer, ...
+                            ctr_inner, kwargs.KrylovDim, conv);
+                    end
                     return
+                end
+                
+                if kwargs.Verbosity >= Verbosity.detail
+                    fprintf('Iter %2d (%2d/%2d):\tlambda = %.5e + %.5ei;\terror = %.5e\n', ...
+                        ctr_outer, ctr_inner, kwargs.KrylovDim, ...
+                        real(lambda(1)), imag(lambda(1)), conv);
                 end
             end
         end
@@ -91,14 +107,16 @@ while ctr_outer < kwargs.MaxIter
     if ctr_outer == kwargs.MaxIter || ctr_inner ~= kwargs.KrylovDim
         [U, lambda] = eig(H(1:ctr_inner, 1:ctr_inner), 'vector');
         select = selecteigvals(lambda, howmany, which);
-        conv = beta * norm(U(ctr_inner, select), Inf);
+        conv = max(abs(beta * U(ctr_inner, select)));
         V = V(:, 1:ctr_inner) * U(:, select);
         D = diag(lambda(select));
         
         if conv > kwargs.Tol
             if invariantsubspace
+                fprintf('Found invariant subspace.\n');
                 flag = 1;
             else
+                fprintf('Reached maxiter without convergence.\n');
                 flag = 2;
             end
         end
@@ -115,21 +133,30 @@ while ctr_outer < kwargs.MaxIter
     V = V * U1;
     [U, lambda] = eig(T(1:kwargs.DeflateDim, 1:kwargs.DeflateDim), 'vector');
     select = selecteigvals(lambda, howmany, which);
-    conv = beta * norm(U1(kwargs.KrylovDim, 1:kwargs.DeflateDim) * U(:, select), 'Inf');
+    conv = max(abs(beta * U1(kwargs.KrylovDim, 1:kwargs.DeflateDim) * U(:, select)));
     
     % check for convergence
     if conv < kwargs.Tol
         V = V(:, 1:kwargs.DeflateDim) * U(:, select);
         D = diag(lambda(select));
+        if kwargs.Verbosity >= Verbosity.conv
+            fprintf('Conv %2d: error = %.5e.\n', ctr_outer, conv);
+        end
         return
     end
     
+    if kwargs.Verbosity >= Verbosity.iter
+        fprintf('Iter %2d:\tlambda = %.5e + %.5ei;\terror = %.5e\n', ...
+            ctr_outer, real(lambda(1)), imag(lambda(1)), conv);
+    end
+    
     % deflate Krylov subspace
+    H = zeros(kwargs.KrylovDim, kwargs.KrylovDim, underlyingType(v));
     H(1:kwargs.DeflateDim, 1:kwargs.DeflateDim) = ...
         T(1:kwargs.DeflateDim, 1:kwargs.DeflateDim);
     H(kwargs.DeflateDim + 1, 1:kwargs.DeflateDim) = ...
         beta * U1(kwargs.KrylovDim, 1:kwargs.DeflateDim);
-    V(:, kwargs.DeflateDim + 1:end) = 0 * V(:, kwargs.DeflateDim + 1:end);
+%     V(:, kwargs.DeflateDim + 1:end) = 0 * V(:, kwargs.DeflateDim + 1:end);
     ctr_inner = kwargs.DeflateDim;
 end
 

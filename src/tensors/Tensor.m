@@ -1,4 +1,4 @@
-classdef Tensor
+classdef Tensor < AbstractTensor
     %TENSOR Summary of this class goes here
     %   Detailed explanation goes here
     
@@ -164,7 +164,11 @@ classdef Tensor
             if iscell(data)
                 t.var = fill_tensor_data(t.var, data);
             else
-                t.var = fill_tensor_fun(t.var, data);
+                [tmp, trees] = tensorblocks(t);
+                for i = 1:length(tmp)
+                    tmp{i} = data(size(tmp{i}), trees(i));
+                end
+                t.var = fill_tensor_data(t.var, tmp);
             end
         end
         
@@ -405,6 +409,12 @@ classdef Tensor
         end
     end
     
+    methods (Hidden)
+        function tdst = zerosLike(t, varargin)
+            tdst = repmat(0 * t, varargin{:});
+        end
+    end
+    
     
     %% Structure
     methods
@@ -460,6 +470,9 @@ classdef Tensor
         
         function style = fusionstyle(t)
             style = fusionstyle(t.codomain, t.domain);
+        end
+        
+        function t = full(t)
         end
         
 %         function t = horzcat(varargin)
@@ -551,8 +564,8 @@ classdef Tensor
                 'tensors:SizeError', 'Incompatible sizes for vectorized function.');
             
             % make everything a vector
-            A = arrayfun(@repartition, A);
-            B = arrayfun(@repartition, B);
+%             A = arrayfun(@repartition, A);
+%             B = arrayfun(@repartition, B);
             
             d = norm(A - B);
         end
@@ -581,68 +594,7 @@ classdef Tensor
             end
         end
         
-        function C = contract(tensors, indices, kwargs)
-            arguments (Repeating)
-                tensors
-                indices (1, :) {mustBeInteger}
-            end
-            
-            arguments
-                kwargs.Conj (1, :) logical = false(size(tensors))
-                kwargs.Rank = []
-                kwargs.Debug = false
-            end
-            
-            assert(length(kwargs.Conj) == length(tensors));
-            
-            for i = 1:length(tensors)
-                if length(indices{i}) > 1
-                    assert(length(unique(indices{i})) == length(indices{i}), ...
-                        'Tensors:TBA', 'Traces not implemented.');
-                end
-            end
-            
-            debug = kwargs.Debug;
-            
-            % Special case for single input tensor
-            if nargin == 2
-                [~, order] = sort(indices{1}, 'descend');
-                C = tensors{1};
-                if kwargs.Conj
-                    C = tpermute(C', order(length(order):-1:1), kwargs.Rank);
-                else
-                    C = tpermute(C, order, kwargs.Rank);
-                end
-                return
-            end
-            
-            % Generate trees
-            contractindices = cellfun(@(x) x(x > 0), indices, 'UniformOutput', false);
-            partialtrees = num2cell(1:length(tensors));
-            tree = generatetree(partialtrees, contractindices);
-            
-            % contract all subtrees
-            [A, ia, ca] = contracttree(tensors, indices, kwargs.Conj, tree{1}, debug);
-            [B, ib, cb] = contracttree(tensors, indices, kwargs.Conj, tree{2}, debug);
-            
-            % contract last pair
-            [dimA, dimB] = contractinds(ia, ib);
-            
-            if debug, contractcheck(A, ia, ca, B, ib, cb); end
-            
-            C = tensorprod(A, B, dimA, dimB, ca, cb, 'NumDimensionsA', length(ia));
-            ia(dimA) = [];  ib(dimB) = [];
-            ic = [ia ib];
-            
-            % permute last tensor
-            if ~isempty(ic) && length(ic) > 1
-                [~, order] = sort(ic, 'descend');
-                if isempty(kwargs.Rank)
-                    kwargs.Rank = [length(order) 0];
-                end
-                C = tpermute(C, order, kwargs.Rank);
-            end
-        end
+        
         
         function t = ctranspose(t)
             % Compute the adjoint of a tensor. This is defined as swapping the codomain and
@@ -667,6 +619,8 @@ classdef Tensor
                 [t(i).codomain, t(i).domain] = swapvars(t(i).codomain, t(i).domain);
                 t(i).var = t(i).var';
             end
+            
+            t = permute(t, ndims(t):-1:1);
         end
         
         function d = dot(t1, t2)
@@ -824,7 +778,7 @@ classdef Tensor
             if isnumeric(A) || isnumeric(B)
                 C = A .* B;
                 return
-            end
+            end 
             
             assert(isequal(A.domain, B.codomain), 'tensors:SpaceMismatch', ...
                 'Multiplied spaces incompatible.');
@@ -961,7 +915,7 @@ classdef Tensor
             if isempty(cache), cache = LRU; end
             
             if Options.CacheEnabled()
-                key = GetMD5({GetMD5_helper(t.codomain), GetMD5_helper(t.domain), p, r}, ...
+                key = GetMD5({t.codomain, t.domain, p, r}, ...
                     'Array', 'hex');
                 med = get(cache, key);
                 if isempty(med)
@@ -1132,8 +1086,8 @@ classdef Tensor
             if isempty(cache), cache = LRU; end
             
             if Options.CacheEnabled()
-                key = GetMD5({GetMD5_helper(A.codomain), GetMD5_helper(A.domain), ...
-                    GetMD5_helper(B.codomain), GetMD5_helper(B.domain), ...
+                key = GetMD5({A.codomain, A.domain, ...
+                    B.codomain, B.domain, ...
                     dimA, dimB, ca, cb}, 'Array', 'hex');
                 med = get(cache, key);
                 if isempty(med)
@@ -1153,8 +1107,11 @@ classdef Tensor
                     med.varB = B_.var;
                     med.mapB = permute(fusiontrees(B), iB, rB);
                     
-                    assert(isequal(A_.domain, B_.codomain), 'tensors:SpaceMismatch', ...
-                        'Contracted spaces incompatible.');
+                    if ~isequal(A_.domain, B_.codomain)
+                        error('tensors:SpaceMismatch', ...
+                            'Contracted spaces incompatible.\n%s\n%s', ...
+                            string(A_.domain), string(B_.codomain));
+                    end
                     if ~isempty(A_.codomain) || ~isempty(B_.domain) 
                         med.C = Tensor.zeros(A_.codomain, B_.domain);
                     else
@@ -1169,7 +1126,7 @@ classdef Tensor
                 if isempty(C)
                     Ablocks = matrixblocks(varA);
                     Bblocks = matrixblocks(varB);
-                    C = horzcat(Ablocks{:}) * vertcat(Bblocks{:});
+                    C = sum(cellfun(@mtimes, Ablocks, Bblocks), 'all'); % horzcat(Ablocks{:}) * vertcat(Bblocks{:});
                 else
                     C.var = mul(C.var, varA, varB);
                 end
@@ -1318,7 +1275,7 @@ classdef Tensor
             if isempty(cache), cache = LRU; end
             
             if Options.CacheEnabled()
-                key = GetMD5({GetMD5_helper(t.codomain), GetMD5_helper(t.domain), i, inv}, ...
+                key = GetMD5({t.codomain, t.domain, i, inv}, ...
                     'Array', 'hex');
                 med = get(cache, key);
                 if isempty(med)
@@ -1562,7 +1519,8 @@ classdef Tensor
             V = t.domain.new(dims, false);
             
             if strcmp(alg, 'polar')
-                assert(isequal(V, prod(t.codomain)));
+                assert(isequal(V, prod(t.codomain)), ...
+                    'linalg:polar', 'polar decomposition should lead to square R.');
                 W = t.codomain;
             elseif length(p1) == 1 && V == t.codomain
                 W = t.codomain;
@@ -1785,11 +1743,18 @@ classdef Tensor
                 S = Tensor.zeros(W1, W2);
                 V = Tensor.eye(W2, t.domain);
             else
+                mask = dims.degeneracies ~= 0;
+                dims.charges = dims.charges(mask);
+                dims.degeneracies = dims.degeneracies(mask);
                 W = t.domain.new(dims, false);
                 
                 U = Tensor.eye(t.codomain, W);
                 S = Tensor.zeros(W, W);
                 V = Tensor.eye(W, t.domain);
+                
+                Us = Us(mask);
+                Vs = Vs(mask);
+                Ss = Ss(mask);
             end
             
             U.var = fill_matrix_data(U.var, Us, dims.charges);
@@ -2005,6 +1970,12 @@ classdef Tensor
                 tol.AbsTol = 0
             end
             
+            if numel(t) > 1
+                bool = arrayfun(@(x) isisometry(x, side, ...
+                    'RelTol', tol.RelTol, 'AbsTol', tol.AbsTol), t);
+                return
+            end
+
             mblocks = matrixblocks(t);
             for i = 1:length(mblocks)
                 if ~isisometry(mblocks{i}, side, 'RelTol', tol.RelTol, 'AbsTol', tol.AbsTol)
@@ -2093,294 +2064,6 @@ classdef Tensor
     
     %% Solvers
     methods
-        function varargout = linsolve(A, b, x0, M1, M2, options)
-            % Find a solution for a linear system `A(x) = b` or `A * x = b`.
-            %
-            % Arguments
-            % ---------
-            % A : operator
-            %   either a function handle implementing or an object that supports
-            %   right multiplication.
-            %
-            % b : :class:`Tensor`
-            %   right-hand side of the equation, interpreted as vector.
-            %
-            % x0 : :class:`Tensor`
-            %   optional initial guess for the solution.
-            %
-            % M1, M2 : operator
-            %   preconditioner M = M1 or M = M1 * M2 to effectively solve the system A *
-            %   inv(M) * y = b with y = M * x.
-            %   M is either a function handle implementing or an object that supports
-            %   left division.
-            %
-            % Keyword Arguments
-            % -----------------
-            % Tol : numeric
-            %   specifies the tolerance of the method, by default this is the square root of
-            %   eps.
-            %
-            % Algorithm : char
-            %   specifies the algorithm used. Can be either one of the following:
-            %
-            %   - 'bicgstab'
-            %   - 'bicgstabl'
-            %   - 'gmres'
-            %   - 'pcg'
-            %
-            % MaxIter : int
-            %   Maximum number of iterations.
-            %
-            % Restart : int
-            %   For 'gmres', amount of iterations after which to restart.
-            %
-            % Verbosity : int
-            %   Level of output information, by default nothing is printed if `flag` is
-            %   returned, otherwise only warnings are given.
-            %
-            %   - 0 : no information
-            %   - 1 : information at failure
-            %   - 2 : information at convergence
-            %
-            % Returns
-            % -------
-            % x : :class:`Tensor`
-            %   solution vector.
-            %
-            % flag : int
-            %   a convergence flag:
-            %
-            %   - 0 : linsolve converged to the desired tolerance.
-            %   - 1 : linsolve reached the maximum iterations without convergence.
-            %   - 2 : linsolve preconditioner was ill-conditioned.
-            %   - 3 : linsolve stagnated.
-            %   - 4 : one of the scalar quantities calculated became too large or too small.
-            %
-            % relres : numeric
-            %   relative residual, norm(b - A * x) / norm(b).
-            %
-            % iter : int
-            %   iteration number at which x was computed.
-            %
-            % resvec : numeric
-            %   vector of estimated residual norms at each part of the iteration.
-            
-            arguments
-                A
-                b
-                x0 = []
-                M1 = []
-                M2 = []
-                
-                options.Tol = eps(underlyingType(b)) ^ (3/4)
-                options.Algorithm {mustBeMember(options.Algorithm, ...
-                    {'pcg', 'gmres', 'bicgstab', 'bicgstabl'})} = 'gmres'
-                options.MaxIter = 400
-                options.Restart = 30
-                options.Verbosity = 0
-            end
-            
-            % Convert input objects to vectors
-            b_vec = vectorize(b);
-            b_sz = size(b_vec);
-            
-            if ~isempty(x0) && ~iszero(x0)
-                x0_vec = vectorize(x0);
-            else
-                x0_vec = zeros(b_sz);
-            end
-            
-            % Convert input operators to handle vectors
-            if isa(A, 'function_handle')
-                A_fun = @(x) vectorize(A(devectorize(x, b)));
-            else
-                A_fun = @(x) vectorize(A * devectorize(x, b));
-            end
-            
-            if isempty(M1)
-                M1_fun = [];
-            elseif isa(M1, 'function_handle')
-                M1_fun = @(x) vectorize(M1(devectorize(x, b)));
-            else
-                M1_fun = @(x) vectorize(M1 \ devectorize(x, b));
-            end
-            
-            if isempty(M2)
-                M2_fun = [];
-            elseif isa(M2, 'function_handle')
-                M2_fun = @(x) vectorize(M2(devectorize(x, b)));
-            else
-                M2_fun = @(x) vectorize(M2 \ devectorize(x, b));
-            end
-            
-            % Sanity check on parameters
-            options.Restart = min(options.Restart, b_sz(1));
-            if options.Tol < eps(underlyingType(b))^0.9
-                warning('Requested tolerance might be too strict.');
-            end
-            
-            % Apply MATLAB implementation
-            switch options.Algorithm
-                case 'bicgstab'
-                    [varargout{1:nargout}] = bicgstab(A_fun, b_vec, ...
-                        options.Tol, options.MaxIter, M1_fun, M2_fun, x0_vec);
-                case 'bicgstabl'
-                    [varargout{1:nargout}] = bicgstabl(A_fun, b_vec, ...
-                        options.Tol, options.MaxIter, M1_fun, M2_fun, x0_vec);
-                case 'gmres'
-                    options.MaxIter = min(b_sz(1), options.MaxIter);
-                    [varargout{1:nargout}] = gmres(A_fun, b_vec, ...
-                        options.Restart, options.Tol, options.MaxIter, ...
-                        M1_fun, M2_fun, x0_vec);
-                case 'pcg'
-                    [varargout{1:nargout}] = pcg(A_fun, b_vec, ...
-                        options.Tol, options.MaxIter, M1_fun, M2_fun, x0_vec);
-            end
-            
-            
-            % Convert output
-            varargout{1} = devectorize(varargout{1}, b);
-        end
-        
-        function varargout = eigsolve(A, x0, howmany, sigma, options)
-            % Find a few eigenvalues and eigenvectors of an operator.
-            %
-            % Usage
-            % -----
-            % :code:`[V, D, flag] = eigsolve(A, x0, howmany, sigma, kwargs)`
-            % :code:`D = eigsolve(A, x0, ...)`
-            %
-            % Arguments
-            % ---------
-            % A : :class:`Tensor` or function_handle
-            %   A square tensormap interpreted as matrix.
-            %   A function handle which implements one of the following, depending on sigma:
-            %
-            %   - A \ x, if `sigma` is 0 or 'smallestabs'
-            %   - (A - sigma * I) \ x, if sigma is a nonzero scalar
-            %   - A * x, for all other cases
-            %
-            % x0 : :class:`Tensor`
-            %   initial guess for the eigenvector. If A is a :class:`Tensor`, this defaults
-            %   to a random complex :class:`Tensor`, for function handles this is a required
-            %   argument.
-            %
-            % howmany : int
-            %   amount of eigenvalues and eigenvectors that should be computed. By default
-            %   this is 1, and this should not be larger than the total dimension of A.
-            %
-            % sigma : 'char' or numeric
-            %   selector for the eigenvalues, should be either one of the following:
-            %
-            %   - 'largestabs', 'largestreal', 'largestimag' : default, eigenvalues of
-            %       largest magnitude, real part or imaginary part.
-            %   - 'smallestabs', 'smallestreal', 'smallestimag' : eigenvalues of smallest
-            %       magnitude, real part or imaginary part.
-            %   - numeric : eigenvalues closest to sigma.
-            %
-            % Keyword Arguments
-            % -----------------
-            % Tol : numeric
-            %   tolerance of the algorithm.
-            %
-            % Algorithm : char
-            %   choice of algorithm. Currently only 'eigs' is available, which leverages the
-            %   default Matlab eigs.
-            %
-            % MaxIter : int
-            %   maximum number of iterations, 100 by default.
-            %
-            % KrylovDim : int
-            %   number of vectors kept in the Krylov subspace.
-            %
-            % IsSymmetric : logical
-            %   flag to speed up the algorithm if the operator is symmetric, false by
-            %   default.
-            %
-            % Verbosity : int
-            %   Level of output information, by default nothing is printed if `flag` is
-            %   returned, otherwise only warnings are given.
-            %
-            %   - 0 : no information
-            %   - 1 : information at failure
-            %   - 2 : information at convergence
-            %   - 3 : information at every iteration
-            %
-            % Returns
-            % -------
-            % V : (1, howmany) :class:`Tensor`
-            %   vector of eigenvectors.
-            %
-            % D : numeric
-            %   vector of eigenvalues if only a single output argument is asked, diagonal
-            %   matrix of eigenvalues otherwise.
-            %
-            % flag : int
-            %   if flag = 0 then all eigenvalues are converged, otherwise not.
-            
-            arguments
-                A
-                x0 = A.randnc(A.domain, [])
-                howmany = 1
-                sigma = 'largestabs'
-                
-                options.Tol = 1e-12
-                options.Algorithm = 'eigs'
-                options.MaxIter = 100
-                options.KrylovDim = 20
-                options.IsSymmetric logical = false
-                options.Verbosity = 0
-            end
-            
-            assert(isnumeric(sigma) || ismember(sigma, {'largestabs', 'smallestabs', ...
-                'largestreal', 'smallestreal', 'bothendsreal', ...
-                'largestimag', 'smallestimag', 'bothendsimag'}), ...
-                'tensors:ArgumentError', 'Invalid choice of eigenvalue selector.');
-            nargoutchk(0, 3);
-            
-            x0_vec = vectorize(x0);
-            sz = size(x0_vec);
-            
-            if isa(A, 'function_handle')
-                A_fun = @(x) vectorize(A(devectorize(x, x0)));
-            else
-                A_fun = @(x) vectorize(A * devectorize(x, x0));
-            end
-            
-            options.KrylovDim = min(sz(1), options.KrylovDim);
-            
-            [V, D, flag] = eigs(A_fun, sz(1), howmany, sigma, ...
-                'Tolerance', options.Tol, 'MaxIterations', options.MaxIter, ...
-                'SubspaceDimension', options.KrylovDim, 'IsFunctionSymmetric', ...
-                options.IsSymmetric, 'StartVector', x0_vec, ...
-                'Display', options.Verbosity == 3);
-            
-            if nargout <= 1
-                varargout = {D};
-            elseif nargout == 2
-                for i = howmany:-1:1
-                    varargout{1}(:, i) = devectorize(V(:, i), x0);
-                end
-                varargout{2} = D;
-            else
-                varargout{2} = D;
-                for i = howmany:-1:1
-                    varargout{1}(:, i) = devectorize(V(:, i), x0);
-                end
-                varargout{3} = flag;
-            end
-            
-            if flag && options.Verbosity > 0
-                warning('eigsolve did not converge.');
-            end
-            
-            if options.Verbosity > 1
-                if flag
-                    fprintf('eigsolve converged.\n');
-                end 
-            end
-        end
-        
         function v = vectorize(t, type)
             % Collect all parameters in a vector, weighted to reproduce the correct
             % inproduct.
@@ -2518,7 +2201,8 @@ classdef Tensor
             type = underlyingType(t(1).var);
         end
         
-        function disp(t)
+        function disp(t, details)
+            if nargin == 1 || isempty(details), details = false; end
             if isscalar(t)
                 r = t.rank;
                 fprintf('Rank (%d, %d) %s:\n\n', r(1), r(2), class(t));
@@ -2528,16 +2212,33 @@ classdef Tensor
                     disp(s(i));
                 end
                 fprintf('\n');
-                
-                [blocks, charges] = matrixblocks(t);
-                for i = 1:length(blocks)
-                    if ~isempty(blocks)
-                        fprintf('charge %s:\n', string(charges(i)));
+                if details
+                    [blocks, charges] = matrixblocks(t);
+                    for i = 1:length(blocks)
+                        if ~isempty(blocks)
+                            fprintf('charge %s:\n', string(charges(i)));
+                        end
+                        disp(blocks{i});
                     end
-                    disp(blocks{i});
                 end
             else
-                builtin('disp', t);
+                fprintf('%s of size %s:\n', class(t), ...
+                    regexprep(mat2str(size(t)), {'\[', '\]', '\s+'}, {'', '', 'x'}));
+                subs = ind2sub_(size(t), 1:numel(t));
+                spc = floor(log10(max(double(subs), [], 1))) + 1;
+                if numel(spc) == 1
+                    fmt = strcat("\t(%", num2str(spc(1)), "u)");
+                else
+                    fmt = strcat("\t(%", num2str(spc(1)), "u,");
+                    for i = 2:numel(spc) - 1
+                        fmt = strcat(fmt, "%", num2str(spc(i)), "u,");
+                    end
+                    fmt = strcat(fmt, "%", num2str(spc(end)), "u)");
+                end
+                for i = 1:numel(t)
+                    fprintf('%s\t\t', compose(fmt, subs(i, :)));
+                    disp(t(i), details);
+                end
             end
         end
     end

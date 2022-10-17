@@ -496,14 +496,21 @@ classdef ProductCharge < AbstractCharge
             end
         end
         
+        function theta = twist(a)
+            theta = twist(a.charges{1});
+            for i = 2:length(a.charges)
+                theta = theta .* twist(a.charges{i});
+            end
+        end
+        
         function bool = issorted(a)
             [a, p] = sort(a);
             bool = isequal(p, (1:length(a)).');
         end
         
         function bool = issortedrows(a)
-            [p, ~] = simulsortrows(a.charges{:});
-            bool = isequal(p, (1:size(a.charges{1}, 1)).');
+            [~, p] = sortrows(a);
+            bool = isequal(p, (1:size(a, 1)).');
         end
         
         function [a, I] = sort(a, varargin)
@@ -513,14 +520,8 @@ classdef ProductCharge < AbstractCharge
         function [a, I] = sortrows(a, col, direction)
             arguments
                 a
-                col (1,:) double = []
+                col (1,:) double = 1:size(a, 2)
                 direction = 'ascend'
-            end
-            
-            if nargin == 1 || isempty(col) || isequal(col, 1:size(a, 2))
-                [I, a.charges{:}] = simulsortrows(a.charges{:}, ...
-                    'Direction', direction);
-                return
             end
             
             newcol = reshape(col + (((1:length(a.charges)).' - 1) .* size(a, 2)), 1, []);

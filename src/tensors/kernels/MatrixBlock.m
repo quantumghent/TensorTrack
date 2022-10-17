@@ -94,8 +94,12 @@ classdef MatrixBlock < AbstractBlock
             
             
             %% Special case 2: addition without permutation
+            rx = X(1).rank;
+            ry = Y(1).rank;
+            
             if nargin == 4 || (isempty(p) && isempty(map)) || ...
-                    (all(p == 1:length(p)) && isequal(map, speye(size(map))))
+                    (all(p == 1:length(p)) && isequal(rx, ry) && ...
+                    isequal(map, speye(size(map))))
                 % reduce to scalar multiplication
                 if b == 0   % a ~= 0 -> case 1
                     Y = X .* a;
@@ -132,8 +136,6 @@ classdef MatrixBlock < AbstractBlock
             
             %% General case: addition with permutation
             % tensor indexing to matrix indexing
-            rx = X(1).rank;
-            ry = Y(1).rank;
             rrx = rankrange(rx);
             rry = rankrange(ry);
             p_eff(rry) = rrx(p);
@@ -654,6 +656,25 @@ classdef MatrixBlock < AbstractBlock
                             reshape(v(ctr + (n + 1:2 * n)), sz)) ./ sqrt(qdim(X(i).charge));
                         ctr = ctr + 2 * n;
                     end
+            end
+        end
+    end
+    
+    methods
+        function assertBlocksizes(X)
+            for i = 1:numel(X)
+                assert(isequal(size(X(i).var), [X(i).rowsizes(end) X(i).colsizes(end)]), ...
+                    'kernel:dimerror', 'Wrong size of block');
+                rows = length(X(i).rowsizes) - 1;
+                cols = length(X(i).colsizes) - 1;
+                matdims = [prod(X(i).tdims(:, 1:X(i).rank(1)), 2) ...
+                    prod(X(i).tdims(:, X(i).rank(1)+1:end), 2)];
+                for k = 1:cols
+                    for j = 1:rows
+                        assert(matdims(j + (k-1) * rows, 1) == X(i).rowsizes(j+1) - X(i).rowsizes(j));
+                        assert(matdims(j + (k-1) * rows, 2) == X(i).colsizes(k+1) - X(i).colsizes(k));
+                    end
+                end
             end
         end
     end

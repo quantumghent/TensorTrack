@@ -12,7 +12,13 @@ if all(cellfun('isempty', contractindices)) % disconnected network
 else
     tocontract = min(horzcat(contractindices{:}));
     tinds = find(cellfun(@(x) any(tocontract == x), contractindices));
-    assert(length(tinds) == 2);
+    
+    if length(tinds) ~= 2
+        celldisp(contractindices);
+        error('contract:indices', ...
+            'contracted indices should appear exactly twice.\n(%d)', ...
+            tocontract);
+    end
     partialtrees{tinds(1)} = partialtrees(tinds);
     partialtrees(tinds(2)) = [];
     contractindices{tinds(1)} = unique1(horzcat(contractindices{tinds}));

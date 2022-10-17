@@ -57,14 +57,14 @@ classdef LRU < handle
             % val : any
             %   value that is stored with a key, or empty if key not in cache.
             
-            try
+            if isKey(cache.map, key)
                 dll = cache.map(key);
                 val = dll.val{2};
                 
                 % Re-insert dll to the front of the list
                 pop(dll);
                 append(cache.sentinel, dll);
-            catch
+            else
                 val = [];
             end
         end

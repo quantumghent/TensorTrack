@@ -1,7 +1,7 @@
 function [C, ic, cc] = contracttree(tensors, indices, conjlist, tree, debug)
 
 if isnumeric(tree)
-    C = tensors{tree};    
+    C = tensors{tree};
     ic = indices{tree};
     cc = conjlist(tree);
     return

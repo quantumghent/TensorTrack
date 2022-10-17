@@ -4,8 +4,8 @@ classdef TestFusionTree < matlab.unittest.TestCase
     %#ok<*PROPLC>
     
     properties (ClassSetupParameter)
-        weight = {'small', 'medium'}%, 'large'}
-        charge = {'A4', 'Z1', 'Z2', 'fZ2', 'U1', 'O2', 'SU2', 'Z2xU1'}
+        weight = {'small', 'medium'} %, 'large'}
+        charge = {'A4', 'Z1', 'Z2', 'fZ2', 'U1', 'O2', 'SU2', 'Z2xU1', 'U1xSU2'}
     end
     
     methods (TestClassSetup)
@@ -64,6 +64,19 @@ classdef TestFusionTree < matlab.unittest.TestCase
                             chargeset = A4(1:4);
                     end
                     
+                case 'U1xSU2'
+                    switch weight
+                        case 'small'
+                            chargeset = ProductCharge(U1(-1:1), SU2(2,1,2));
+                        case 'medium'
+                            chargeset = ProductCharge(U1(-2:2), SU2(1,2,1,2,1));
+                        case 'large'
+                            chargeset = ProductCharge(U1(-2:2), SU2(3,2,1,2,3));
+                    end
+                    
+                otherwise
+                    error('not implemented');
+                    
             end
             
             %% Setup weight
@@ -75,7 +88,7 @@ classdef TestFusionTree < matlab.unittest.TestCase
                     tc.testWeight = 0.5;
                 case 'medium'
                     legs = 0:4;
-                    maxTrees = 100;
+                    maxTrees = 200;
                     maxLegs = 5;
                     tc.testWeight = 0.25;
                 case 'large'
@@ -140,6 +153,8 @@ classdef TestFusionTree < matlab.unittest.TestCase
                     end
                     assertTrue(tc, all(isallowed(tc.trees{i,j})), ...
                         'Generated invalid fusion trees.');
+                    assertTrue(tc, issorted(tc.trees{i,j}), ...
+                        'FusionTrees are not properly sorted.');
                 end
             end
         end

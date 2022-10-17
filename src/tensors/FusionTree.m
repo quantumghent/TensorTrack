@@ -806,7 +806,7 @@ classdef FusionTree < matlab.mixin.CustomDisplay
             
             if isempty(f), c = []; return; end
             
-            if istwistless(braidingstyle(f))
+            if istwistless(braidingstyle(f)) || isempty(i) || ~any(i)
                 c = speye(length(f));
                 return
             end
@@ -918,6 +918,20 @@ classdef FusionTree < matlab.mixin.CustomDisplay
                 else
                     f.charges = sortrows(f.charges, cols);
                 end
+            end
+        end
+        
+        function bool = issorted(f)
+            if ~isempty(f.vertices) && hasmultiplicity(fusionstyle(f))
+                [~, p] = sort(f);
+                bool = isequal(p, (1:length(f)).');
+            else
+                bool = issorted(f.coupled);
+                if ~bool, return; end
+                cols = [treeindsequence(f.rank(1)) + 1 ...                                  % center charge
+                    (1:treeindsequence(f.rank(2))) + treeindsequence(f.rank(1)) + 1 ...         % fuse charges
+                    fliplr(1:treeindsequence(f.rank(1)))];
+                bool = issortedrows(f.charges(:, cols));
             end
         end
     end

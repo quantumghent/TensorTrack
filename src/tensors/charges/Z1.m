@@ -40,6 +40,10 @@ classdef Z1 < AbstractCharge
             bool = true;
         end
         
+        function bool = issorted(~)
+            bool = true;
+        end
+        
         function a = mtimes(a, ~), end
         
         function bools = ne(A, B)

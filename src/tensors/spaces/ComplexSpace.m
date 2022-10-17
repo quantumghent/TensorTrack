@@ -255,6 +255,35 @@ classdef ComplexSpace < AbstractSpace
             
             hashable = [spaces.dimensions spaces.isdual];
         end
+        
+        function disp(spaces)
+            if isscalar(spaces)
+                fprintf('%s\n', string(spaces));
+                return
+            end
+            
+            sz = size(spaces);
+            dim_str = sprintf('%dx%d', sz(1), sz(2));
+            fprintf('%s ProductSpace with elements:\n\n', dim_str);
+            for i = 1:length(spaces)
+                fprintf('%d.\t', i);
+                disp(spaces(i));
+                fprintf('\n');
+            end
+        end
+        
+        function s = string(spaces)
+            if numel(spaces) > 1
+                s = arrayfun(@string, spaces);
+                return
+            end
+            
+            if spaces.dual
+                s = sprintf("Space (%d)*", dims(spaces));
+            else
+                s = sprintf("Space (%d)", dims(spaces));
+            end
+        end
     end
 
 end

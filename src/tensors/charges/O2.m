@@ -225,6 +225,10 @@ classdef O2 < AbstractCharge
             bool = issortedrows(reshape([A.j] + [A.s], size(A)));
         end
         
+        function bool = issorted(A)
+            bool = issorted(reshape([A.j] + [A.s], size(A)));
+        end
+        
         function c = mtimes(a, b)
             assert(isscalar(a) && isscalar(b), ...
                 'Simple fusion cannot be vectorised.');
