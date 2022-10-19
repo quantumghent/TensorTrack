@@ -180,6 +180,10 @@ classdef CartesianSpace < AbstractSpace
             
             style = FusionStyle.Unique;
         end
+        
+        function space = one(~)
+            space = CartesianSpace(1, []);
+        end
     end
         
         
