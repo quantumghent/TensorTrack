@@ -707,7 +707,7 @@ classdef (Abstract) AbstractCharge
                 if any(size(a) == numel(a)) && any(size(b) == numel(b))
                     lia = a == b;
                 else
-                    lia = a(:) == b(:);
+                    lia = reshape(a == b, [], 1);
                 end
                 
                 if ~any(lia)
@@ -725,8 +725,9 @@ classdef (Abstract) AbstractCharge
                 return
             end
             
-            [sortab, indsortab] = sort([a(:); b(:)]);
-            d = sortab(1:end-1) == sortab(2:end);
+            [sortab, indsortab] = sort([reshape(a, [], 1); reshape(b, [], 1)]);
+            d = subsref(sortab, substruct('()', {1:length(sortab)-1})) == ...
+                subsref(sortab, substruct('()', {2:length(sortab)}));
             ndx1 = indsortab(d);
             
             if nargout <= 1
