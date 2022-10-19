@@ -40,8 +40,14 @@ classdef GradedSpace < AbstractSpace
                         'tensors:ArgumentError', ...
                         'Charges should be unique.');
                     
-                    assert(all(dimensions{i}.degeneracies > 0), 'tensors:argerror', ...
-                        'degeneracies should be strictly positive.');
+                    assert(all(dimensions{i}.degeneracies >= 0), 'tensors:argerror', ...
+                        'degeneracies should be positive.');
+                    mask = dimensions{i}.degeneracies == 0;
+                    if any(mask)
+                        warning('degeneracies should be strictly positive, removing 0.');
+                        dimensions{i}.charges = dimensions{i}.charges(mask);
+                        dimensions{i}.degeneracies = dimensions{i}.degeneracies(mask);
+                    end
                     [dimensions{i}.charges, I] = sort(dimensions{i}.charges);
                     dimensions{i}.degeneracies = dimensions{i}.degeneracies(I);
                 end
