@@ -14,7 +14,7 @@ classdef InfiniteMpo
                 
                 if isa(O, 'InfiniteMpo')
                     for i = numel(O):1:1
-                        mpo(i).O = O(i).O;
+                        mpo(i, 1).O = O(i, 1).O;
                     end
                     mpo = reshape(mpo, size(O));
                     
@@ -23,7 +23,7 @@ classdef InfiniteMpo
                 
                 elseif isa(O, 'AbstractTensor')
                     for i = height(O):-1:1
-                        mpo(i).O = arrayfun(@MpoTensor, O(i, :), 'UniformOutput', false);
+                        mpo(i, 1).O = arrayfun(@MpoTensor, O(i, :), 'UniformOutput', false);
                     end
                     
                 elseif iscell(O)
@@ -35,6 +35,34 @@ classdef InfiniteMpo
     end
     
     methods
+        function p = period(mpo)
+            p = length(mpo(1).O);
+        end
+        
+        function d = depth(mpo)
+            d = length(mpo);
+        end
+        
+        function mpo = block(mpo)
+            if depth(mpo) == 1, return; end
+            O_ = mpo(1, 1).O;
+            for d = 2:depth(mpo)
+                
+                for w = period(mpo):-1:1
+                    vspaces = [rightvspace(O_{w})' rightvspace(mpo(d, 1).O{w})'];
+                    fuser(w) = Tensor.eye(vspaces, prod(vspaces));
+                end
+                
+                for w = 1:period(mpo)
+                    O_{w} = MpoTensor(contract(O_{w}, [1 2 5 -4], mpo(d, 1).O{w}, [3 -2 4 2], ...
+                        fuser(prev(w, period(mpo)))', [-1 3 1], fuser(w), [5 4 -3], ...
+                        'Rank', [2 2]));
+                end
+            end
+            mpo = mpo(1, 1);
+            mpo.O = O_;
+        end
+
         function [GL, lambda] = leftenvironment(mpo, mps1, mps2, GL, eigopts)
             arguments
                 mpo
@@ -47,22 +75,10 @@ classdef InfiniteMpo
                 eigopts.Tol = eps(underlyingType(mps1))^(3/4)
             end
             
-            if isempty(GL)
-                GL = cell(1, period(mps1));
-                for i = size(mpo.O{1}, 1):-1:1
-                    GL{1}(1, i, 1) = Tensor.randnc(...
-                        [leftvspace(mps2, 1) leftvspace(mpo.O{1}, i)'], leftvspace(mps1, 1));
-                end
-            end
-            
-            [GL{1}, lambda] = eigsolve(@(x) transferleft(mpo, mps1, mps2, x), ...
-                GL{1}, 1, 'largestabs', 'KrylovDim', eigopts.KrylovDim, 'Tol', eigopts.Tol, ...
+            T = transfermatrix(mpo, mps1, mps2, 'Type', 'LL');
+            [GL, lambda] = eigsolve(T, GL, 1, 'largestabs', ...
+                'KrylovDim', eigopts.KrylovDim, 'Tol', eigopts.Tol, ...
                 'ReOrth', eigopts.ReOrth, 'MaxIter', eigopts.MaxIter);
-            
-            n = lambda^(1/period(mps1));
-            for w = 2:period(mps1)
-                GL{w} = applyleft(mpo.O{w}, mps1.AL(w), conj(mps2.AL(w)), GL{w-1}) / n;
-            end
         end
         
         function [GR, lambda] = rightenvironment(mpo, mps1, mps2, GR, eigopts)
@@ -77,37 +93,92 @@ classdef InfiniteMpo
                 eigopts.Tol = eps(underlyingType(mps1))^(3/4)
             end
             
-            N = period(mps1);
-            if isempty(GR)
-                GR = cell(1, N);
-                for i = size(mpo.O{end}, 3):-1:1
-                    GR{1}(1, i, 1) = Tensor.randnc(...
-                        [rightvspace(mps1, N)' rightvspace(mpo.O{end}, i)'], ...
-                        rightvspace(mps2, N)');
-                end
-            end
+            T = transfermatrix(mpo, mps1, mps2, 'Type', 'RR').';
             
-            [GR{1}, lambda] = eigsolve(@(x) transferright(mpo, mps1, mps2, x), ...
-                GR{1}, 1, 'largestabs', 'KrylovDim', eigopts.KrylovDim, 'Tol', eigopts.Tol, ...
+            [GR, lambda] = eigsolve(T, GR, 1, 'largestabs', ...
+                'KrylovDim', eigopts.KrylovDim, 'Tol', eigopts.Tol, ...
                 'ReOrth', eigopts.ReOrth, 'MaxIter', eigopts.MaxIter);
+        end
+        
+        function [GL, GR, lambda] = environments(mpo, mps1, mps2, GL, GR, eigopts)
+            arguments
+                mpo
+                mps1
+                mps2 = mps1
+                GL = []
+                GR = []
+                eigopts.KrylovDim = 30
+                eigopts.MaxIter = 1000
+                eigopts.ReOrth = 2
+                eigopts.Tol = eps(underlyingType(mps1))^(3/4)
+            end
             
-            n = lambda^(1/N);
-            for w = N:-1:1
-                GR{w} = applyright(mpo.O{w}, mps1.AR(w), conj(mps2.AR(w)), ...
-                    GR{next(w, N)}) / n;
+            kwargs = [fieldnames(eigopts).'; struct2cell(eigopts).'];
+            [GL, lambdaL] = leftenvironment(mpo, mps1, mps2, GL, kwargs{:});
+            [GR, lambdaR] = rightenvironment(mpo, mps1, mps2, GR, kwargs{:});
+            lambda = (lambdaL + lambdaR) / 2;
+            if abs(lambdaL - lambdaR)/abs(lambda) > eps(lambda)^(1/3)
+                warning('lambdas disagree');
             end
+            
+            overlap = sqrt(contract(GL, [1 3 2], mps1.C, [2 4], mps2.C', [5 1], GR, [4 3 5]));
+            GL = GL / overlap;
+            GR = GR / overlap;
+        end
+    end
+    %% Derived operators
+    methods
+        function T = transfermatrix(mpo, mps1, mps2, sites, kwargs)
+            arguments
+                mpo
+                mps1
+                mps2 = mps1
+                sites = 1:period(mpo)
+                kwargs.Type {mustBeMember(kwargs.Type, {'LL' 'LR' 'RL' 'RR'})} = 'RR'
+            end
+            
+            assert(all(diff(sites) == 1), 'sites must be neighbouring and increasing.');
+            
+            if kwargs.Type(1) == 'L'
+                A1 = mps1.AL(sites);
+            else
+                A1 = mps1.AR(sites);
+            end
+            if kwargs.Type(2) == 'L'
+                A2 = mps2.AL(sites);
+            else
+                A2 = mps2.AR(sites);
+            end
+            
+            A2 = twist(A2, 1 + find(isdual(space(A1, 2:nspaces(A1)-1))));
+            T = FiniteMpo(A2', {rot90(mpo.O{1})}, A1);
+            
+%             T = transfermatrix(mps1, mps2, sites, 'Type', kwargs.Type);
+%             T.O = {rot90(mpo.O{1})};
         end
         
-        function x = transferleft(mpo, mps1, mps2, x)
-            for w = 1:period(mps1)
-                x = applyleft(mpo.O{w}, mps1.AL(w), conj(mps2.AL(w)), x);
+        function H = AC_hamiltonian(mpo, mps, GL, GR)
+            arguments
+                mpo
+                mps
+                GL = fixedpoint(transfermatrix(mpo, mps, 'Type', 'LL'))
+                GR = fixedpoint(transfermatrix(mpo, mps, 'Type', 'RR').')
             end
+            GR = twist(GR, find(isdual(space(GR, nspaces(GR)))) + nspaces(GR)-1);
+            GL = twist(GL, find(isdual(space(GL, 1))));
+            H = FiniteMpo(GL, mpo.O, GR);
         end
         
-        function x = transferright(mpo, mps1, mps2, x)
-            for w = period(mps1):-1:1
-                x = applyright(mpo.O{w}, mps1.AR(w), conj(mps2.AR(w)), x);
+        function H = C_hamiltonian(mpo, mps, GL, GR)
+            arguments
+                mpo
+                mps
+                GL = fixedpoint(transfermatrix(mpo, mps, 'Type', 'LL'))
+                GR = fixedpoint(transfermatrix(mpo, mps, 'Type', 'RR').')
             end
+            GR = twist(GR, find(isdual(space(GR, nspaces(GR)))) + nspaces(GR)-1);
+            GL = twist(GL, find(isdual(space(GL, 1))));
+            H = FiniteMpo(GL, {}, GR);
         end
     end
     
@@ -134,11 +205,22 @@ classdef InfiniteMpo
             else
                 s = GradedSpace.new(Z2(0, 1), [1 1], false);
                 O = fill_tensor(Tensor([s s], [s s]), ...
-                    @(~,f) sqrt(prod(logical(f.uncoupled) .* sinh(beta) + ...
+                    @(~, f) 2 * sqrt(prod(logical(f.uncoupled) .* sinh(beta) + ...
                     ~logical(f.uncoupled) .* cosh(beta))));
             end
             
             mpo = InfiniteMpo(O);
+        end
+        
+        function mpo = fDimer()
+            pspace = GradedSpace.new(fZ2(0, 1), [1 1], false);
+            O = Tensor([pspace pspace], [pspace pspace]);
+            O1 = fill_tensor(O, @(~, f) ~any(f.uncoupled) || ...
+                (f.uncoupled(2) && sum(f.uncoupled) == 2));
+            O2 = fill_tensor(O, @(~, f) ~any(f.uncoupled) || ...
+                (f.uncoupled(4) && sum(f.uncoupled) == 2));
+            
+            mpo = InfiniteMpo([O1; O2]);
         end
     end
 end

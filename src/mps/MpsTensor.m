@@ -1,6 +1,5 @@
 classdef MpsTensor < Tensor
-    %MPSTENSOR Summary of this class goes here
-    %   Detailed explanation goes here
+    % Generic mps tensor objects that have a notion of virtual, physical and auxiliary legs.
     
     properties
         plegs = 1
@@ -60,11 +59,16 @@ classdef MpsTensor < Tensor
         function [AL, L] = leftorth(A, alg)
             arguments
                 A
-                alg = 'qr'
+                alg = 'polar'
             end
             
             if A.alegs == 0
                 [AL, L] = leftorth@Tensor(A, 1:nspaces(A)-1, nspaces(A), alg);
+                if isdual(space(L, 1)) == isdual(space(L, 2))
+                    L.codomain = conj(L.codomain);
+                    L = twist(L, 1);
+                    AL.domain = conj(AL.domain);
+                end
             else
                 [AL, L] = leftorth@Tensor(A, [1:A.plegs+1 A.plegs+3], A.plegs+2, alg);
                 AL = permute(AL, [1:A.plegs+1 A.plegs+3 A.plegs+2], rank(A));
@@ -84,7 +88,7 @@ classdef MpsTensor < Tensor
                 kwargs.EigsInit = 3
                 kwargs.EigsFrequence = 2
             end
-            
+%             
             % constants
             EIG_TOLFACTOR = 1/50;
             EIG_MAXTOL = 1e-4;
@@ -98,10 +102,14 @@ classdef MpsTensor < Tensor
             A = arrayfun(@(a) MpsTensor(repartition(a, [nspaces(a)-1 1])), A);
             AL = A;
             
+            eta_best = Inf;
+            ctr_best = 0;
+            
             for ctr = 1:kwargs.MaxIter
                 if ctr > kwargs.EigsInit && mod(ctr, kwargs.EigsFrequence) == 0
                     C_ = repartition(C(end), [2 0]);
-                    [C_, ~] = eigsolve(@(x) applyleft(A, conj(AL), x), C_, ...
+                    T = transfermatrix(A, AL);
+                    [C_, ~] = eigsolve(T, C_, ...
                         1, 'largestabs', ...
                         'Tol', min(eta * EIG_TOLFACTOR, EIG_MAXTOL), ...
                         'KrylovDim', between(MINKRYLOVDIM, ...
@@ -110,6 +118,10 @@ classdef MpsTensor < Tensor
                         'NoBuild', 4, ...
                         'Verbosity', kwargs.Verbosity - 1);
                     [~, C(end)] = leftorth(C_, 1, 2, kwargs.Method);
+                    if isdual(space(C(end), 2)) == isdual(space(C(end), 1))
+                        C(end).codomain = conj(C(end).codomain);
+                        C(end) = twist(C(end), 1);
+                    end
                 end
                 
                 C_ = C(end);
@@ -121,17 +133,26 @@ classdef MpsTensor < Tensor
                     lambdas(w) = norm(C(w));
                     if kwargs.Normalize, C(w) = C(w) ./ lambdas(w); end
                 end
+                try
                 eta = norm(C_ - C(end), Inf);
-                
+                catch
+                    bla
+                end
                 if eta < kwargs.Tol
                     if kwargs.Verbosity >= Verbosity.conv
                         fprintf('Conv %2d:\terror = %0.4e\n', ctr, eta);
                     end
                     break;
-                else
-                    if kwargs.Verbosity >= Verbosity.iter
-                        fprintf('Iter %2d:\terror = %0.4e\n', ctr, eta);
-                    end
+                elseif eta < eta_best
+                    eta_best = eta;
+                    ctr_best = ctr;
+                elseif ctr - ctr_best > 3
+                    warning('uniform_orthright:stagnate', 'Algorithm stagnated');
+                    break;
+                end
+                
+                if kwargs.Verbosity >= Verbosity.iter
+                    fprintf('Iter %2d:\terror = %0.4e\n', ctr, eta);
                 end
             end
             
@@ -145,11 +166,17 @@ classdef MpsTensor < Tensor
         function [R, AR] = rightorth(A, alg)
             arguments
                 A
-                alg = 'lq'
+                alg = 'rqpos'
             end
             
             [R, AR] = rightorth@Tensor(A, 1, 2:nspaces(A), alg);
-            AR = MpsTensor(repartition(AR, rank(A)), A.alegs);
+            if isdual(space(R, 1)) == isdual(space(R, 2))
+                R.domain = conj(R.domain);
+                R = twist(R, 2);
+                AR.codomain = conj(AR.codomain);
+            end
+            
+%             AR = MpsTensor(repartition(AR, rank(A)), A.alegs);
         end
         
         function [AR, C, lambda, eta] = uniform_rightorth(A, C, kwargs)
@@ -164,6 +191,13 @@ classdef MpsTensor < Tensor
                 kwargs.EigsInit = 3
                 kwargs.EigsFrequence = 2
             end
+            opts = namedargs2cell(kwargs);
+            [AR, C, lambda, eta] = uniform_leftorth(A', C', opts{:});
+            AR = AR';
+            C = C';
+            lambda = conj(lambda);
+            return
+            
             
             % constants
             EIG_TOLFACTOR = 1/50;
@@ -178,10 +212,14 @@ classdef MpsTensor < Tensor
             A = arrayfun(@(a) MpsTensor(repartition(a, [1 nspaces(a)-1])), A);
             AR = A;
             
+            eta_best = Inf;
+            ctr_best = 0;
+            
             for ctr = 1:kwargs.MaxIter
                 if ctr > kwargs.EigsInit && mod(ctr, kwargs.EigsFrequence) == 0
                     C_ = repartition(C(end), [nspaces(C(end)) 0]);
-                    [C_, ~] = eigsolve(@(x) applyright(A, conj(AR), x), C_, ...
+                    T = transfermatrix(A, AR)';
+                    [C_, ~] = eigsolve(T, C_, ...
                         1, 'largestabs', ...
                         'Tol', min(eta * EIG_TOLFACTOR, EIG_MAXTOL), ...
                         'KrylovDim', between(MINKRYLOVDIM, ...
@@ -189,7 +227,11 @@ classdef MpsTensor < Tensor
                             MAXKRYLOVDIM), ...
                         'NoBuild', 4, ...
                         'Verbosity', kwargs.Verbosity - 1);
-                    [C(end), ~] = rightorth(C_, 1, 2, kwargs.Method);
+                    [C(end), ~] = rightorth(C_', 1, 2, kwargs.Method);
+                    if isdual(space(C(end), 1))
+                        C.domain = conj(C.domain);
+                        C = twist(C, 2);
+                    end
                 end
                 
                 C_ = C(end);
@@ -208,10 +250,15 @@ classdef MpsTensor < Tensor
                         fprintf('Conv %2d:\terror = %0.4e\n', ctr, eta);
                     end
                     break;
-                else
-                    if kwargs.Verbosity >= Verbosity.iter
-                        fprintf('Iter %2d:\terror = %0.4e\n', ctr, eta);
-                    end
+                elseif eta < eta_best
+                    eta_best = eta;
+                    ctr_best = ctr;
+                elseif ctr - ctr_best > 3
+                    warning('uniform_orthright:stagnate', 'Algorithm stagnated');
+                    break;
+                end
+                if kwargs.Verbosity >= Verbosity.iter
+                    fprintf('Iter %2d:\terror = %0.4e\n', ctr, eta);
                 end
             end
             
@@ -220,6 +267,37 @@ classdef MpsTensor < Tensor
             end
             
             if nargout > 2, lambda = prod(lambdas); end
+        end
+        
+        function T = transfermatrix(A, B)
+            arguments
+                A MpsTensor
+                B MpsTensor = A
+            end
+            
+            
+            for i = length(A):-1:1
+                B(i) = twist(B(i), [isdual(space(B(i), 1:2)) ~isdual(space(B(i), 3))]);
+                T(i, 1) = FiniteMpo(B(i)', {}, A(i));
+            end
+        end
+        
+        function v = applytransfer(L, R, v)
+            arguments
+                L MpsTensor
+                R MpsTensor
+                v
+            end
+            
+            auxlegs_v = nspaces(v) - 2;
+            auxlegs_l = L.alegs;
+            auxlegs_r = R.alegs;
+            auxlegs = auxlegs_v + auxlegs_l + auxlegs_r;
+            
+            v = contract(v, [1 3 (-(1:auxlegs_v) - 2 - auxlegs_l)], ...
+                L, [-1 2 1 (-(1:auxlegs_l) - 2)], ...
+                R, [3 2 -2 (-(1:auxlegs_r) - 3 - auxlegs_l - auxlegs_v)], ...
+                'Rank', rank(v) + [0 auxlegs]);
         end
         
         function rho = applyleft(T, B, rho)
@@ -322,23 +400,28 @@ classdef MpsTensor < Tensor
         end
         
         function A = multiplyleft(A, C)
-            A = MpsTensor(repartition(...
-                repartition(C, [1 1]) * repartition(A, [1 nspaces(A)-1]), ...
-                rank(A)), A.alegs);
+%             A = MpsTensor(repartition(...
+%                 repartition(C, [1 1]) * repartition(A, [1 nspaces(A)-1]), ...
+%                 rank(A)), A.alegs);
 %             if ~isdual(space(C, 2))
 %                 C = twist(C, 2);
 %             end
+%             if isdual(space(A, 1)), C = twist(C, 2); end
+            A = MpsTensor(contract(C, [-1 1], A, [1 -2 -3], 'Rank', rank(A)));
+%             A = MpsTensor(tpermute(...
+%                 multiplyright(MpsTensor(tpermute(A, [3 2 1])), tpermute(C, [2 1])), [3 2 1]));
+%             A = MpsTensor(multiplyright(A', C')');
 %             A = MpsTensor(contract(C, [-1 1], A, [1 -(2:nspaces(A))], 'Rank', rank(A)));
         end
         
         function A = multiplyright(A, C)
-            if A.alegs == 0
-                A = MpsTensor(repartition(...
-                    repartition(A, [nspaces(A)-1 1]) * repartition(C, [1 1]), ...
-                    rank(A)), 0);
-                return
-            end
-            if isdual(space(C, 1)), C = twist(C, 1); end
+%             if A.alegs == 0
+%                 A = MpsTensor(repartition(...
+%                     repartition(A, [nspaces(A)-1 1]) * repartition(C, [1 1]), ...
+%                     rank(A)), 0);
+%                 return
+%             end
+%             if isdual(space(C, 1)), C = twist(C, 1); end
             Alegs = nspaces(A);
             if A.alegs == 0
                 A = contract(A, [-(1:Alegs-1) 1], C, [1 -Alegs], 'Rank', rank(A));

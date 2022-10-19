@@ -96,7 +96,7 @@ classdef GradedSpace < AbstractSpace
             end
             
             if isa(varargin{1}, 'AbstractCharge')
-                assert(mod(nargin, 3) == 0);
+                assert(mod(nargin, 3) == 0, 'Unknown caller syntax');
                 args = cell(2, nargin / 3);
                 for i = 1:size(args, 2)
                     args{1, i} = struct('charges', varargin{3 * i - 2}, ...
@@ -419,10 +419,10 @@ classdef GradedSpace < AbstractSpace
                 spaces.dimensions.degeneracies.'), ', ');
 
             if spaces.dual
-                s = sprintf('%s Space (%d)*: %s', class(spaces.dimensions.charges), ...
+                s = sprintf("%s Space (%d)*: %s", class(spaces.dimensions.charges), ...
                     dims(spaces), chargestring);
             else
-                s = sprintf('%s Space (%d): %s', class(spaces.dimensions.charges), ...
+                s = sprintf("%s Space (%d): %s", class(spaces.dimensions.charges), ...
                     dims(spaces), chargestring);
             end
         end

@@ -42,6 +42,10 @@ classdef fZ2 < Z2
         function theta = twist(a)
             theta = -2 * double(a) + 1;
         end
+        
+        function s = GetMD5_helper(data)
+            s = {'fZ2' logical(data)};
+        end
     end
 end
 

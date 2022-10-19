@@ -252,6 +252,7 @@ classdef AbstractTensor
                 'tensors:ArgumentError', 'Invalid choice of eigenvalue selector.');
             nargoutchk(0, 3);
             
+            
             x0_vec = vectorize(x0);
             sz = size(x0_vec);
             
@@ -267,7 +268,7 @@ classdef AbstractTensor
                 'Tolerance', options.Tol, 'MaxIterations', options.MaxIter, ...
                 'SubspaceDimension', options.KrylovDim, 'IsFunctionSymmetric', ...
                 options.IsSymmetric, 'StartVector', x0_vec, ...
-                'Display', options.Verbosity == 3);
+                'Display', options.Verbosity >= 3);
             
             if nargout <= 1
                 varargout = {D};
@@ -308,7 +309,6 @@ classdef AbstractTensor
             end
             
             assert(length(kwargs.Conj) == length(tensors));
-            celldisp(indices);
             for i = 1:length(tensors)
                 if length(indices{i}) > 1
                     assert(length(unique(indices{i})) == length(indices{i}), ...

@@ -2,9 +2,9 @@ classdef FiniteMpo
     % Finite Matrix product operators
     
     properties
-        L
+        L MpsTensor
         O
-        R
+        R MpsTensor
     end
     
     methods
@@ -18,15 +18,14 @@ classdef FiniteMpo
         
         function v = apply(mpo, v)
             N = length(mpo);
-            assert(nspaces(v) - 2 == N, 'incompatible vector.');
-
-            inds = arrayfun(@(x) [2*x -(x+1) 2*(x+1) 2*x+1], 1:N, ...
-                'UniformOutput', false);
-            for d = depth(mpo):-1:1
-                args = [mpo(d).O; inds];
-                v = contract(v, 1:2:2*N+3, ...
-                    mpo(d).L, [-1 2 1], args{:}, mpo(d).R, [2*N+3 2*N+2 -(N+2)], ...
-                    'Rank', rank(v));
+            for d = 1:depth(mpo)
+                if N == 0
+                    v = applytransfer(mpo(d).L, mpo(d).R, v);
+                elseif N == 1
+                    v = applychannel(mpo(d).O{1}, mpo(d).L, mpo(d).R, v);
+                else
+                    v = applympo(mpo(d).O{:}, mpo(d).L, mpo(d).R, v);
+                end
             end
         end
         
@@ -50,7 +49,7 @@ classdef FiniteMpo
             
             if isempty(v0), v0 = initialize_fixedpoint(mpo(1)); end
             
-            kwargs = [fieldnames(options).'; struct2cell(options)];
+            kwargs = namedargs2cell(options);
             [V, D, flag] = eigsolve(@(x) mpo.apply(x), v0, howmany, sigma, kwargs{:});
         end
         
@@ -60,11 +59,11 @@ classdef FiniteMpo
         
         function s = domain(mpo)
             s = conj(...
-                [space(mpo(1).L, 3), cellfun(@(x) space(x, 4), mpo.O), space(mpo.R, 1)]);
+                [rightvspace(mpo(1).L) cellfun(@(x) pspace(x)', mpo(1).O) leftvspace(mpo(1).R)]);
         end
         
         function s = codomain(mpo)
-            s = [space(mpo(1).L, 1), cellfun(@(x) space(x, 2), mpo.O), space(mpo.R, 3)];
+            s = [leftvspace(mpo(end).L) cellfun(@pspace, mpo(end).O) rightvspace(mpo(end).R)];
         end
         
         function d = depth(mpo)
@@ -75,64 +74,91 @@ classdef FiniteMpo
             l = length(mpo(1).O);
         end
         
-        function w = width(mpo)
-            w = size(mpo.O, 2);
+        function type = underlyingType(mpo)
+            type = underlyingType(mpo(1).L);
         end
         
-        function v = applyleft(mpo, v)
-            
-        end
-        
-        function mpo_d = ctranspose(mpo)
-            mpo_d = mpo;
-            mpo_d.L = tpermute(conj(mpo.L), [3 2 1], rank(mpo.L));
-            mpo_d.R = tpermute(conj(mpo.R), [3 2 1], rank(mpo.R));
-            mpo_d.O = cellfun(@(x) tpermute(conj(x), [3 2 1 4], rank(x)), mpo.O, ...
-                'UniformOutput', false);
-%             mpo_d = FiniteMpo(conj(mpo.L), conj(mpo.O), conj(mpo.R));
-        end
-        
-        function mpo1 = plus(mpo1, mpo2)
-            
-        end
-        
-        function v = applyright(mpo, v)
-            arguments
-                mpo
-                v MpsTensor
+        function mpo = ctranspose(mpo)
+            if depth(mpo) > 1
+                mpo = flip(mpo, 1);
             end
             
-            assert(depth(mpo) == 1, 'mps:TBA', 'Not implemented yet.');
-            assert(v.plegs == width(mpo), 'mps:ArgError', 'Incompatible sizes.');
-            
-            w = width(mpo);
-            
-            mpopart = cell(2, w);
-            for i = 1:w
-                mpopart{1, i} = mpo.O{i};
-                mpopart{2, i} = [2 * i, 2 * (i + 1) + 1, -(1 + i), 2 * i + 1];
+            for d = 1:depth(mpo)
+                mpo(d).L = mpo(d).L';
+                mpo(d).O = cellfun(@ctranspose, mpo(d).O, ...
+                    'UniformOutput', false);
+                mpo(d).R = mpo(d).R';
             end
-            
-            v = MpsTensor(contract(...
-                v, [1, 2:2:(2 * w), 2 * (w + 1), -(1:v.alegs) - (w + 2)], ...
-                mpo.L, [-1 3 1], ...
-                mpo.R, [-(w + 2), 2 * (w + 1) + 1, 2 * (w + 1)], ...
-                mpopart{:}, 'Rank', rank(v)));
         end
         
+        function mpo = transpose(mpo)
+            if depth(mpo) > 1
+                mpo = flip(mpo, 1);
+            end
+            
+            for d = 1:depth(mpo)
+                [mpo(d).L, mpo(d).R] = swapvars(mpo(d).L, mpo(d).R);
+                mpo(d).O = cellfun(@transpose, ...
+                    fliplr(mpo(d).O), 'UniformOutput', false);
+            end
+        end
+%         
+%         function v = applyleft(mpo, v)
+%             
+%         end
+%         
+%         function mpo1 = plus(mpo1, mpo2)
+%             
+%         end
+%         
+%         function v = applyright(mpo, v)
+%             arguments
+%                 mpo
+%                 v MpsTensor
+%             end
+%             
+%             assert(depth(mpo) == 1, 'mps:TBA', 'Not implemented yet.');
+%             assert(v.plegs == width(mpo), 'mps:ArgError', 'Incompatible sizes.');
+%             
+%             w = width(mpo);
+%             
+%             mpopart = cell(2, w);
+%             for i = 1:w
+%                 mpopart{1, i} = mpo.O{i};
+%                 mpopart{2, i} = [2 * i, 2 * (i + 1) + 1, -(1 + i), 2 * i + 1];
+%             end
+%             
+%             v = MpsTensor(contract(...
+%                 v, [1, 2:2:(2 * w), 2 * (w + 1), -(1:v.alegs) - (w + 2)], ...
+%                 mpo.L, [-1 3 1], ...
+%                 mpo.R, [-(w + 2), 2 * (w + 1) + 1, 2 * (w + 1)], ...
+%                 mpopart{:}, 'Rank', rank(v)));
+%         end
+%         
         function t = Tensor(mpo)
             assert(depth(mpo) == 1, 'not implemented for 1 < depth');
             N = length(mpo);
             inds = arrayfun(@(x) [x -(x+1) (x+1) -(N+x+3)], 1:N, ...
                 'UniformOutput', false);
             args = [mpo.O; inds];
-            t = contract(mpo.L, [-1 1 -(N+3)], args{:}, mpo.R, [-(2*N+4) N+1 -(N+2)], ...
+            t = contract(mpo.L, [-1 1 -(2*N+4)], args{:}, mpo.R, [-(N+3) N+1 -(N+2)], ...
                     'Rank', [N+2 N+2]);
         end
     end
     
     methods (Static)
-        
+        function mpo = randnc(pspaces, vspaces)
+            assert(length(pspaces) == length(vspaces) + 1);
+            
+            L = MpsTensor(Tensor.randnc([pspaces(1) vspaces(1)'], pspaces(1)));
+            O = cell(1, length(pspaces)-2);
+            for i = 1:length(O)
+                O{i} = MpoTensor(Tensor.randnc([vspaces(i) pspaces(i+1)], ...
+                    [pspaces(i+1) vspaces(i+1)]));
+            end
+            R = MpsTensor(Tensor.randnc([pspaces(end)' vspaces(end)], pspaces(end)'));
+            mpo = FiniteMpo(L, O, R);
+        end
     end
 end
 

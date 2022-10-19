@@ -150,8 +150,8 @@ classdef UniformMps
             if kwargs.ComputeAC
                 for i = 1:height(mps)
                     for w = period(mps(i)):-1:1
-                        mps(i).AC(w) = multiplyleft(mps(i).AR(w), ...
-                            mps(i).C(prev(w, period(mps(i)))));
+                        mps(i).AC(w) = multiplyright(mps(i).AL(w), ...
+                            mps(i).C(w));
                     end
                 end
             end
@@ -187,6 +187,30 @@ classdef UniformMps
             end
         end
         
+        function T = transfermatrix(mps1, mps2, sites, kwargs)
+            arguments
+                mps1
+                mps2 = mps1
+                sites = 1:period(mps1)
+                kwargs.Type {mustBeMember(kwargs.Type, {'LL' 'LR' 'RL' 'RR'})} = 'RR'
+            end
+            
+            assert(all(diff(sites) == 1), 'sites must be neighbouring and increasing.');
+            
+            if kwargs.Type(1) == 'L'
+                A1 = mps1.AL(sites);
+            else
+                A1 = mps1.AR(sites);
+            end
+            if kwargs.Type(2) == 'L'
+                A2 = mps2.AL(sites);
+            else
+                A2 = mps2.AR(sites);
+            end
+            
+            T = transfermatrix(A1, A2);
+        end
+        
         function [V, D] = transfereigs(mps1, mps2, howmany, which, eigopts, kwargs)
             arguments
                 mps1
@@ -199,41 +223,28 @@ classdef UniformMps
                 eigopts.Tol = eps(underlyingType(mps1))^(3/4)
                 kwargs.Verbosity = 0
                 kwargs.Type {mustBeMember(kwargs.Type, ...
-                    {'l_LL' 'l_LR' 'l_RL' 'l_RR' 'r_LL' 'r_LR' 'r_RL' 'r_RR'})} = 'l_LL'
+                    {'l_LL' 'l_LR' 'l_RL' 'l_RR' 'r_LL' 'r_LR' 'r_RL' 'r_RR'})} = 'r_RR'
                 kwargs.Charge = []
             end
             
-            % extract tensors
-            if strcmp(kwargs.Type(3), 'L'), T = mps1.AL; else, T = mps1.AR; end
-            if strcmp(kwargs.Type(4), 'L'), B = mps2.AL; else, B = mps2.AR; end
+            T = transfermatrix(mps1, mps2, 'Type', kwargs.Type(3:4));
+            if kwargs.Type(1) == 'r', T = T'; end
             
-            % generate initial guess
-            if strcmp(kwargs.Type(1), 'l')
-                vspace1 = leftvspace(mps2, 1);
-                vspace2 = leftvspace(mps1, 1);
+            if ~isempty(kwargs.Charge)
+                Tdomain = domain(T);
+                auxspace = Tdomain.new(...
+                    struct('charges', kwargs.Charge, 'degeneracies', 1), ...
+                    false);
+                v0 = Tensor.randnc([Tdomain auxspace], []); 
             else
-                vspace1 = rightvspace(mps1, period(mps));
-                vspace2 = rightvspace(mps2, period(mps));
-            end
-            if isempty(kwargs.Charge) || isequal(kwargs.Charge, one(kwargs.Charge))
-                v0 = Tensor.randnc([vspace1 vspace2'], []);
-            else
-                dims = struct('charges', kwargs.Charge, ...
-                    'degeneracies', ones(size(kwargs.Charge)));
-                auxspace = vspace1.new(dims, false);
-                v0 = Tensor.randnc([vspace1 vspace2' auxspace], []);
+                v0 = [];
             end
             
-            % find eigenvectors
             eigkwargs = [fieldnames(eigopts).'; struct2cell(eigopts).'];
-            if strcmp(kwargs.Type(1), 'l')
-                [V, D] = eigsolve(@(x) applyleft(T, conj(B), x), v0, howmany, which, ...
-                    eigkwargs{:}, 'Verbosity', kwargs.Verbosity);
-            else
-                [V, D] = eigsolve(@(x) applyright(T, conj(B), x), v0, howmany, which, ...
-                    eigkwargs{:}, 'Verbosity', kwargs.Verbosity);
-            end
+            [V, D] = eigsolve(T, v0, howmany, which, ...
+                eigkwargs{:}, 'Verbosity', kwargs.Verbosity);
             
+            if kwargs.Type(1) == 'r', V = V'; end
             if nargout < 2, V = D; end
         end
         
@@ -259,25 +270,33 @@ classdef UniformMps
                     {'l_LL' 'l_LR' 'l_RL' 'l_RR' 'r_LL' 'r_LR' 'r_RL' 'r_RR'})}
                 w = strcmp(type(1), 'l') * 1 + strcmp(type(1), 'r') * period(mps)
             end
-            
             ww = prev(w, period(mps));
             switch type
                 case 'l_RR'
-                    rho = mps.C(ww)' * mps.C(ww);
+                    rho = contract(mps.C(ww)', [-1 1], mps.C(ww), [1 -2], 'Rank', [1 1]);
+%                     if isdual(space(rho, 1)), rho = twist(rho, 1); end
                 case 'l_RL'
                     rho = mps.C(ww);
+%                     if isdual(space(rho, 1)), rho = twist(rho, 1); end
                 case 'l_LR'
                     rho = mps.C(ww)';
+%                     if isdual(space(rho, 1)), rho = twist(rho, 1); end
                 case 'l_LL'
                     rho = mps.C.eye(leftvspace(mps, w), leftvspace(mps, w));
+                    if isdual(space(rho, 1)), rho = twist(rho, 1); end
+                    
                 case 'r_RR'
                     rho = mps.C.eye(rightvspace(mps, w)', rightvspace(mps, w)');
+                    if isdual(space(rho, 2)), rho = twist(rho, 2); end
                 case 'r_RL'
-                    rho = mps.C(w)';
+                    rho = twist(mps.C(w)', 2);
+%                     if isdual(space(rho, 1)), rho = twist(rho, 2); end
                 case 'r_LR'
-                    rho = mps.C(w);
+                    rho = twist(mps.C(w), 2);
+%                     if ~isdual(space(rho, 2)), rho = twist(rho, 2); end
                 case 'r_LL'
-                    rho = mps.C(w) * mps.C(w)';
+                    rho = contract(mps.C(w), [-1 1], mps.C(w)', [1 -2], 'Rank', [1 1]);
+                    rho = twist(rho, 2);
             end
         end
         

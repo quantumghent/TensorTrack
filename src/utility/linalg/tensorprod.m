@@ -24,12 +24,12 @@ arguments
     options.NumDimensionsA = ndims(A)
 end
 
-persistent version
-if isempty(version), version = ~isMATLABReleaseOlderThan("R2022a", "release", 1); end
-if version
-    C = builtin('tensorprod', dimA, dimB, 'NumDimensionsA', options.NumDimensionsA);
-    return
-end
+% persistent version
+% if isempty(version), version = ~isMATLABReleaseOlderThan("R2022a", "release", 1); end
+% if version
+%     C = builtin('tensorprod', dimA, dimB, 'NumDimensionsA', options.NumDimensionsA);
+%     return
+% end
 
 szA = size(A, 1:options.NumDimensionsA);
 

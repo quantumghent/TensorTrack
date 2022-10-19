@@ -125,14 +125,14 @@ classdef Tensor < AbstractTensor
             end
         end
         
-        function t = fill_tensor(t, data, trees)
+        function t = fill_tensor(t, data)
             % Fill the tensor blocks of a tensor.
             %
             % Usage
             % -----
-            % :code:`t = fill_tensor(t, tensors, trees)`
+            % :code:`t = fill_tensor(t, tensors)`
             % 
-            % :code:`t = fill_tensor(t, fun, trees)`
+            % :code:`t = fill_tensor(t, fun)`
             %
             % Arguments
             % ---------
@@ -144,9 +144,6 @@ classdef Tensor < AbstractTensor
             %
             % fun : :class:`function_handle`
             %   function of signature :code:`fun(dims, trees)` to fill with.
-            % 
-            % trees : :class:`FusionTree`
-            %   optional list of fusion trees to identify the tensor blocks.
             %
             % Returns
             % -------
@@ -156,7 +153,6 @@ classdef Tensor < AbstractTensor
             arguments
                 t
                 data
-                trees = []
             end
             
             if isnumeric(data), data = {data}; end
@@ -475,36 +471,6 @@ classdef Tensor < AbstractTensor
         function t = full(t)
         end
         
-%         function t = horzcat(varargin)
-%             sp = space(varargin{1}, [1, 3:nspaces(varargin{1})]);
-%             for i = 2:length(varargin)
-%                 sp2 = space(varargin{2}, [1, 3:nspaces(varargin{1})]);
-%                 assert(isequal(sp, sp2), 'tensors:SpaceMismatch', ...
-%                     'hozcat tensors may only differ in the second space.');
-%             end
-%             t = builtin('horzcat', varargin{:});
-%         end
-%         
-%         function t = vertcat(varargin)
-%             sp = space(varargin{1}, 2:nspaces(varargin{1}));
-%             for i = 2:length(varargin)
-%                 sp2 = space(varargin{2}, 2:nspaces(varargin{1}));
-%                 assert(isequal(sp, sp2), 'tensors:SpaceMismatch', ...
-%                     'vertcat tensors may only differ in the first space.');
-%             end
-%             t = builtin('vertcat', varargin{:});
-%         end
-%         
-%         function t = cat(dim, varargin)
-%             sp = space(varargin{1}, [1:dim-1 dim+1:nspaces(varargin{1})]);
-%             for i = 2:length(varargin)
-%                 sp2 = space(varargin{2}, [1:dim-1 dim+1:nspaces(varargin{1})]);
-%                 assert(isequal(sp, sp2), 'tensors:SpaceMismatch', ...
-%                     'cat tensors may only differ in the concatenated dimension.');
-%             end
-%             t = builtin('cat', dim, varargin{:});
-%         end
-        
         function tdst = insert_onespace(tsrc, i, dual)
             arguments
                 tsrc
@@ -564,8 +530,8 @@ classdef Tensor < AbstractTensor
                 'tensors:SizeError', 'Incompatible sizes for vectorized function.');
             
             % make everything a vector
-%             A = arrayfun(@repartition, A);
-%             B = arrayfun(@repartition, B);
+            A = arrayfun(@repartition, A);
+            B = arrayfun(@repartition, B);
             
             d = norm(A - B);
         end
@@ -1110,7 +1076,8 @@ classdef Tensor < AbstractTensor
                     if ~isequal(A_.domain, B_.codomain)
                         error('tensors:SpaceMismatch', ...
                             'Contracted spaces incompatible.\n%s\n%s', ...
-                            string(A_.domain), string(B_.codomain));
+                            join(string(A_.domain), '    '), ...
+                            join(string(B_.codomain), '    '));
                     end
                     if ~isempty(A_.codomain) || ~isempty(B_.domain) 
                         med.C = Tensor.zeros(A_.codomain, B_.domain);
@@ -1216,7 +1183,6 @@ classdef Tensor < AbstractTensor
         function t = transpose(t, p, r)
             % Compute the transpose of a tensor. This is defined as rotating the domain to
             % the codomain and vice versa, while cyclicly permuting the tensor blocks.
-            % Currently not implemented.
             %
             % Usage
             % -----
@@ -1238,8 +1204,17 @@ classdef Tensor < AbstractTensor
             % -------
             % t : :class:`Tensor`
             %   transposed output tensor.
+            if nargin < 2
+                p = circshift(1:nspaces(t), length(t.domain));
+            else
+                assert(iscircperm(p));
+            end
             
-            error('tensors:TBA', 'This method has not been implemented.');
+            if nargin < 3
+                r = flip(rank(t));
+            end
+            
+            t = tpermute(t, p, r);
         end
         
         function t = twist(t, i, inv)
@@ -1441,7 +1416,7 @@ classdef Tensor < AbstractTensor
             
             if strcmp(alg, 'polar')
                 assert(isequal(V, prod(t.domain)));
-                W = t.domain;
+                W = V;
             elseif length(p1) == 1 && V == t.codomain
                 W = t.codomain;
             elseif length(p2) == 1 && V == t.domain
@@ -1521,7 +1496,7 @@ classdef Tensor < AbstractTensor
             if strcmp(alg, 'polar')
                 assert(isequal(V, prod(t.codomain)), ...
                     'linalg:polar', 'polar decomposition should lead to square R.');
-                W = t.codomain;
+                W = V;
             elseif length(p1) == 1 && V == t.codomain
                 W = t.codomain;
             elseif length(p2) == 1 && V == t.domain

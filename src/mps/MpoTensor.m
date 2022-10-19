@@ -86,6 +86,46 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) MpoTensor < Ab
             t.scalars = t.scalars / a;
         end
         
+        function v = applychannel(O, L, R, v)
+            arguments
+                O MpoTensor
+                L MpsTensor
+                R MpsTensor
+                v
+            end
+            auxlegs_v = nspaces(v) - 3;
+            auxlegs_l = L.alegs;
+            auxlegs_r = R.alegs;
+            auxlegs = auxlegs_v + auxlegs_l + auxlegs_r;
+            
+            v = contract(v, [1 3 5 (-(1:auxlegs_v) - 3 - auxlegs_l)], ...
+                L, [-1 2 1 (-(1:auxlegs_l) - 3)], ...
+                O, [2 -2 4 3], ...
+                R, [5 4 -3 (-(1:auxlegs_r) - 3 - auxlegs_l - auxlegs_v)], ...
+                'Rank', rank(v) + [0 auxlegs]);
+        end
+        
+        function v = applympo(varargin)
+            assert(nargin >= 3)
+            v = varargin{end};
+            R = varargin{end-1};
+            L = varargin{end-2};
+            N = nargin - 1;
+            
+            auxlegs_v = nspaces(v) - N;
+            auxlegs_l = L.alegs;
+            auxlegs_r = R.alegs;
+            auxlegs = auxlegs_v + auxlegs_l + auxlegs_r;
+            
+            Oinds = cellfun(@(x) [2*x-2 -x 2*x 2*x-1], 2:N-1, 'UniformOutput', false);
+            O = [varargin(1:end-3); Oinds];
+            v = contract(v, [1:2:2*N-1 ((-1:auxlegs_v) - N - auxlegs_l)], ...
+                L, [-1 2 1 (-(1:auxlegs_l) - N)], ...
+                O{:}, ...
+                R, [2*N-1 2*N-2 -N (-(1:auxlegs_r) - N - auxlegs_l - auxlegs_v)], ...
+                'Rank', rank(v) + [0 auxlegs]);
+        end
+        
         function y = applyleft(O, T, B, x)
             arguments
                 O MpoTensor
@@ -157,6 +197,11 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) MpoTensor < Ab
             end
         end
         
+        function O = rot90(O)
+            O.tensors = tpermute(O.tensors, [2 3 4 1], [2 2]);
+            O.scalars = permute(O.scalars, [2 3 4 1]);
+        end
+        
         function C = tensorprod(A, B, dimA, dimB, ca, cb, options)
             arguments
                 A
@@ -170,40 +215,50 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) MpoTensor < Ab
             
             assert(~isa(A, 'MpoTensor') || ~isa(B, 'MpoTensor'));
             if isa(A, 'MpoTensor')
-                assert(sum(dimA == 1 | dimA == 3, 'all') == 1, ...
-                    'Cannot deduce output space unless leg 1 xor leg 3 is connected.');
-                assert(sum(dimA == 2 | dimA == 4, 'all') == 1, ...
-                    'Cannot deduce output space unless leg 2 xor leg 4 is connected.');
+                C = tensorprod(A.tensors, B, dimA, dimB, ca, cb);
                 
-                C1 = tensorprod(A.tensors, B, dimA, dimB, ca, cb);
-                
-                % action of braiding tensor, always flip connected indices
-                uncA = 1:nspaces(A); uncA(dimA) = [];
-                uncB = 1:nspaces(B); uncB(dimB) = [];
-                
-                C2 = reshape(permute(A.scalars, [uncA flip(dimA)]), ...
-                    [prod(size(A, uncA)) prod(size(A, dimA))]) * ...
-                    tpermute(B, [dimB uncB], [length(dimB) length(uncB)]);
-                C = C1 + C2;
+                if nnz(A.scalars) > 0
+                    assert(sum(dimA == 1 | dimA == 3, 'all') == 1, ...
+                        'Cannot deduce output space unless leg 1 xor leg 3 is connected.');
+                    assert(sum(dimA == 2 | dimA == 4, 'all') == 1, ...
+                        'Cannot deduce output space unless leg 2 xor leg 4 is connected.');
+                    
+                    uncA = 1:nspaces(A); uncA(dimA) = [];
+                    uncB = 1:nspaces(B); uncB(dimB) = [];
+                    
+                    A = reshape(permute(A.scalars, [uncA flip(dimA)]), ...
+                        [prod(size(A, uncA)) prod(size(A, dimA))]);
+                    B = tpermute(B, [dimB uncB], [length(dimB) length(uncB)]);
+                    C = C + A * B;
+                end
             else
-                assert(sum(dimB == 1 | dimB == 3, 'all') == 1, ...
-                    'Cannot deduce output space unless leg 1 xor leg 3 is connected.');
-                assert(sum(dimB == 2 | dimB == 4, 'all') == 1, ...
-                    'Cannot deduce output space unless leg 2 xor leg 4 is connected.');
+                C = tensorprod(A, B.tensors, dimA, dimB, ca, cb);
                 
-                C1 = tensorprod(A, B.tensors, dimA, dimB, ca, cb);
-                
-                % action of braiding tensor, always flip connected indices
-                uncA = 1:nspaces(A); uncA(dimA) = [];
-                uncB = 1:nspaces(B); uncB(dimB) = [];
-                
-                C2 = tpermute(A, [uncA flip(dimA)], [length(uncA) length(dimA)]) * ...
-                    reshape(permute(B.scalars, [flip(dimB) uncB]), ...
-                    [prod(size(B, dimB)) prod(size(B, uncB))]);
-                C = C1 + C2;
+                if nnz(B.scalars) > 0
+                    assert(sum(dimB == 1 | dimB == 3, 'all') == 1, ...
+                        'Cannot deduce output space unless leg 1 xor leg 3 is connected.');
+                    assert(sum(dimB == 2 | dimB == 4, 'all') == 1, ...
+                        'Cannot deduce output space unless leg 2 xor leg 4 is connected.');
+                    
+                    uncA = 1:nspaces(A); uncA(dimA) = [];
+                    uncB = 1:nspaces(B); uncB(dimB) = [];
+                    
+                    A = tpermute(A, [uncA flip(dimA)], [length(uncA) length(dimA)]);
+                    B = reshape(permute(B.scalars, [flip(dimB) uncB]), ...
+                        [prod(size(B, dimB)) prod(size(B, uncB))]);
+                    C = C + A * B;
+                end
             end
-            
-            
+        end
+        
+        function O = ctranspose(O)
+            O.tensors = tpermute(O.tensors', [4 1 2 3], [2 2]);
+            O.scalars = conj(permute(O.scalars, [1 4 3 2]));
+        end
+        
+        function O = transpose(O)
+            O.tensors = tpermute(O.tensors, [3 4 1 2], [2 2]);
+            O.scalars = permute(O.scalars, [3 4 1 2]);
         end
 %         
 %         function C = contract(tensors, indices, kwargs)
