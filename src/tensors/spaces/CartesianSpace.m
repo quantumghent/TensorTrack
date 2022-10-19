@@ -184,6 +184,16 @@ classdef CartesianSpace < AbstractSpace
         function space = one(~)
             space = CartesianSpace(1, []);
         end
+        
+        function spaces = insertone(spaces, i, ~)
+            arguments
+                spaces
+                i = length(spaces) + 1
+                ~
+            end
+            
+            spaces = [spaces(1:i-1) one(spaces) spaces(i:end)];
+        end
     end
         
         

@@ -82,8 +82,6 @@ classdef Vumps
                 disp_iter(alg, iter, lambda, eta, toc(t_iter));
             end
             
-            warning('vumps:maxiter', ...
-                'Reached maximum amount of iterations without converging.');
             disp_maxiter(alg, iter, lambda, eta, toc(t_total));
         end
     end
@@ -199,6 +197,21 @@ classdef Vumps
                         iter, real(lambda), imag(lambda), eta, time2str(t));
                 otherwise
                     fprintf('Conv %4d:\tE = %-0.15f %+0.15fi\terror = %0.4e\t(%s)\n', ...
+                        iter, real(lambda), imag(lambda), eta, time2str(t));
+                    
+            end
+            fprintf('---------------\n');
+        end
+        
+        function disp_maxiter(alg, iter, lambda, eta, t)
+            if alg.verbosity < Verbosity.warn, return; end
+            s = settings;
+            switch s.matlab.commandwindow.NumericFormat.ActiveValue
+                case 'short'
+                    fprintf('MaxIter %2d:\tE = %-0.4f %+0.4fi\terror = %0.1e\t(%s)\n', ...
+                        iter, real(lambda), imag(lambda), eta, time2str(t));
+                otherwise
+                    fprintf('MaxIter %4d:\tE = %-0.15f %+0.15fi\terror = %0.4e\t(%s)\n', ...
                         iter, real(lambda), imag(lambda), eta, time2str(t));
                     
             end

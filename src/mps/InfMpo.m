@@ -1,4 +1,4 @@
-classdef InfiniteMpo
+classdef InfMpo
     % Infinite translation invariant matrix product operator.
     
     properties
@@ -6,13 +6,13 @@ classdef InfiniteMpo
     end
     
     methods
-        function mpo = InfiniteMpo(varargin)
+        function mpo = InfMpo(varargin)
             if nargin == 0, return; end
             
             if nargin == 1
                 O = varargin{1};
                 
-                if isa(O, 'InfiniteMpo')
+                if isa(O, 'InfMpo')
                     for i = numel(O):1:1
                         mpo(i, 1).O = O(i, 1).O;
                     end
@@ -67,7 +67,7 @@ classdef InfiniteMpo
             arguments
                 mpo
                 mps1
-                mps2
+                mps2 = []
                 GL = []
                 eigopts.KrylovDim = 30
                 eigopts.MaxIter = 1000
@@ -122,8 +122,12 @@ classdef InfiniteMpo
             end
             
             overlap = sqrt(contract(GL, [1 3 2], mps1.C, [2 4], mps2.C', [5 1], GR, [4 3 5]));
-            GL = GL / overlap;
-            GR = GR / overlap;
+%             GL = GL / overlap;
+%             GR = GR / overlap;
+        end
+        
+        function s = pspace(mpo)
+            s = pspace(mpo.O{1});
         end
     end
     %% Derived operators
@@ -152,9 +156,6 @@ classdef InfiniteMpo
             
             A2 = twist(A2, 1 + find(isdual(space(A1, 2:nspaces(A1)-1))));
             T = FiniteMpo(A2', {rot90(mpo.O{1})}, A1);
-            
-%             T = transfermatrix(mps1, mps2, sites, 'Type', kwargs.Type);
-%             T.O = {rot90(mpo.O{1})};
         end
         
         function H = AC_hamiltonian(mpo, mps, GL, GR)
@@ -209,7 +210,7 @@ classdef InfiniteMpo
                     ~logical(f.uncoupled) .* cosh(beta))));
             end
             
-            mpo = InfiniteMpo(O);
+            mpo = InfMpo(O);
         end
         
         function mpo = fDimer()
@@ -220,7 +221,7 @@ classdef InfiniteMpo
             O2 = fill_tensor(O, @(~, f) ~any(f.uncoupled) || ...
                 (f.uncoupled(4) && sum(f.uncoupled) == 2));
             
-            mpo = InfiniteMpo([O1; O2]);
+            mpo = InfMpo([O1; O2]);
         end
     end
 end

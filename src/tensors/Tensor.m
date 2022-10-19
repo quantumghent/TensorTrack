@@ -423,7 +423,7 @@ classdef Tensor < AbstractTensor
         end
         
         function n = nspaces(t)
-            n = length(t.domain) + length(t.codomain);
+            n = length(t(1).domain) + length(t(1).codomain);
         end
         
         function r = rank(t, i)
@@ -514,27 +514,7 @@ classdef Tensor < AbstractTensor
     
     %% Comparison
     methods
-        function d = distance(A, B)
-            % Compute the Euclidean distance between two tensors.
-            %
-            % Arguments
-            % ---------
-            % A, B : :class:`Tensor`
-            %
-            % Returns
-            % -------
-            % d : numeric
-            %   Euclidean distance, defined as the norm of the distance.
-            
-            assert(isequal(size(A), size(B)) || isscalar(A) || isscalar(B), ...
-                'tensors:SizeError', 'Incompatible sizes for vectorized function.');
-            
-            % make everything a vector
-            A = arrayfun(@repartition, A);
-            B = arrayfun(@repartition, B);
-            
-            d = norm(A - B);
-        end
+        
     end
         
     
@@ -559,8 +539,6 @@ classdef Tensor < AbstractTensor
                 t(i) = tpermute(t(i)', nspaces(t(i)):-1:1, rank(t(i)));
             end
         end
-        
-        
         
         function t = ctranspose(t)
             % Compute the adjoint of a tensor. This is defined as swapping the codomain and
@@ -724,38 +702,63 @@ classdef Tensor < AbstractTensor
             % C : :class:`Tensor`
             %   output tensor.
             
-            if ~isscalar(A) || ~isscalar(B)
-                szA = size(A);
-                szB = size(B);
-                assert(szA(2) == szB(1));
+            if isscalar(A) || isscalar(B)
+                C = A .* B;
+                return
+            end
+            
+            szA = size(A);
+            szB = size(B);
+            if szA(2) ~= szB(1)
+                error('mtimes:dimagree', ...
+                    'incompatible dimensions (%d) (%d)', szA(2), szB(1));
+            end
+            
+            if isnumeric(A)
+                if issparse(A) && ~all(any(A, 2))
+                    C = SparseTensor.zeros(szA(1), szB(2));
+                else
+                    C = Tensor.empty(szA(1), szB(2), 0);
+                end
                 
-                % Tensor multiplications
-                for i = szA(1):-1:1
-                    for j = szB(2):-1:1
-                        C(i,j) = A(i, 1) * B(1, j);
-                        for k = 2:szA(2)
-                            C(i,j) = C(i,j) + A(i, k) * B(k, j);
-                        end
+                for i = 1:szA(1)
+                    for j = 1:szB(2)
+                        C(i, j) = sum(A(i, :).' .* B(:, j));
                     end
                 end
                 return
             end
             
-            if isnumeric(A) || isnumeric(B)
-                C = A .* B;
+            if isnumeric(B)
+                if issparse(B) && ~all(any(B, 1))
+                    C = SparseTensor.zeros(szA(1), szB(2));
+                else
+                    C = Tensor.empty(szA(1), szB(2), 0);
+                end
+                
+                for i = 1:szA(1)
+                    for j = 1:szB(2)
+                        try
+                        C(i, j) = sum(A(i, :) .* B(:, j).');
+                        catch
+                            bla
+                        end
+                        
+                    end
+                end
                 return
-            end 
-            
-            assert(isequal(A.domain, B.codomain), 'tensors:SpaceMismatch', ...
-                'Multiplied spaces incompatible.');
-            if ~isempty(A.codomain) || ~isempty(B.domain)
-                C = Tensor.zeros(A.codomain, B.domain);
-                C.var = mul(C.var, A.var, B.var);
-            else
-                Ablocks = matrixblocks(A.var);
-                Bblocks = matrixblocks(B.var);
-                C = horzcat(Ablocks{:}) * vertcat(Bblocks{:});
             end
+            
+            % Tensor multiplications
+            for i = szA(1):-1:1
+                for j = szB(2):-1:1
+                    C(i, j) = sum(reshape(A(i, :), [], 1) .* B(:, j));
+                end
+            end
+        end
+        
+        function n = nnz(A)
+            n = numel(A);
         end
         
         function n = norm(t, p)
@@ -815,7 +818,11 @@ classdef Tensor < AbstractTensor
         
         function t1 = plus(t1, t2)
             if isnumeric(t1), t1 = t2 + t1; return; end
-            assert(isequal(size(t1), size(t2)), 'Incompatible sizes for vectorized plus.');
+            if ~isequal(size(t1), size(t2))
+                error('plus:dimagree', ...
+                    'Incompatible sizes for vectorized plus. (%s) (%s)', ...
+                    dim2str(size(t1)), dim2str(size(t2)));
+            end
             
             for i = 1:numel(t1)
                 if isnumeric(t2(i))
@@ -828,9 +835,10 @@ classdef Tensor < AbstractTensor
                 elseif iszero(t1(i))
                     t1(i) = t2(i);
                 else
-                    assert(isequal(t1(i).domain, t2(i).domain) && ...
-                        isequal(t1(i).codomain, t2(i).codomain), 'tensors:SpaceMismatch', ...
-                        'Cannot add tensors of different structures.');
+                    if ~isequal(t1(i).domain, t2(i).domain) || ...
+                            ~isequal(t1(i).codomain, t2(i).codomain)
+                        error('plus:spacemismatch', 'Incompatible spaces.');
+                    end
                     t1(i).var = t1(i).var + t2(i).var;
                 end
             end
@@ -922,8 +930,11 @@ classdef Tensor < AbstractTensor
                 r (1,2) = [nspaces(t) 0]
             end
             
-            assert(sum(r) == sum(rank(t)), 'tensors:ValueError', 'Invalid new rank.');
-            t = tpermute(t, 1:nspaces(t), r);
+            for i = 1:numel(t)
+                t(i) = tpermute(t(i), 1:nspaces(t(i)), r);
+                assert(sum(r) == sum(rank(t(i))), ...
+                    'tensors:ValueError', 'Invalid new rank.');
+            end
         end
         
         function t = rdivide(t, a)
@@ -949,6 +960,45 @@ classdef Tensor < AbstractTensor
             %   output tensor.
             
             t.var = rdivide(t.var, a);
+        end
+        
+        function C = sum(A, dim)
+            arguments
+                A
+                dim = []
+            end
+            
+            if isscalar(A), C = A; return; end
+            
+            if isempty(dim), dim = find(size(A) ~= 1, 1); end
+                
+            if strcmp(dim, 'all')
+                C = A(1);
+                for i = 2:numel(A)
+                    C = C + A(i);
+                end
+                return
+            end
+            
+            if ismatrix(A)
+                if dim == 1
+                    C = A(1, :);
+                    for i = 2:size(A, 1)
+                        C = C + A(i, :);
+                    end
+                    return
+                end
+
+                if dim == 2
+                    C = A(:, 1);
+                    for i = 2:size(A, 2)
+                        C = C + A(:, i);
+                    end
+                    return
+                end
+            end
+            
+            error('TBA');
         end
         
         function C = tensorprod(A, B, dimA, dimB, ca, cb, options)
@@ -1123,7 +1173,7 @@ classdef Tensor < AbstractTensor
             C.var = mul(C.var, A.var, B.var);
         end
         
-        function t = times(t, a)
+        function C = times(A, B)
             % Scalar product of a tensor and a scalar.
             %
             % Usage
@@ -1145,16 +1195,49 @@ classdef Tensor < AbstractTensor
             % t : :class:`Tensor`
             %   output tensor.
             
-            if isnumeric(t), [t, a] = swapvars(t, a); end
-            if isscalar(a) && ~isscalar(t)
-                a = repmat(a, size(t));
-            else
-                assert(isequal(size(a), size(t)), 'tensors:dimerror', ...
-                    'input sizes incompatible.');
+            if isscalar(A) && ~isscalar(B)
+                A = repmat(A, size(B));
+            elseif isscalar(B) && ~isscalar(A)
+                B = repmat(B, size(A));
             end
-            for i = 1:numel(t)
-                t(i).var = times(t(i).var, a(i));
+            
+            assert(isequal(size(A), size(B)), ...
+                'times:dimagree', 'incompatible dimensions.');
+            
+            if isnumeric(A)
+                if issparse(A)
+                    C = SparseTensor.zeros(size(A));
+                    I = find(A);
+                    if isempty(I), return; end
+                    C(I) = full(A(I)) .* B(I);
+                    return
+                end
+                
+                C = B;
+                for i = 1:numel(C)
+                    C(i).var = C(i).var .* A(i);
+                end
+                return
             end
+            
+            if isnumeric(B)
+                C = B .* A;
+                return
+            end
+            
+            for i = numel(A):-1:1
+                assert(isequal(A(i).domain, B(i).codomain), 'tensors:SpaceMismatch', ...
+                    'Multiplied spaces incompatible.');
+                if ~isempty(A.codomain) || ~isempty(B.domain)
+                    C(i) = Tensor.zeros(A(i).codomain, B(i).domain);
+                    C(i).var = mul(C(i).var, A(i).var, B(i).var);
+                else
+                    Ablocks = matrixblocks(A(i).var);
+                    Bblocks = matrixblocks(B(i).var);
+                    C(i) = horzcat(Ablocks{:}) * vertcat(Bblocks{:});
+                end
+            end
+            C = reshape(C, size(A));
         end
         
         function tr = trace(t)
@@ -1242,7 +1325,14 @@ classdef Tensor < AbstractTensor
                 inv = false
             end
             
-            if isempty(i) || ~any(i) || istwistless(braidingstyle(t)) 
+            if isempty(i) || ~any(i) || istwistless(braidingstyle(t(1))) 
+                return
+            end
+            
+            if numel(t) > 1
+                for i = 1:numel(t)
+                    t(i) = twist(t(i), i, inv);
+                end
                 return
             end
             

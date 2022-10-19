@@ -48,7 +48,6 @@ classdef FiniteMpo
             end
             
             if isempty(v0), v0 = initialize_fixedpoint(mpo(1)); end
-            
             kwargs = namedargs2cell(options);
             [V, D, flag] = eigsolve(@(x) mpo.apply(x), v0, howmany, sigma, kwargs{:});
         end
@@ -101,6 +100,36 @@ classdef FiniteMpo
                 mpo(d).O = cellfun(@transpose, ...
                     fliplr(mpo(d).O), 'UniformOutput', false);
             end
+        end
+        
+        function mpo = slice(mpo, i, j)
+            if strcmp(i, ':')
+                i = 1:size(mpo(end).O, 2);
+            end
+            if strcmp(j, ':')
+                j = 1:size(mpo(1).O{1}, 4);
+            end
+            assert(all(1 <= i) && all(i <= size(mpo(end).O{1}, 2)));
+            assert(all(1 <= j) && all(j <= size(mpo(1).O{1}, 4)));
+            
+            assert(depth(mpo) == 1, 'TBA');
+            mpo.O{1} = mpo.O{1}(:, i, :, j);
+        end
+        
+        function bool = iszero(mpo)
+            if isempty(mpo.O)
+                bool = false;
+                return
+            end
+            bool = any(cellfun(@nnz, mpo.O) == 0);
+        end
+        
+        function bool = iseye(mpo)
+            if isempty(mpo.O)
+                bool = true;
+                return
+            end
+            bool = all(cellfun(@iseye, mpo.O));
         end
 %         
 %         function v = applyleft(mpo, v)

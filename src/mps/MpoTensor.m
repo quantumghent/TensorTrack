@@ -94,8 +94,8 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) MpoTensor < Ab
                 v
             end
             auxlegs_v = nspaces(v) - 3;
-            auxlegs_l = L.alegs;
-            auxlegs_r = R.alegs;
+            auxlegs_l = nspaces(L) - 3;
+            auxlegs_r = nspaces(R) - 3;
             auxlegs = auxlegs_v + auxlegs_l + auxlegs_r;
             
             v = contract(v, [1 3 5 (-(1:auxlegs_v) - 3 - auxlegs_l)], ...
@@ -228,12 +228,13 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) MpoTensor < Ab
                     
                     A = reshape(permute(A.scalars, [uncA flip(dimA)]), ...
                         [prod(size(A, uncA)) prod(size(A, dimA))]);
-                    B = tpermute(B, [dimB uncB], [length(dimB) length(uncB)]);
-                    C = C + A * B;
+                    B = reshape(tpermute(B, [dimB uncB], [length(dimB) length(uncB)]), ...
+                        [prod(size(B, dimB)) prod(size(B, uncB))]);
+                    C = C + reshape(sparse(A) * B, size(C));
                 end
             else
                 C = tensorprod(A, B.tensors, dimA, dimB, ca, cb);
-                
+                szC = size(C);
                 if nnz(B.scalars) > 0
                     assert(sum(dimB == 1 | dimB == 3, 'all') == 1, ...
                         'Cannot deduce output space unless leg 1 xor leg 3 is connected.');
@@ -243,10 +244,11 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) MpoTensor < Ab
                     uncA = 1:nspaces(A); uncA(dimA) = [];
                     uncB = 1:nspaces(B); uncB(dimB) = [];
                     
-                    A = tpermute(A, [uncA flip(dimA)], [length(uncA) length(dimA)]);
+                    A = reshape(tpermute(A, [uncA flip(dimA)], [length(uncA) length(dimA)]), ...
+                        [prod(size(A, uncA)) prod(size(A, dimA))]);
                     B = reshape(permute(B.scalars, [flip(dimB) uncB]), ...
                         [prod(size(B, dimB)) prod(size(B, uncB))]);
-                    C = C + A * B;
+                    C = C + reshape(A * sparse(B), size(C));
                 end
             end
         end
@@ -260,99 +262,13 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) MpoTensor < Ab
             O.tensors = tpermute(O.tensors, [3 4 1 2], [2 2]);
             O.scalars = permute(O.scalars, [3 4 1 2]);
         end
-%         
-%         function C = contract(tensors, indices, kwargs)
-%             arguments (Repeating)
-%                 tensors
-%                 indices (1, :) {mustBeInteger}
-%             end
-%             
-%             arguments
-%                 kwargs.Conj (1, :) logical = false(size(tensors))
-%                 kwargs.Rank = []
-%                 kwargs.Debug = false
-%             end
-%             
-%             % replace mpo with tensor + scalar contribution
-%             i = find(cellfun(@(x) isa(x, 'MpoTensor'), tensors), 1);
-%             
-%             args1 = [tensors; indices];
-%             args1{1, i} = args1{1, i}.tensors;
-%             conj1 = kwargs.Conj;
-%             
-%             args2 = [tensors([1:i-1 i+1:end]); indices([1:i-1 i+1:end])];
-%             conj2 = kwargs.Conj([1:i-1 i+1:end]);
-%             
-%             C = contract(args1{:}, ...
-%                 'Conj', conj1, 'Rank', kwargs.Rank, 'Debug', kwargs.Debug) + ...
-%                 contract(args2{:}, ...
-%                 'Conj', conj2, 'Rank', kwargs.Rank, 'Debug', kwargs.Debug);
-%             
-%             
-%             for ii = 1:length(tensors)
-%                 if isa(tensors{ii}, 'MpoTensor') && strcmp(tensors{ii}.info, 'dense')
-%                     tensors{ii} = tensors{ii}.var;
-%                 end
-%             end
-%             
-%             % replace scalar mpo's and correct indices
-%             scalar = 1;
-%             mpoInds = cellfun(@(x) isa(x, 'MpoTensor'), tensors);
-%             
-%             % collect scalars
-%             for ii = 1:length(tensors)
-%                 if mpoInds(ii)
-%                     if kwargs.Conj(ii)
-%                         scalar = scalar * conj(tensors{ii}.var);
-%                     else
-%                         scalar = scalar * tensors{ii}.var;
-%                     end
-%                 end
-%             end
-%             
-%             if scalar == 0
-%                 warning('Endresult is 0, probably could have been more efficient.');
-%             end
-%             
-%             % remove mpo's from tensorlist
-%             tensors(mpoInds) = [];
-%             kwargs.Conj(mpoInds) = [];
-%             
-%             % correct indices
-%             toCorrect    = indices(mpoInds);
-%             indices = indices(~mpoInds);
-%             
-%             for ii = 1:length(toCorrect)
-%                 vertical = toCorrect{ii}([1 3]);
-%                 horizont = toCorrect{ii}([2 4]);
-%                 vertMax = max(vertical);
-%                 vertMin = min(vertical);
-%                 horMax  = max(horizont);
-%                 horMin  = min(horizont);
-%                 
-%                 for jj = 1:length(indices)
-%                     indices{jj}(indices{jj} == vertMax) = vertMin;
-%                     indices{jj}(indices{jj} == horMax ) = horMin;
-%                 end
-%                 for jj = ii+1:length(toCorrect)
-%                     toCorrect{jj}(toCorrect{jj} == vertMax) = vertMin;
-%                     toCorrect{jj}(toCorrect{jj} == horMax ) = horMin;
-%                 end
-%             end
-%             
-%             
-%             %% Perform contraction
-%             args = [tensors; indices];
-%             C = contract(args{:}, ...
-%                 'Conj', kwargs.Conj, 'Rank', kwargs.Rank, 'Debug', kwargs.Debug);
-% %             [output, med] = Contract(tensors, indices, endcenter, med);
-%             if ~isequal(scalar, 1)
-%                 C = C * scalar;
-%             end
-%         end
     end
     
     methods
+        function s = space(O, i)
+            s = space(O.tensors, i);
+        end
+        
         function s = pspace(O)
             s = space(O.tensors, 2);
         end
@@ -371,6 +287,22 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) MpoTensor < Ab
             else
                 s = space(O.tensors(:, :, lvls, :), 3);
             end
+        end
+        
+        function bool = istriu(O)
+            sz = size(O, 1:4);
+            sz1 = sz(1) * sz(2);
+            sz2 = sz(3) * sz(4);
+            bool = istriu(reshape(O.scalars, [sz1, sz2])) && ...
+                istriu(reshape(O.tensors, [sz1, sz2]));
+        end
+        
+        function bool = iseye(O)
+            bool = nnz(O.tensors) == 0 && isequal(O.scalars, eye(size(O.scalars)));
+        end
+        
+        function n = nnz(O)
+            n = nnz(O.tensors) + nnz(O.scalars);
         end
     end
     

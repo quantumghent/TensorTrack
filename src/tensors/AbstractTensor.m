@@ -357,6 +357,29 @@ classdef AbstractTensor
                 C = tpermute(C, order, kwargs.Rank);
             end
         end
+        
+        function d = distance(A, B)
+            % Compute the Euclidean distance between two tensors.
+            %
+            % Arguments
+            % ---------
+            % A, B : :class:`Tensor`
+            %
+            % Returns
+            % -------
+            % d : numeric
+            %   Euclidean distance, defined as the norm of the distance.
+            
+            n = max(ndims(A), ndims(B));
+            assert(isequal(size(A, 1:n), size(B, 1:n)) || isscalar(A) || isscalar(B), ...
+                'tensors:SizeError', 'Incompatible sizes for vectorized function.');
+            
+            % make everything a vector
+            A = repartition(A);
+            B = repartition(B);
+            
+            d = norm(A - B);
+        end
     end
 end
 

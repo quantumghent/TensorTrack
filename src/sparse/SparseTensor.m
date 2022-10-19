@@ -72,7 +72,21 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor}) SparseTensor < AbstractTensor
             t.sz = t.sz(p);
         end
         
-        function t = reshape(t, sz)
+        function t = reshape(t, varargin)
+            if nargin == 1
+                sz = varargin{1};
+            else
+                hasempty = find(cellfun(@isempty, varargin));
+                if isempty(hasempty)
+                    sz = [varargin{:}];
+                elseif isscalar(hasempty)
+                    varargin{hasempty} = 1;
+                    sz = [varargin{:}];
+                    sz(hasempty) = round(numel(t) / prod(sz));
+                else
+                    error('Can only accept a single empty size index.');
+                end
+            end
             assert(prod(sz) == prod(t.sz), ...
                 'sparse:argerror', 'To reshape the number of elements must not change.');
             idx = sub2ind_(t.sz, t.ind);
@@ -130,27 +144,36 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor}) SparseTensor < AbstractTensor
             end
         end
         
-        function sz = size(a, i)
+        function varargout = size(a, i)
             if nargin == 1
                 sz = a.sz;
-                return
+            else
+                sz = ones(1, max(i));
+                sz(1:length(a.sz)) = a.sz;
+                sz = sz(i);
             end
             
-            sz = ones(1, max(i));
-            sz(1:length(a.sz)) = a.sz;
-            sz = sz(i);
+            if nargout <= 1
+                varargout = {sz};
+            else
+                varargout = num2cell(sz);
+            end
+        end
+        
+        function n = numel(t)
+            n = prod(t.sz);
         end
         
         function disp(t)
             nz = nnz(t);
             if nz == 0
                 fprintf('all-zero %s of size %s\n', class(t), ...
-                    regexprep(mat2str(t.sz), {'\[', '\]', '\s+'}, {'', '', 'x'}));
+                    dim2str(t.sz));
                 return
             end
             
             fprintf('%s of size %s with %d nonzeros:\n', class(t), ...
-                regexprep(mat2str(t.sz), {'\[', '\]', '\s+'}, {'', '', 'x'}), nz);
+                dim2str(t.sz), nz);
             
             spc = floor(log10(max(double(t.ind), [], 1))) + 1;
             if numel(spc) == 1
@@ -244,14 +267,19 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor}) SparseTensor < AbstractTensor
             if isempty(ia), d = 0; return; end
             d = dot(a.var(ia), b.var(ib));
         end
-            
+        
         function a = minus(a, b)
             a = a + (-b);
         end
         
         function c = mtimes(a, b)
-            szA = a.sz;
-            szB = b.sz;
+            if isscalar(a) || isscalar(b)
+                c = a .* b;
+                return
+            end
+            
+            szA = size(a);
+            szB = size(b);
             assert(length(szA) == 2 && length(szB) == 2, 'sparse:argerror', ...
                 'mtimes only defined for matrices.');
             assert(szA(2) == szB(1), 'sparse:dimerror', ...
@@ -316,7 +344,7 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor}) SparseTensor < AbstractTensor
             if ~issparse(a)
                 if nnz(b) > 0
                     idx = sub2ind_(b.sz, b.ind);
-                    a(idx) = a(idx) + b.var;
+                    a(idx) = reshape(a(idx), [], 1) + b.var;
                 end
                 return
             end
@@ -333,6 +361,69 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor}) SparseTensor < AbstractTensor
             a.var(locb(lia)) = a.var(locb(lia)) + b.var(lia);
             a.var = [a.var; b.var(~lia)];
             a.ind = [a.ind; b.ind(~lia, :)];
+        end
+        
+        function B = sum(A, dim)
+            arguments
+                A
+                dim = []
+            end
+            
+            if isscalar(A)
+                B = A;
+                return
+            end
+            
+            if isempty(dim), dim = find(size(A) ~= 1, 1); end
+            
+            if strcmp(dim, 'all')
+                if nnz(A) == 0
+                    B = A;
+                    B.sz = [1 1];
+                    return
+                end
+                
+                B = sum(A.var, 'all');
+                return
+            end
+            
+            if isvector(A)
+                if nnz(A) == 0
+                    B = SparseTensor.zeros(1, 1);
+                else
+                    B = sum(A.var, 'all');
+                end
+                return
+            end
+            
+            if ismatrix(A)
+                if dim == 1
+                    B = SparseTensor.zeros(1, size(A, 2));
+                    n = nnz(A);
+                    for i = 1:size(A, 2)
+                        if n == 0, break; end
+                        idx = A.ind(:, 2) == i;
+                        if ~any(idx), continue; end
+                        B(1, i) = sum(A.var(idx));
+                        n = n - sum(idx);
+                    end
+                    return
+                end
+                
+                if dim == 2
+                    B = SparseTensor.zeros(size(A, 1), 1);
+                    n = nnz(A);
+                    for i = 1:size(A, 2)
+                        if n == 0, break; end
+                        idx = A.ind(:, 1) == i;
+                        if ~any(idx), continue; end
+                        B(i, 1) = sum(A.var(idx));
+                        n = n - sum(idx);
+                    end
+                    return
+                end
+            end
+            error('TBA');
         end
         
         function C = tensorprod(A, B, dimA, dimB, ca, cb, options)
@@ -397,7 +488,7 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor}) SparseTensor < AbstractTensor
             else
                 Cvar = A.var.empty(0, 1);
                 Cind = double.empty(0, length(uncA) + length(uncB));
-
+                
                 if nnz(A) > 0 && nnz(B) > 0
                     for i = 1:size(A, 1)
                         for j = 1:size(B, 2)
@@ -420,7 +511,7 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor}) SparseTensor < AbstractTensor
                         end
                     end
                 end
-
+                
                 C = reshape(SparseTensor(Cind, Cvar, [size(A,1) size(B,2)]), szC);
                 if size(Cind, 1) == prod(szC), C = full(C); end
             end
@@ -486,6 +577,16 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor}) SparseTensor < AbstractTensor
             t = permute(t, p);
         end
         
+        function t = repartition(t, r)
+            if nnz(t) > 0
+                if nargin == 1
+                    t.var = arrayfun(@repartition, t.var);
+                else
+                    t.var = arrayfun(@(x) repartition(x, r), t.var);
+                end
+            end
+        end
+        
         function t = twist(t, i)
             if nnz(t) > 0
                 t.var = twist(t.var, i);
@@ -497,6 +598,17 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor}) SparseTensor < AbstractTensor
         end
         
         function a = uplus(a)
+        end
+    end
+    
+    methods
+        function bool = ismatrix(a)
+            bool = ndims(a) == 2;
+        end
+        
+        function bool = istriu(a)
+            assert(ismatrix(a), 'sparse:matrix', 'istriu is only defined for matrices');
+            bool = all(a.ind(:, 1) <= a.ind(:, 2));
         end
     end
     
@@ -577,6 +689,7 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor}) SparseTensor < AbstractTensor
                 end
                 subsize(i) = length(s(1).subs{i});
             end
+            if nnz(v) == 0, return; end
             if isscalar(v), v = repmat(v, subsize); end
             subs = combvec(s(1).subs{:}).';
             
@@ -641,6 +754,13 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor}) SparseTensor < AbstractTensor
             if isempty(t), return; end
             [t.ind, p] = sortrows(t.ind, width(t.ind):-1:1);
             t.var = t.var(p);
+        end
+    end
+    
+    methods (Static)
+        function t = zeros(varargin)
+            sz = [varargin{:}];
+            t = SparseTensor([], [], sz);
         end
     end
 end

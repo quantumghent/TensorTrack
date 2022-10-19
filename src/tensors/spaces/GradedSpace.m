@@ -274,7 +274,7 @@ classdef GradedSpace < AbstractSpace
         function spaces = insertone(spaces, i, dual)
             arguments
                 spaces
-                i = length(spaces)
+                i = length(spaces) + 1
                 dual = false
             end
             

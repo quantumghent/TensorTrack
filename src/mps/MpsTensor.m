@@ -25,7 +25,7 @@ classdef MpsTensor < Tensor
             if isempty(tensor)
                 args = {};
             else
-                args = {tensor};
+                args = {full(tensor)};
             end
             A@Tensor(args{:});
             if ~isempty(tensor)

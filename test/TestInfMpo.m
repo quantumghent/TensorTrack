@@ -1,10 +1,10 @@
-classdef TestInfiniteMpo < matlab.unittest.TestCase
+classdef TestInfMpo < matlab.unittest.TestCase
     % Unit tests for infinite matrix product operators.
     
     properties (TestParameter)
         mpo = struct(...
-            'trivial', InfiniteMpo.Ising(), ...
-            'Z2', InfiniteMpo.Ising('Symmetry', 'Z2') ...
+            'trivial', InfMpo.Ising(), ...
+            'Z2', InfMpo.Ising('Symmetry', 'Z2') ...
             )
         mps = struct(...
             'trivial', UniformMps.randnc(CartesianSpace.new(2), CartesianSpace.new(4)), ...
@@ -15,15 +15,13 @@ classdef TestInfiniteMpo < matlab.unittest.TestCase
     
     methods (Test, ParameterCombination='sequential')
         function testEnvironments(tc, mpo, mps)
-            
-            T = transfermatrix(mpo, mps);
-            [GL, lambdaL] = eigsolve(T, [], 1, 'largestabs');
+            [GL, lambdaL] = leftenvironment(mpo, mps, mps);
+            T = transfermatrix(mpo, mps, mps, 'Type', 'LL');
             tc.assertTrue(isapprox(apply(T, GL), lambdaL * GL));
             
-            [GR, lambdaR] = eigsolve(T', [], 1, 'largestabs');
-            tc.assertTrue(isapprox(apply(T', GR), lambdaR * GR));
-            
-            N = period(mps);
+            [GR, lambdaR] = rightenvironment(mpo, mps, mps);
+            T = transfermatrix(mpo, mps, mps, 'Type', 'RR');
+            tc.assertTrue(isapprox(apply(T.', GR), lambdaR * GR));
         end
         
         function testDerivatives(tc, mpo, mps)
@@ -48,21 +46,21 @@ classdef TestInfiniteMpo < matlab.unittest.TestCase
             
             D = 64;
             
-            mpo = InfiniteMpo.Ising(beta);
+            mpo = InfMpo.Ising(beta);
             mps = UniformMps.randnc(CartesianSpace.new(2), CartesianSpace.new(D));
             [mps2, lambda] = fixedpoint(Vumps(), mpo, mps);
             tc.assertEqual(-log(lambda) / beta, freeEnergyExact, 'RelTol', 1e-5);
             
             mps = UniformMps.randnc(GradedSpace.new(Z2(0, 1), [1 1], false), ...
                 GradedSpace.new(Z2(0, 1), [D D] ./ 2, false));
-            mpo = InfiniteMpo.Ising(beta, 'Symmetry', 'Z2');
+            mpo = InfMpo.Ising(beta, 'Symmetry', 'Z2');
             [mps2, lambda] = fixedpoint(Vumps(), mpo, mps);
             tc.assertEqual(-log(lambda) / beta, freeEnergyExact, 'RelTol', 1e-5);
         end
         
         function test2dfDimer(tc)
             D = 32;
-            mpo = block(InfiniteMpo.fDimer());
+            mpo = block(InfMpo.fDimer());
             mps = UniformMps.randnc(GradedSpace.new(fZ2(0, 1), [1 1], false), ...
                 GradedSpace.new(fZ2(0, 1), [D D], false));
             [mps2, lambda] = fixedpoint(Vumps('tol', 1e-4, 'maxiter', 25), mpo, mps);
