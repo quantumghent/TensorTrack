@@ -533,6 +533,7 @@ classdef ProductCharge < AbstractCharge
         function s = string(a)
             charge_str = cellfun(@string, a.charges, 'UniformOutput', false);
             s = join(cat(ndims(a) + 1, charge_str{:}), ' x ', ndims(a) + 1);
+            s = compose("(%s)", s);
         end
             
         function a = one(a)
