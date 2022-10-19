@@ -1559,6 +1559,11 @@ classdef Tensor < AbstractTensor
                 dims.degeneracies(i) = size(Ns{i}, 2);
             end
             
+            mask = dims.degeneracies > 0;
+            dims.charges = dims.charges(mask);
+            dims.degeneracies = dims.degeneracies(mask);
+            Ns = Ns(mask);
+            
             N = t.eye(t.codomain, t.codomain.new(dims, false));
             N.var = fill_matrix_data(N.var, Ns, dims.charges);
         end
@@ -1609,6 +1614,11 @@ classdef Tensor < AbstractTensor
                 Ns{i} = rightnull(mblocks{i}, alg, atol);
                 dims.degeneracies(i) = size(Ns{i}, 1);
             end
+            
+            mask = dims.degeneracies > 0;
+            dims.charges = dims.charges(mask);
+            dims.degeneracies = dims.degeneracies(mask);
+            Ns = Ns(mask);
             
             N = Tensor.eye(t.domain.new(dims, false), t.domain);
             N.var = fill_matrix_data(N.var, Ns, dims.charges);

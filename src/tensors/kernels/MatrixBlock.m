@@ -19,6 +19,12 @@ classdef MatrixBlock < AbstractBlock
             rank = [length(codomain) length(domain)];
             
             trees = fusiontrees(codomain, domain);
+            if isempty(trees)
+                warning('tensors:empty', ...
+                    'No fusion channels available for the given spaces.');
+                b = MatrixBlock.empty(0, 1);
+                return
+            end
             assert(~isempty(trees), 'tensors:empty', ...
                 'no fusion channels available for the given spaces.');
             
@@ -384,13 +390,13 @@ classdef MatrixBlock < AbstractBlock
         
         function b = fill_matrix_data(b, vars, charges)
             if nargin < 3 || isempty(charges)
-                assert(length(vars) == length(b));
+                assert(length(vars) == length(b), ...
+                    'Invalid number of blocks');
                 for i = 1:length(b)
                     b(i).var = vars{i};
                 end
                 return
             end
-            
             [lia, locb] = ismember(charges, [b.charge]);
             assert(all(lia));
             for i = 1:length(vars)
