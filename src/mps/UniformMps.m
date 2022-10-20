@@ -91,6 +91,14 @@ classdef UniformMps
             d = size(mps, 1);
         end
         
+        function mps = horzcat(varargin)
+            ALs = cellfun(@(x) x.AL, varargin, 'UniformOutput', false);
+            ARs = cellfun(@(x) x.AR, varargin, 'UniformOutput', false);
+            Cs =  cellfun(@(x) x.C, varargin, 'UniformOutput', false);
+            ACs = cellfun(@(x) x.AC, varargin, 'UniformOutput', false);
+            mps = UniformMps([ALs{:}], [ARs{:}], [Cs{:}], [ACs{:}]);
+        end
+        
         function s = leftvspace(mps, w)
             if nargin == 1 || isempty(w), w = 1:period(mps); end
             s = arrayfun(@leftvspace, mps.AL(w));

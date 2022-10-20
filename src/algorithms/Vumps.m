@@ -92,21 +92,26 @@ classdef Vumps
         function AC = updateAC(alg, mpo, mps, GL, GR)
             kwargs = namedargs2cell(alg.alg_eigs);
             H_AC = AC_hamiltonian(mpo, mps, GL, GR);
-            [AC, ~] = eigsolve(H_AC, mps.AC, 1, alg.which, kwargs{:});
+            for i = period(mps):-1:1
+                [AC(i), ~] = eigsolve(H_AC{i}, mps.AC(i), 1, alg.which, kwargs{:});
+            end
         end
         
         function C = updateC(alg, mpo, mps, GL, GR)
             kwargs = namedargs2cell(alg.alg_eigs);
             H_C = C_hamiltonian(mpo, mps, GL, GR);
-            [C, ~] = eigsolve(H_C, mps.C, 1, alg.which, kwargs{:});
+            for i = period(mps):-1:1
+                [C(i), ~] = eigsolve(H_C{i}, mps.C(i), 1, alg.which, kwargs{:});
+            end
         end
         
         function mps = updatemps(alg, AC, C)
-            [~, Q_AC] = rightorth(AC);
-            [~, Q_C]  = rightorth(C, 1, 2);
-            
-            AR = contract(conj(Q_C), [1 -1], Q_AC, [1 -2 -3], 'Rank', [1 2]);
-            
+            for i = length(AC):-1:1
+                [~, Q_AC] = rightorth(AC(i));
+                [~, Q_C]  = rightorth(C(i), 1, 2);
+                
+                AR(i) = contract(conj(Q_C), [1 -1], Q_AC, [1 -2 -3], 'Rank', [1 2]);
+            end
             mps = UniformMps([], AR, C, []);
             kwargs = namedargs2cell(alg.alg_canonical);
             mps = canonicalize(mps, kwargs{:});
@@ -127,15 +132,22 @@ classdef Vumps
         end
         
         function eta = convergence(alg, mpo, mps, GL, GR)
-            AC_ = apply(AC_hamiltonian(mpo, mps, GL, GR), mps.AC);
-            lambda_AC = dot(AC_, mps.AC);
-            AC_ = normalize(AC_ ./ lambda_AC);
+            H_AC = AC_hamiltonian(mpo, mps, GL, GR);
+            H_C  = C_hamiltonian(mpo, mps, GL, GR);
+            eta = zeros(1, period(mps));
+            for w = 1:period(mps)
+                AC_ = apply(H_AC{w}, mps.AC(w));
+                lambda_AC = dot(AC_, mps.AC(w));
+                AC_ = normalize(AC_ ./ lambda_AC);
             
-            C_ = apply(C_hamiltonian(mpo, mps, GL, GR), mps.C);
-            lambda_C = dot(C_, mps.C);
-            C_ = normalize(C_ ./ lambda_C);
+                C_ = apply(H_C{w}, mps.C(w));
+                lambda_C = dot(C_, mps.C(w));
+                C_ = normalize(C_ ./ lambda_C);
             
-            eta = distance(AC_ , repartition(multiplyleft(mps.AR, C_), rank(AC_)));
+                eta(w) = distance(AC_ , ...
+                    repartition(multiplyleft(mps.AR(w), C_), rank(AC_)));
+            end
+            eta = max(eta, [], 'all');
         end
     end
     

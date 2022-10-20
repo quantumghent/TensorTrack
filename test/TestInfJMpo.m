@@ -55,26 +55,19 @@ classdef TestInfJMpo < matlab.unittest.TestCase
         end
         
         function test1dIsing(tc)            
-            alg = Vumps('which', 'smallestreal', 'maxiter', 20, 'verbosity', Verbosity.iter);
+            alg = Vumps('which', 'smallestreal', 'maxiter', 5, 'verbosity', Verbosity.iter);
             D = 16;
             mpo = InfJMpo.Ising(1, 1);
             mps = UniformMps.randnc(CartesianSpace.new(2), CartesianSpace.new(D));
-            [mps2, lambda] = fixedpoint(alg, mpo, mps);
-            profile on
+%             [mps2, lambda] = fixedpoint(alg, mpo, mps);
             mpo = InfJMpo.Ising(1, 1, 'Symmetry', 'Z2');
             mps = UniformMps.randnc(pspace(mpo), ...
                 GradedSpace.new(Z2(0, 1), [D D] ./ 2, false));
             [mps2, lambda2] = fixedpoint(alg, mpo, mps);
-            profile viewer
-        end
-        
-        function test2dfDimer(tc)
-            D = 32;
-            mpo = block(InfMpo.fDimer());
-            mps = UniformMps.randnc(GradedSpace.new(fZ2(0, 1), [1 1], false), ...
-                GradedSpace.new(fZ2(0, 1), [D D], false));
-            [mps2, lambda] = fixedpoint(Vumps('tol', 1e-4, 'maxiter', 25), mpo, mps);
-            tc.assertEqual(log(abs(lambda)) / 2, 0.29156, 'RelTol', 1e-4);
+            
+            mpo = [mpo mpo];
+            mps = [mps mps];
+            [mps2, lambda2] = fixedpoint(alg, mpo, mps);
         end
     end
 end

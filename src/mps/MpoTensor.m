@@ -336,6 +336,18 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) MpoTensor < Ab
             end
         end
         
+        function i = end(t, k, n)
+            if n == 1
+                i = prod(size(t));
+                return
+            end
+            if n > ndims(t)
+                i = 1;
+            else
+                i = size(t, k);
+            end
+        end
+        
         function bools = eq(a, b)
             arguments
                 a MpoTensor

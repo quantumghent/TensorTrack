@@ -67,26 +67,31 @@ classdef InfMpo
             arguments
                 mpo
                 mps1
-                mps2 = []
-                GL = []
+                mps2 = mps1
+                GL = cell(1, period(mps1))
                 eigopts.KrylovDim = 30
                 eigopts.MaxIter = 1000
                 eigopts.ReOrth = 2
                 eigopts.Tol = eps(underlyingType(mps1))^(3/4)
             end
-            
+            N = period(mps1);
             T = transfermatrix(mpo, mps1, mps2, 'Type', 'LL');
-            [GL, lambda] = eigsolve(T, GL, 1, 'largestabs', ...
+            [GL{1}, lambda] = eigsolve(T, GL{1}, 1, 'largestabs', ...
                 'KrylovDim', eigopts.KrylovDim, 'Tol', eigopts.Tol, ...
                 'ReOrth', eigopts.ReOrth, 'MaxIter', eigopts.MaxIter);
+            
+            for i = 2:N
+                T = transfermatrix(mpo, mps1, mps2, i-1, 'Type', 'LL');
+                GL{i} = apply(T, GL{i-1}) ./ lambda^(1/N);
+            end
         end
         
         function [GR, lambda] = rightenvironment(mpo, mps1, mps2, GR, eigopts)
             arguments
                 mpo
                 mps1
-                mps2
-                GR = []
+                mps2 = mps1
+                GR = cell(1, period(mps1))
                 eigopts.KrylovDim = 30
                 eigopts.MaxIter = 1000
                 eigopts.ReOrth = 2
@@ -94,10 +99,14 @@ classdef InfMpo
             end
             
             T = transfermatrix(mpo, mps1, mps2, 'Type', 'RR').';
-            
-            [GR, lambda] = eigsolve(T, GR, 1, 'largestabs', ...
+            [GR{1}, lambda] = eigsolve(T, GR{1}, 1, 'largestabs', ...
                 'KrylovDim', eigopts.KrylovDim, 'Tol', eigopts.Tol, ...
                 'ReOrth', eigopts.ReOrth, 'MaxIter', eigopts.MaxIter);
+            N = period(mps1);
+            for i = N:-1:2
+                T = transfermatrix(mpo, mps1, mps2, i, 'Type', 'RR').';
+                GR{i} = apply(T, GR{next(i, N)}) ./ lambda^(1/N);
+            end
         end
         
         function [GL, GR, lambda] = environments(mpo, mps1, mps2, GL, GR, eigopts)
@@ -105,8 +114,8 @@ classdef InfMpo
                 mpo
                 mps1
                 mps2 = mps1
-                GL = []
-                GR = []
+                GL = cell(1, period(mps1))
+                GR = cell(1, period(mps1))
                 eigopts.KrylovDim = 30
                 eigopts.MaxIter = 1000
                 eigopts.ReOrth = 2
@@ -121,13 +130,20 @@ classdef InfMpo
                 warning('lambdas disagree');
             end
             
-            overlap = sqrt(contract(GL, [1 3 2], mps1.C, [2 4], mps2.C', [5 1], GR, [4 3 5]));
+%             for w = 1:length(mps1)
+%                 overlap = sqrt(contract(GL, [1 3 2], mps1.C, [2 4], mps2.C', [5 1], GR, [4 3 5]));
+%             end
 %             GL = GL / overlap;
 %             GR = GR / overlap;
         end
         
         function s = pspace(mpo)
             s = pspace(mpo.O{1});
+        end
+        
+        function mpo = horzcat(varargin)
+            Os = cellfun(@(x) x.O, varargin, 'UniformOutput', false);
+            mpo = InfMpo([Os{:}]);
         end
     end
     %% Derived operators
@@ -137,7 +153,7 @@ classdef InfMpo
                 mpo
                 mps1
                 mps2 = mps1
-                sites = 1:period(mpo)
+                sites = 1:period(mps1)
                 kwargs.Type {mustBeMember(kwargs.Type, {'LL' 'LR' 'RL' 'RR'})} = 'RR'
             end
             
@@ -153,9 +169,15 @@ classdef InfMpo
             else
                 A2 = mps2.AR(sites);
             end
+            O = cellfun(@rot90, mpo.O(sites), 'UniformOutput', false);
             
-            A2 = twist(A2, 1 + find(isdual(space(A1, 2:nspaces(A1)-1))));
-            T = FiniteMpo(A2', {rot90(mpo.O{1})}, A1);
+            for i = 1:numel(A2)
+                T(i, 1) = FiniteMpo(...
+                    twist(A2(i)', 1 + find(isdual(space(A1(i), 2:nspaces(A1(i))-1)))), ...
+                    O(i), A1(i));
+            end
+            
+%             T = FiniteMpo(A2, {rot90(mpo.O{1})}, A1);
         end
         
         function H = AC_hamiltonian(mpo, mps, GL, GR)
@@ -165,9 +187,22 @@ classdef InfMpo
                 GL = fixedpoint(transfermatrix(mpo, mps, 'Type', 'LL'))
                 GR = fixedpoint(transfermatrix(mpo, mps, 'Type', 'RR').')
             end
-            GR = twist(GR, find(isdual(space(GR, nspaces(GR)))) + nspaces(GR)-1);
-            GL = twist(GL, find(isdual(space(GL, 1))));
-            H = FiniteMpo(GL, mpo.O, GR);
+            H = cell(1, period(mps));
+            for i = 1:period(mps)
+                gl = GL{i};
+                for j = 1:numel(gl)
+                    gl(j) = twist(gl(j), find(isdual(space(gl(j), 1))));
+                end
+                gr = GR{next(i, length(mps))};
+                for j = 1:numel(gr)
+                    gr(j) = twist(gr(j), find(isdual(space(gr(j), nspaces(gr(j))))) + ...
+                        nspaces(gr(j)) - 1);
+                end
+                H{i} = FiniteMpo(gl, mpo.O{i}, gr);
+            end
+%             GR = twist(GR, find(isdual(space(GR, nspaces(GR)))) + nspaces(GR)-1);
+%             GL = twist(GL, find(isdual(space(GL, 1))));
+%             H = FiniteMpo(GL, mpo.O, GR);
         end
         
         function H = C_hamiltonian(mpo, mps, GL, GR)
@@ -177,9 +212,21 @@ classdef InfMpo
                 GL = fixedpoint(transfermatrix(mpo, mps, 'Type', 'LL'))
                 GR = fixedpoint(transfermatrix(mpo, mps, 'Type', 'RR').')
             end
-            GR = twist(GR, find(isdual(space(GR, nspaces(GR)))) + nspaces(GR)-1);
-            GL = twist(GL, find(isdual(space(GL, 1))));
-            H = FiniteMpo(GL, {}, GR);
+            for i = 1:period(mps)
+                gl = GL{i};
+                for j = 1:numel(gl)
+                    gl(j) = twist(gl(j), find(isdual(space(gl(j), 1))));
+                end
+                gr = GR{i};
+                for j = 1:numel(gr)
+                    gr(j) = twist(gr(j), find(isdual(space(gr(j), nspaces(gr(j))))) + ...
+                        nspaces(gr(j)) - 1);
+                end
+                H{i} = FiniteMpo(gl, {}, gr);
+            end
+%             GR = twist(GR, find(isdual(space(GR, nspaces(GR)))) + nspaces(GR)-1);
+%             GL = twist(GL, find(isdual(space(GL, 1))));
+%             H = FiniteMpo(GL, {}, GR);
         end
     end
     

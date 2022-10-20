@@ -115,7 +115,7 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor}) SparseTensor < AbstractTensor
             assert(isscalar(i), 'sparse:argerror', ...
                 'Can only obtain spaces for single index.');
             for j = size(t, i):-1:1
-                el = t.var(find(t.ind(:, i), 1));
+                el = t.var(find(t.ind(:, i) == j, 1));
                 if isempty(el)
                     warning('cannot deduce space.');
                     continue;
@@ -284,6 +284,32 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor}) SparseTensor < AbstractTensor
                 'mtimes only defined for matrices.');
             assert(szA(2) == szB(1), 'sparse:dimerror', ...
                 'incompatible sizes for mtimes.');
+            
+            if isnumeric(a)
+                c = SparseTensor.zeros(szA(1), szB(2));
+                
+                for i = 1:szA(1)
+                    for j = 1:szB(2)
+                        c = subsasgn(c, substruct('()', {i, j}), ...
+                            sum(a(i, :).' .* ...
+                            subsref(b, substruct('()', {':', j}))));
+                    end
+                end
+                return
+            end
+            
+            if isnumeric(b)
+                c = SparseTensor.zeros(szA(1), szB(2));
+                
+                for i = 1:szA(1)
+                    for j = 1:szB(2)
+                        c = subsasgn(c, substruct('()', {i, j}), ...
+                            sum(subsref(a, substruct('()', {i, ':'})) .* ...
+                            b(:, j).'));
+                    end
+                end
+                return
+            end
             
             cvar = [];
             cind = double.empty(0, 2);
@@ -518,56 +544,21 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor}) SparseTensor < AbstractTensor
         end
         
         function t = times(t1, t2)
-            if isnumeric(t1)
-                if isempty(t2.var)
-                    t = t2;
-                    return
-                end
-                t = t2;
-                t.var = t1 .* t.var;
-                return
-            end
-            
-            if isnumeric(t2)
-                t = t2 .* t1;
-                return
-            end
-            
             if isscalar(t1) && ~isscalar(t2)
                 t1 = repmat(t1, size(t2));
             elseif isscalar(t2) && ~isscalar(t1)
                 t2 = repmat(t2, size(t1));
             end
             
-            assert(isequal(size(t1), size(t2)), 'sparse:dimerror', ...
-                'incompatible input sizes.');
+            assert(isequal(size(t1), size(t2)));
             
-            if ~issparse(t1)
-                if isempty(t2.var)
-                    t = t2;
-                    return
-                end
-                
-                idx = sub2ind_(t2.sz, t2.ind);
-                t = t2;
-                t.var = t1(idx) .* t.var;
-                return
-            end
-            
-            if ~issparse(t2)
-                if isempty(t1.var)
-                    t = t1;
-                    return
-                end
-                
-                idx = sub2ind_(t1.sz, t1.ind);
-                t = t1;
-                t.var = t.var .* t2(idx);
-                return
-            end
-            
-            [inds, ia, ib] = intersect(t1.ind, t2.ind, 'rows');
-            t = SparseTensor(inds, t1.var(ia) .* t2.var(ib), t1.sz);
+            t = SparseTensor.zeros(size(t1));
+            I = intersect(find(t1), find(t2));
+            a = full(subsref(t1, substruct('()', {I})));
+            b = full(subsref(t2, substruct('()', {I})));
+            subs = ind2sub_(t.sz, I);
+            t.ind = subs;
+            t.var = reshape(a .* b, [], 1);
         end
         
         function t = tpermute(t, p, r)
@@ -703,7 +694,7 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor}) SparseTensor < AbstractTensor
                         t.ind = [t.ind; subs];
                         t.var = [t.var; full(v(i))];
                     else
-                        t.var(idx) = v(i);
+                        t.var(idx) = full(v(i));
                     end
                 end
             end

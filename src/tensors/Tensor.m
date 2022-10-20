@@ -427,7 +427,7 @@ classdef Tensor < AbstractTensor
         end
         
         function r = rank(t, i)
-            r = [length(t.codomain) length(t.domain)];
+            r = [length(t(1).codomain) length(t(1).domain)];
             if nargin > 1
                 r = r(i);
             end
@@ -733,17 +733,12 @@ classdef Tensor < AbstractTensor
                 if issparse(B) && ~all(any(B, 1))
                     C = SparseTensor.zeros(szA(1), szB(2));
                 else
-                    C = Tensor.empty(szA(1), szB(2), 0);
+                    C(szA(1), szB(2)) = Tensor();
                 end
                 
                 for i = 1:szA(1)
                     for j = 1:szB(2)
-                        try
                         C(i, j) = sum(A(i, :) .* B(:, j).');
-                        catch
-                            bla
-                        end
-                        
                     end
                 end
                 return

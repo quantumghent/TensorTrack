@@ -169,11 +169,13 @@ classdef MpsTensor < Tensor
                 alg = 'rqpos'
             end
             
-            [R, AR] = rightorth@Tensor(A, 1, 2:nspaces(A), alg);
-            if isdual(space(R, 1)) == isdual(space(R, 2))
-                R.domain = conj(R.domain);
-                R = twist(R, 2);
-                AR.codomain = conj(AR.codomain);
+            for i = numel(A):-1:1
+                [R(i), AR(i)] = rightorth@Tensor(A(i), 1, 2:nspaces(A(i)), alg);
+                if isdual(space(R(i), 1)) == isdual(space(R(i), 2))
+                    R(i).domain = conj(R(i).domain);
+                    R(i) = twist(R(i), 2);
+                    AR(i).codomain = conj(AR(i).codomain);
+                end
             end
             
 %             AR = MpsTensor(repartition(AR, rank(A)), A.alegs);

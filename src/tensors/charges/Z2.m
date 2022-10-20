@@ -40,7 +40,7 @@ classdef Z2 < AbstractCharge & logical
         end
         
         function s = GetMD5_helper(data)
-            s = {'Z2' logical(data)};
+            s = logical(data);
         end
         
         function c = mtimes(a, b)

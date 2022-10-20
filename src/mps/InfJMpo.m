@@ -20,7 +20,7 @@ classdef InfJMpo < InfMpo
                 mpo
                 mps1
                 mps2 = mps1
-                GL = []
+                GL = cell(1, period(mps1))
                 eigopts.KrylovDim = 30
                 eigopts.MaxIter = 1000
                 eigopts.ReOrth = 2
@@ -29,19 +29,20 @@ classdef InfJMpo < InfMpo
             
             T = transfermatrix(mpo, mps1, mps2, 'Type', 'LL');
             
-            if isempty(GL)
-                GL = SparseTensor.zeros(1, size(T.O{1}, 2), 1);
-                pSpace = pspace(mpo.O{1});
-                GL(1) = insert_onespace(fixedpoint(mps1, 'l_LL'), ...
+            if isempty(GL) || isempty(GL{1})
+                GL = cell(1, period(mps1));
+                GL{1} = SparseTensor.zeros(1, size(T(1).O{1}, 2), 1);
+                pSpace = space(T(1).O{1}(:,:,:,1), 4);
+                GL{1}(1) = insert_onespace(fixedpoint(mps1, 'l_LL'), ...
                     2, ~isdual(pSpace(1)));
             end
             
-            for i = 2:size(mpo.O{1}, 1)
-                rhs = apply(slice(T, i, 1:i-1), GL(1, 1:i-1, 1));
+            for i = 2:size(GL{1}, 2)
+                rhs = apply(slice(T, i, 1:i-1), GL{1}(1, 1:i-1, 1));
                 Tdiag = slice(T, i, i);
                 if iszero(Tdiag)
-                    GL(i) = rhs;
-                elseif iseye(Tdiag)
+                    GL{1}(i) = rhs;
+                elseif iseye(T, i)
                     fp_left  = insert_onespace(fixedpoint(mps1, 'l_LL'), ...
                         2, isdual(space(rhs, 2)));
                     fp_right = insert_onespace(fixedpoint(mps1, 'r_LL'), ...
@@ -49,13 +50,19 @@ classdef InfJMpo < InfMpo
                     lambda = contract(rhs, 1:3, fp_right, 3:-1:1);
                     
                     rhs = rhs - lambda * fp_left;
-                    GL(i) = linsolve(@(x) x - apply(Tdiag, x), rhs, ...
-                        GL(i));
-                    GL(i) = GL(i) - contract(GL(i), 1:3, fp_right, 3:-1:1) * fp_left;
+                    GL{1}(i) = linsolve(@(x) x - apply(Tdiag, x), rhs, ...
+                        GL{1}(i));
+                    GL{1}(i) = GL{1}(i) - ...
+                        contract(GL{1}(i), 1:3, fp_right, 3:-1:1) * fp_left;
                 else
-                    GL(i) = linsolve(@(x) x - apply(Tdiag, x), rhs, ...
-                        GL(i));
+                    GL{1}(i) = linsolve(@(x) x - apply(Tdiag, x), rhs, ...
+                        GL{1}(i));
                 end
+            end
+            
+            for w = 1:period(mps1)-1
+                T = transfermatrix(mpo, mps1, mps2, w, 'Type', 'LL');
+                GL{next(w, period(mps1))} = apply(T, GL{w});
             end
         end
         
@@ -64,7 +71,7 @@ classdef InfJMpo < InfMpo
                 mpo
                 mps1
                 mps2 = mps1
-                GR = []
+                GR = cell(1, period(mps1))
                 eigopts.KrylovDim = 30
                 eigopts.MaxIter = 1000
                 eigopts.ReOrth = 2
@@ -72,20 +79,21 @@ classdef InfJMpo < InfMpo
             end
             
             T = transfermatrix(mpo, mps1, mps2, 'Type', 'RR').';
-            N = size(T.O{1}, 2);
-            if isempty(GR)
-                GR = SparseTensor.zeros(1, N, 1);
-                pSpace = pspace(mpo.O{1});
-                GR(1, N, 1) = insert_onespace(fixedpoint(mps1, 'r_RR'), ...
+            N = size(T(1).O{1}, 2);
+            if isempty(GR) || isempty(GR{1})
+                GR = cell(1, period(mps1));
+                GR{1} = SparseTensor.zeros(1, N, 1);
+                pSpace = space(T(1).O{1}(:, end, :, :), 2);
+                GR{1}(1, N, 1) = insert_onespace(fixedpoint(mps1, 'r_RR'), ...
                     2, isdual(pSpace(end)));
             end
             
             for i = N-1:-1:1
-                rhs = apply(slice(T, i, i+1:N), GR(1, i+1:N, 1));
+                rhs = apply(slice(T, i, i+1:N), GR{1}(1, i+1:N, 1));
                 Tdiag = slice(T, i, i);
                 if iszero(Tdiag)
-                    GR(i) = rhs;
-                elseif iseye(Tdiag)
+                    GR{1}(i) = rhs;
+                elseif iseye(T, i)
                     fp_left  = insert_onespace(fixedpoint(mps1, 'l_RR'), ...
                         2, ~isdual(space(rhs, 2)));
                     fp_right = insert_onespace(fixedpoint(mps1, 'r_RR'), ...
@@ -93,16 +101,26 @@ classdef InfJMpo < InfMpo
                     lambda = contract(rhs, 1:3, fp_left, 3:-1:1);
                     
                     rhs = rhs - lambda * fp_right;
-                    GR(i) = linsolve(@(x) x - apply(Tdiag, x), rhs, ...
-                        GR(i));
-                    GR(i) = GR(i) - contract(GR(i), 1:3, fp_left, 3:-1:1) * fp_right;
+                    GR{1}(i) = linsolve(@(x) x - apply(Tdiag, x), rhs, ...
+                        GR{1}(i));
+                    GR{1}(i) = GR{1}(i) - ...
+                        contract(GR{1}(i), 1:3, fp_left, 3:-1:1) * fp_right;
                 else
-                    GR(i) = linsolve(@(x) x - apply(Tdiag, x), rhs, ...
-                        GR(i));
+                    GR{1}(i) = linsolve(@(x) x - apply(Tdiag, x), rhs, ...
+                        GR{1}(i));
                 end
+            end
+            
+            for w = period(mps1):-1:2
+                T = transfermatrix(mpo, mps1, mps2, w, 'Type', 'RR').';
+                GR{w} = apply(T, GR{next(w, period(mps1))});
             end
         end
         
+        function mpo = horzcat(varargin)
+            Os = cellfun(@(x) x.O, varargin, 'UniformOutput', false);
+            mpo = InfJMpo([Os{:}]);
+        end
     end
     
     methods (Static)

@@ -53,10 +53,14 @@ classdef FiniteMpo
         end
         
         function v = initialize_fixedpoint(mpo)
-            v = Tensor.randnc(domain(mpo), []);
+            N = prod(cellfun(@(x) size(x, 4), mpo.O));
+            for i = N:-1:1
+                v(i) = Tensor.randnc(domain(slice(mpo, i, 1:N)), []);
+            end
         end
         
         function s = domain(mpo)
+            N = prod(cellfun(@(x) size(x, 4), mpo.O));
             s = conj(...
                 [rightvspace(mpo(1).L) cellfun(@(x) pspace(x)', mpo(1).O) leftvspace(mpo(1).R)]);
         end
@@ -112,24 +116,30 @@ classdef FiniteMpo
             assert(all(1 <= i) && all(i <= size(mpo(end).O{1}, 2)));
             assert(all(1 <= j) && all(j <= size(mpo(1).O{1}, 4)));
             
-            assert(depth(mpo) == 1, 'TBA');
-            mpo.O{1} = mpo.O{1}(:, i, :, j);
+            mpo(end).O{1} = mpo(end).O{1}(:, i, :, :);
+            mpo(1).O{1} = mpo(1).O{1}(:, :, :, j);
         end
         
         function bool = iszero(mpo)
-            if isempty(mpo.O)
+            if isempty(mpo(1).O)
                 bool = false;
                 return
             end
-            bool = any(cellfun(@nnz, mpo.O) == 0);
+            for i = 1:depth(mpo)
+                bool = any(cellfun(@nnz, mpo(i).O) == 0);
+                if bool, return; end
+            end
         end
         
-        function bool = iseye(mpo)
-            if isempty(mpo.O)
+        function bool = iseye(mpo, i)
+            if isempty(mpo(1).O)
                 bool = true;
                 return
             end
-            bool = all(cellfun(@iseye, mpo.O));
+            for d = 1:depth(mpo)
+                bool = all(cellfun(@(x) iseye(x(:,i,:,i)), mpo(d).O));
+                if ~bool, return; end
+            end
         end
 %         
 %         function v = applyleft(mpo, v)
