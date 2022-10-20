@@ -552,13 +552,36 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor}) SparseTensor < AbstractTensor
             
             assert(isequal(size(t1), size(t2)));
             
-            t = SparseTensor.zeros(size(t1));
-            I = intersect(find(t1), find(t2));
-            a = full(subsref(t1, substruct('()', {I})));
-            b = full(subsref(t2, substruct('()', {I})));
-            subs = ind2sub_(t.sz, I);
-            t.ind = subs;
-            t.var = reshape(a .* b, [], 1);
+            if isnumeric(t1)
+                t = t2;
+                idx = sub2ind_(t.sz, t.ind);
+                t1 = t1(idx);
+                idx2 = find(t1);
+                t.var = t.var(idx2) .* t1(idx2);
+                t.ind = t.ind(idx2, :);
+                return
+            end
+            
+            if isnumeric(t2)
+                t = t2 .* t1;
+                return
+            end
+            
+            if ~issparse(t1)
+                idx = sub2ind_(t2.sz, t2.ind);
+                t = t2;
+                t.var = t.var .* t1(idx);
+                return
+            end
+            
+            if ~issparse(t2)
+                t = t2 .* t1;
+                return
+            end
+            
+            t = t1;
+            [t.ind, ia, ib] = intersect(t1.ind, t2.ind, 'rows');
+            t.var = t1.var(ia) .* t2.var(ib);
         end
         
         function t = tpermute(t, p, r)

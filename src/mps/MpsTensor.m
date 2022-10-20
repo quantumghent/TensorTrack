@@ -96,7 +96,7 @@ classdef MpsTensor < Tensor
             MAXKRYLOVDIM = 30;
             
             % initialization
-            N = width(A);
+            N = size(A, 2);
             if isempty(C), C = initializeC(A, circshift(A, 1)); end
             if kwargs.Normalize, C(1) = normalize(C(1)); end
             A = arrayfun(@(a) MpsTensor(repartition(a, [nspaces(a)-1 1])), A);
@@ -193,82 +193,17 @@ classdef MpsTensor < Tensor
                 kwargs.EigsInit = 3
                 kwargs.EigsFrequence = 2
             end
+            
             opts = namedargs2cell(kwargs);
-            [AR, C, lambda, eta] = uniform_leftorth(A', C', opts{:});
-            AR = AR';
-            C = C';
+            
+            Ad = arrayfun(@ctranspose, A);
+            Cd = arrayfun(@ctranspose, C);
+            
+            [AR, C, lambda, eta] = uniform_leftorth(Ad, Cd, opts{:});
+            
+            AR = arrayfun(@ctranspose, AR);
+            C  = arrayfun(@ctranspose, C);
             lambda = conj(lambda);
-            return
-            
-            
-            % constants
-            EIG_TOLFACTOR = 1/50;
-            EIG_MAXTOL = 1e-4;
-            MINKRYLOVDIM = 8;
-            MAXKRYLOVDIM = 30;
-            
-            % initialization
-            N = width(A);
-            if isempty(C), C = initializeC(A, circshift(A, 1)); end
-            if kwargs.Normalize, C(1) = normalize(C(1)); end
-            A = arrayfun(@(a) MpsTensor(repartition(a, [1 nspaces(a)-1])), A);
-            AR = A;
-            
-            eta_best = Inf;
-            ctr_best = 0;
-            
-            for ctr = 1:kwargs.MaxIter
-                if ctr > kwargs.EigsInit && mod(ctr, kwargs.EigsFrequence) == 0
-                    C_ = repartition(C(end), [nspaces(C(end)) 0]);
-                    T = transfermatrix(A, AR)';
-                    [C_, ~] = eigsolve(T, C_, ...
-                        1, 'largestabs', ...
-                        'Tol', min(eta * EIG_TOLFACTOR, EIG_MAXTOL), ...
-                        'KrylovDim', between(MINKRYLOVDIM, ...
-                            MAXKRYLOVDIM - ctr / 2 + 4, ...
-                            MAXKRYLOVDIM), ...
-                        'NoBuild', 4, ...
-                        'Verbosity', kwargs.Verbosity - 1);
-                    [C(end), ~] = rightorth(C_', 1, 2, kwargs.Method);
-                    if isdual(space(C(end), 1))
-                        C.domain = conj(C.domain);
-                        C = twist(C, 2);
-                    end
-                end
-                
-                C_ = C(end);
-                lambdas = ones(1, N);
-                for w = N:-1:1
-                    ww = prev(w, N);
-                    AC = multiplyright(A(w), C(w));
-                    [C(ww), AR(w)] = rightorth(AC, kwargs.Method);
-                    lambdas(w) = norm(C(ww));
-                    if kwargs.Normalize, C(ww) = C(ww) ./ lambdas(w); end
-                end
-                eta = norm(C_ - C(end), Inf);
-                
-                if eta < kwargs.Tol
-                    if kwargs.Verbosity >= Verbosity.conv
-                        fprintf('Conv %2d:\terror = %0.4e\n', ctr, eta);
-                    end
-                    break;
-                elseif eta < eta_best
-                    eta_best = eta;
-                    ctr_best = ctr;
-                elseif ctr - ctr_best > 3
-                    warning('uniform_orthright:stagnate', 'Algorithm stagnated');
-                    break;
-                end
-                if kwargs.Verbosity >= Verbosity.iter
-                    fprintf('Iter %2d:\terror = %0.4e\n', ctr, eta);
-                end
-            end
-            
-            if kwargs.Verbosity >= Verbosity.warn && eta > kwargs.Tol
-                fprintf('Not converged %2d:\terror = %0.4e\n', ctr, eta);
-            end
-            
-            if nargout > 2, lambda = prod(lambdas); end
         end
         
         function T = transfermatrix(A, B)

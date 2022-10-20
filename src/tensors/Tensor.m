@@ -48,6 +48,11 @@ classdef Tensor < AbstractTensor
                 return
             end
             
+            if nargin == 1 && isa(varargin{1}, 'SparseTensor')
+                t = full(varargin{1});
+                return
+            end
+            
             % t = Tensor(array)
             if nargin == 1 && isnumeric(varargin{1})
                 t.domain = [];
@@ -1223,7 +1228,7 @@ classdef Tensor < AbstractTensor
             for i = numel(A):-1:1
                 assert(isequal(A(i).domain, B(i).codomain), 'tensors:SpaceMismatch', ...
                     'Multiplied spaces incompatible.');
-                if ~isempty(A.codomain) || ~isempty(B.domain)
+                if ~isempty(A(i).codomain) || ~isempty(B(i).domain)
                     C(i) = Tensor.zeros(A(i).codomain, B(i).domain);
                     C(i).var = mul(C(i).var, A(i).var, B(i).var);
                 else
