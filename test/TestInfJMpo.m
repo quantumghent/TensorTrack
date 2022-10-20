@@ -15,59 +15,48 @@ classdef TestInfJMpo < matlab.unittest.TestCase
             [GL, lambdaL] = leftenvironment(mpo, mps, mps);
             tc.verifyTrue(isapprox(abs(lambdaL), abs(real(lambdaL)), 'RelTol', 1e-6), ...
                 sprintf('lambda should be real. (%-g i)', imag(lambdaL)));
-            T = transfermatrix(mpo, mps, mps, 'Type', 'LL');
-            
-%             for i = 1:size(mpo.O{1}, 1)
-%                 tc.assertTrue(isapprox(apply(slice(T, i, 1:i-1), GL(1:i-1)), ...
-%                     apply(slice(T, i, i), GL(i))));
-%             end
-            GL_ = apply(T, GL);
-            for i = 1:numel(GL_)
-                tc.verifyTrue(isapprox(GL_(i), GL(i)), ...
-                    sprintf('GL(%d) disagrees', i));
-            end
-%             tc.assertTrue(isapprox(apply(T, GL), GL));
             
             [GR, lambdaR] = rightenvironment(mpo, mps, mps);
             tc.verifyTrue(isapprox(abs(lambdaR), abs(real(lambdaR)), 'RelTol', 1e-6), ...
                 sprintf('lambda should be real. (%gi)', imag(lambdaR)));
-            T = transfermatrix(mpo, mps, mps, 'Type', 'RR');
-            GR_ = apply(T.', GR);
-            for i = 1:numel(GR_)
-                tc.verifyTrue(isapprox(GR_(i), GR(i)), ...
-                    sprintf('GR(%d) disagrees', i));
-            end
             
-            tc.verifyTrue(isapprox(lambdaL, lambdaR), 'lambdas should be equal.')
+            tc.verifyTrue(isapprox(lambdaL, lambdaR), 'lambdas should be equal.');
         end
         
         function testDerivatives(tc, mpo, mps)
             [GL, GR] = environments(mpo, mps, mps);
             
             H_AC = AC_hamiltonian(mpo, mps, GL, GR);
+            for i = 1:numel(H_AC)
+                [AC_, lambda] = eigsolve(H_AC{i}, mps.AC(i), 1, 'largestabs');
+                tc.assertTrue(isapprox(apply(H_AC{i}, AC_), lambda * AC_));
+            end
+            
             H_C = C_hamiltonian(mpo, mps, GL, GR);
-            
-            [AC_, lambda] = eigsolve(H_AC, mps.AC, 1, 'largestabs');
-            tc.assertTrue(isapprox(apply(H_AC, AC_), lambda * AC_));
-            
-            [C_, lambda] = eigsolve(H_C, mps.C, 1, 'largestabs');
-            tc.assertTrue(isapprox(apply(H_C, C_), lambda * C_));
+            for i = 1:numel(H_C)
+                [C_, lambda] = eigsolve(H_C{i}, mps.C(i), 1, 'largestabs');
+                tc.assertTrue(isapprox(apply(H_C{i}, C_), lambda * C_));
+            end
         end
         
         function test1dIsing(tc)            
-            alg = Vumps('which', 'smallestreal', 'maxiter', 5, 'verbosity', Verbosity.iter);
+            alg = Vumps('which', 'smallestreal', 'maxiter', 5);
             D = 16;
             mpo = InfJMpo.Ising(1, 1);
             mps = UniformMps.randnc(CartesianSpace.new(2), CartesianSpace.new(D));
-%             [mps2, lambda] = fixedpoint(alg, mpo, mps);
+            [mps2, lambda] = fixedpoint(alg, mpo, mps);
+            tc.verifyTrue(isapprox(lambda, -1.27, 'RelTol', 1e-2))
+            
             mpo = InfJMpo.Ising(1, 1, 'Symmetry', 'Z2');
             mps = UniformMps.randnc(pspace(mpo), ...
                 GradedSpace.new(Z2(0, 1), [D D] ./ 2, false));
             [mps2, lambda2] = fixedpoint(alg, mpo, mps);
+            tc.verifyTrue(isapprox(lambda, -1.27, 'RelTol', 1e-2))
             
             mpo = [mpo mpo];
             mps = [mps mps];
             [mps2, lambda2] = fixedpoint(alg, mpo, mps);
+            tc.verifyTrue(isapprox(lambda2/2, -1.27, 'RelTol', 5e-2))
         end
     end
 end

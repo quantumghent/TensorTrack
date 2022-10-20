@@ -15,17 +15,19 @@ classdef InfJMpo < InfMpo
             bool = true;
         end
         
-        function [GL, lambda] = leftenvironment(mpo, mps1, mps2, GL, eigopts)
+        function [GL, lambda] = leftenvironment(mpo, mps1, mps2, GL, linopts)
             arguments
                 mpo
                 mps1
                 mps2 = mps1
                 GL = cell(1, period(mps1))
-                eigopts.KrylovDim = 30
-                eigopts.MaxIter = 1000
-                eigopts.ReOrth = 2
-                eigopts.Tol = eps(underlyingType(mps1))^(3/4)
+                linopts.Algorithm = 'bicgstab'
+                linopts.MaxIter = 500
+                linopts.Verbosity = Verbosity.warn
+                linopts.Tol = eps(underlyingType(mps1))^(3/4)
             end
+            
+            linkwargs = namedargs2cell(linopts);
             
             T = transfermatrix(mpo, mps1, mps2, 'Type', 'LL');
             
@@ -50,13 +52,13 @@ classdef InfJMpo < InfMpo
                     lambda = contract(rhs, 1:3, fp_right, 3:-1:1);
                     
                     rhs = rhs - lambda * fp_left;
-                    GL{1}(i) = linsolve(@(x) x - apply(Tdiag, x), rhs, ...
-                        GL{1}(i));
+                    [GL{1}(i), ~] = linsolve(@(x) x - apply(Tdiag, x), rhs, GL{1}(i), ...
+                        linkwargs{:});
                     GL{1}(i) = GL{1}(i) - ...
                         contract(GL{1}(i), 1:3, fp_right, 3:-1:1) * fp_left;
                 else
-                    GL{1}(i) = linsolve(@(x) x - apply(Tdiag, x), rhs, ...
-                        GL{1}(i));
+                    [GL{1}(i), ~] = linsolve(@(x) x - apply(Tdiag, x), rhs, GL{1}(i), ...
+                        linkwargs{:});
                 end
             end
             
@@ -66,20 +68,23 @@ classdef InfJMpo < InfMpo
             end
         end
         
-        function [GR, lambda] = rightenvironment(mpo, mps1, mps2, GR, eigopts)
+        function [GR, lambda] = rightenvironment(mpo, mps1, mps2, GR, linopts)
             arguments
                 mpo
                 mps1
                 mps2 = mps1
                 GR = cell(1, period(mps1))
-                eigopts.KrylovDim = 30
-                eigopts.MaxIter = 1000
-                eigopts.ReOrth = 2
-                eigopts.Tol = eps(underlyingType(mps1))^(3/4)
+                linopts.Algorithm = 'bicgstab'
+                linopts.MaxIter = 500
+                linopts.Verbosity = Verbosity.warn
+                linopts.Tol = eps(underlyingType(mps1))^(3/4)
             end
+            
+            linkwargs = namedargs2cell(linopts);
             
             T = transfermatrix(mpo, mps1, mps2, 'Type', 'RR').';
             N = size(T(1).O{1}, 2);
+            
             if isempty(GR) || isempty(GR{1})
                 GR = cell(1, period(mps1));
                 GR{1} = SparseTensor.zeros(1, N, 1);
@@ -101,19 +106,42 @@ classdef InfJMpo < InfMpo
                     lambda = contract(rhs, 1:3, fp_left, 3:-1:1);
                     
                     rhs = rhs - lambda * fp_right;
-                    GR{1}(i) = linsolve(@(x) x - apply(Tdiag, x), rhs, ...
-                        GR{1}(i));
+                    [GR{1}(i), ~] = ...
+                        linsolve(@(x) x - apply(Tdiag, x), rhs, GR{1}(i), linkwargs{:});
+                    
                     GR{1}(i) = GR{1}(i) - ...
                         contract(GR{1}(i), 1:3, fp_left, 3:-1:1) * fp_right;
                 else
-                    GR{1}(i) = linsolve(@(x) x - apply(Tdiag, x), rhs, ...
-                        GR{1}(i));
+                    [GR{1}(i), ~] = linsolve(@(x) x - apply(Tdiag, x), rhs, GR{1}(i), ...
+                        linkwargs{:});
                 end
             end
             
             for w = period(mps1):-1:2
                 T = transfermatrix(mpo, mps1, mps2, w, 'Type', 'RR').';
                 GR{w} = apply(T, GR{next(w, period(mps1))});
+            end
+        end
+        
+        function [GL, GR, lambda] = environments(mpo, mps1, mps2, GL, GR, linopts)
+            arguments
+                mpo
+                mps1
+                mps2 = mps1
+                GL = cell(1, period(mps1))
+                GR = cell(1, period(mps1))
+                linopts.Algorithm = 'bicgstab'
+                linopts.MaxIter = 500
+                linopts.Verbosity = Verbosity.warn
+                linopts.Tol = eps(underlyingType(mps1))^(3/4)
+            end
+            
+            kwargs = namedargs2cell(linopts);
+            [GL, lambdaL] = leftenvironment(mpo, mps1, mps2, GL, kwargs{:});
+            [GR, lambdaR] = rightenvironment(mpo, mps1, mps2, GR, kwargs{:});
+            lambda = (lambdaL + lambdaR) / 2;
+            if abs(lambdaL - lambdaR)/abs(lambda) > eps(lambda)^(1/3)
+                warning('lambdas disagree');
             end
         end
         

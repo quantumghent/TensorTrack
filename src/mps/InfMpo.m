@@ -122,7 +122,7 @@ classdef InfMpo
                 eigopts.Tol = eps(underlyingType(mps1))^(3/4)
             end
             
-            kwargs = [fieldnames(eigopts).'; struct2cell(eigopts).'];
+            kwargs = namedargs2cell(eigopts);
             [GL, lambdaL] = leftenvironment(mpo, mps1, mps2, GL, kwargs{:});
             [GR, lambdaR] = rightenvironment(mpo, mps1, mps2, GR, kwargs{:});
             lambda = (lambdaL + lambdaR) / 2;
@@ -130,11 +130,12 @@ classdef InfMpo
                 warning('lambdas disagree');
             end
             
-%             for w = 1:length(mps1)
-%                 overlap = sqrt(contract(GL, [1 3 2], mps1.C, [2 4], mps2.C', [5 1], GR, [4 3 5]));
-%             end
-%             GL = GL / overlap;
-%             GR = GR / overlap;
+            for w = 1:length(mps1)
+                overlap = sqrt(contract(GL{w}, [1 3 2], mps1.C(w), [2 4], ...
+                    mps2.C(w)', [5 1], GR{w}, [4 3 5]));
+                GL{w} = GL{w} ./ overlap;
+                GR{w} = GR{w} ./ overlap;
+            end
         end
         
         function s = pspace(mpo)

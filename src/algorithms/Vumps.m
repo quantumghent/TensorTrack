@@ -14,10 +14,10 @@ classdef Vumps
         KrylovDim = 20
         
         dynamical_tols = true
-        tol_min                 = 1e-13
-        tol_max                 = 1e-10
+        tol_min                 = 1e-12
+        tol_max                 = 1e-6
         eigs_tolfactor          = 1e-4
-        canonical_tolfactor     = 1e-4
+        canonical_tolfactor     = 1e-8
         environments_tolfactor  = 1e-4
     end
     
@@ -71,7 +71,7 @@ classdef Vumps
                 C  = updateC (alg, mpo, mps, GL, GR);
                 mps = updatemps(alg, AC, C);
                 
-                [GL, GR, lambda] = environments(mpo, mps, mps, GL, GR);
+                [GL, GR, lambda] = environments(alg, mpo, mps, GL, GR);
                 eta = convergence(alg, mpo, mps, GL, GR);
                 
                 if iter > alg.miniter && eta < alg.tol
@@ -122,8 +122,8 @@ classdef Vumps
                 alg
                 mpo
                 mps
-                GL = []
-                GR = []
+                GL = cell(1, period(mps))
+                GR = cell(1, period(mps))
             end
             
             kwargs = namedargs2cell(alg.alg_environments);
@@ -163,6 +163,11 @@ classdef Vumps
                 alg.tol_max / iter);
             alg.alg_environments.Tol = between(alg.tol_min, eta * alg.environments_tolfactor, ...
                 alg.tol_max / iter);
+            
+            if alg.verbosity > Verbosity.iter
+                fprintf('Updated subalgorithm tolerances: (%e,\t%e,\t%e)\n', ...
+                    alg.alg_eigs.Tol, alg.alg_canonical.Tol, alg.alg_environments.Tol);
+            end
         end
     end
     

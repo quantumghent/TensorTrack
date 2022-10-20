@@ -17,24 +17,29 @@ classdef TestInfMpo < matlab.unittest.TestCase
         function testEnvironments(tc, mpo, mps)
             [GL, lambdaL] = leftenvironment(mpo, mps, mps);
             T = transfermatrix(mpo, mps, mps, 'Type', 'LL');
-            tc.assertTrue(isapprox(apply(T, GL), lambdaL * GL));
+            tc.assertTrue(isapprox(apply(T, GL{1}), lambdaL * GL{1}));
             
             [GR, lambdaR] = rightenvironment(mpo, mps, mps);
             T = transfermatrix(mpo, mps, mps, 'Type', 'RR');
-            tc.assertTrue(isapprox(apply(T.', GR), lambdaR * GR));
+            tc.assertTrue(isapprox(apply(T.', GR{1}), lambdaR * GR{1}));
+            
+            tc.assertTrue(isapprox(lambdaL, lambdaR));
         end
         
         function testDerivatives(tc, mpo, mps)
             [GL, GR] = environments(mpo, mps, mps);
             
             H_AC = AC_hamiltonian(mpo, mps, GL, GR);
+            for i = 1:numel(H_AC)
+                [AC_, lambda] = eigsolve(H_AC{i}, mps.AC(i), 1, 'largestabs');
+                tc.assertTrue(isapprox(apply(H_AC{i}, AC_), lambda * AC_));
+            end
+            
             H_C = C_hamiltonian(mpo, mps, GL, GR);
-            
-            [AC_, lambda] = eigsolve(H_AC, mps.AC, 1, 'largestabs');
-            tc.assertTrue(isapprox(apply(H_AC, AC_), lambda * AC_));
-            
-            [C_, lambda] = eigsolve(H_C, mps.C, 1, 'largestabs');
-            tc.assertTrue(isapprox(apply(H_C, C_), lambda * C_));
+            for i = 1:numel(H_C)
+                [C_, lambda] = eigsolve(H_C{i}, mps.C(i), 1, 'largestabs');
+                tc.assertTrue(isapprox(apply(H_C{i}, C_), lambda * C_));
+            end
         end
         
         function test2dIsing(tc)

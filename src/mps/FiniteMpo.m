@@ -29,6 +29,11 @@ classdef FiniteMpo
             end
         end
         
+        function v = apply_regularised(mpo, fp1, fp2, v)
+            v = apply(mpo, v);
+            v = v - contract(fp1, 1:nspaces(fp1), v, nspaces(fp1):-1:1) * fp2;
+        end
+        
         function [V, D, flag] = eigsolve(mpo, v0, howmany, sigma, options)
             arguments
                 mpo
