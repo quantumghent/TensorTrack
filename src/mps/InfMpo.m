@@ -194,7 +194,7 @@ classdef InfMpo
                 for j = 1:numel(gl)
                     gl(j) = twist(gl(j), find(isdual(space(gl(j), 1))));
                 end
-                gr = GR{next(i, length(mps))};
+                gr = GR{next(i, period(mps))};
                 for j = 1:numel(gr)
                     gr(j) = twist(gr(j), find(isdual(space(gr(j), nspaces(gr(j))))) + ...
                         nspaces(gr(j)) - 1);
@@ -223,7 +223,7 @@ classdef InfMpo
                     gr(j) = twist(gr(j), find(isdual(space(gr(j), nspaces(gr(j))))) + ...
                         nspaces(gr(j)) - 1);
                 end
-                H{i} = FiniteMpo(gl, {}, gr);
+                H{prev(i, period(mps))} = FiniteMpo(gl, {}, gr);
             end
 %             GR = twist(GR, find(isdual(space(GR, nspaces(GR)))) + nspaces(GR)-1);
 %             GL = twist(GL, find(isdual(space(GL, 1))));

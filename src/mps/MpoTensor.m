@@ -325,7 +325,7 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) MpoTensor < Ab
             assert(length(s) == 1, 'mpotensor:index', ...
                 'only a single level of indexing allowed.');
             assert(strcmp(s.type, '()'), 'mpotensor:index', 'only () indexing allowed.');
-            
+            if isempty(t), t = MpoTensor(); end
             if isnumeric(v)
                 t.scalars = subsasgn(t.scalars, s, v);
             elseif isa(v, 'MpoTensor')

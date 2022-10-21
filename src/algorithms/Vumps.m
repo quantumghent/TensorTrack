@@ -108,7 +108,7 @@ classdef Vumps
         function mps = updatemps(alg, AC, C)
             for i = length(AC):-1:1
                 [~, Q_AC] = rightorth(AC(i));
-                [~, Q_C]  = rightorth(C(i), 1, 2);
+                [~, Q_C]  = rightorth(C(prev(i, length(C))), 1, 2);
                 
                 AR(i) = contract(conj(Q_C), [1 -1], Q_AC, [1 -2 -3], 'Rank', [1 2]);
             end
@@ -139,9 +139,10 @@ classdef Vumps
                 AC_ = apply(H_AC{w}, mps.AC(w));
                 lambda_AC = dot(AC_, mps.AC(w));
                 AC_ = normalize(AC_ ./ lambda_AC);
-            
-                C_ = apply(H_C{w}, mps.C(w));
-                lambda_C = dot(C_, mps.C(w));
+                
+                ww = prev(w, period(mps));
+                C_ = apply(H_C{ww}, mps.C(ww));
+                lambda_C = dot(C_, mps.C(ww));
                 C_ = normalize(C_ ./ lambda_C);
             
                 eta(w) = distance(AC_ , ...
