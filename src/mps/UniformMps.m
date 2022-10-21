@@ -308,6 +308,65 @@ classdef UniformMps
             end
         end
         
+        function [svals, charges] = schmidt_values(mps, w)
+            arguments
+                mps
+                w = 1
+            end
+            
+            [svals, charges] = matrixblocks(tsvd(mps.C(w)));
+            svals = cellfun(@diag, svals, 'UniformOutput', false);
+        end
+        
+        function plot_entanglementspectrum(ax, mps, w)
+            if nargin == 1
+                mps = ax;
+                w = 1:period(mps);
+                ax = gobjects(depth(mps), width(mps));
+                for ww = 1:length(w)
+                    ax(1, ww) = subplot(1, length(w), ww);
+                end
+            elseif nargin == 2
+                w = mps;
+                mps = ax;
+                ax = gobjects(depth(mps), width(mps));
+                for ww = 1:length(w)
+                    ax(1, ww) = subplot(1, length(w), ww);
+                end
+            end
+            
+            lim_y = 1;
+            for ww = 1:length(w)
+                [svals, charges] = schmidt_values(mps, w(ww));
+                ctr = 0;
+                hold off;
+                lim_x = 1;
+                
+                ticks = zeros(size(svals));
+                labels = arrayfun(@string, charges, 'UniformOutput', false);
+                
+                for i = 1:length(svals)
+                    ticks(i) = ctr + 1;
+                    lim_x = max(lim_x, ctr + length(svals{i}));
+                    semilogy(ax(1, ww), ctr+1:ctr+length(svals{i}), svals{i}, ...
+                        '.', 'MarkerSize', 10, 'Color', colors(i));
+                    hold on
+                    
+                    ctr = ctr + length(svals{i}) + 3;
+                    lim_y = min(lim_y, min(svals{i}));
+                end
+                
+                set(ax(1, ww), 'TickLabelInterpreter', 'latex');
+                set(ax(1, ww), 'Xtick', ticks, 'XTickLabel', labels, 'fontsize', 10, ...
+                    'XtickLabelRotation', 60, 'Xgrid', 'on');
+                xlim(ax(1, ww), [1 - 1e-9 lim_x + 1e-9]);
+            end
+                
+            for ww = 1:length(w)
+                ylim(ax(1, ww), [10^(floor(log10(lim_y))) 1]);
+            end
+        end
+        
         function mps = desymmetrize(mps)
             if numel(mps) > 1
                 mps = arrayfun(@desymmetrize, mps);
