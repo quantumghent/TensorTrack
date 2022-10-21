@@ -112,7 +112,7 @@ classdef FiniteMpo
         end
         
         function mpo = slice(mpo, i, j)
-            if isempty(mpo.O), return; end
+            if isempty(mpo(1).O), return; end
             if strcmp(i, ':')
                 i = 1:size(mpo(end).O, 2);
             end
