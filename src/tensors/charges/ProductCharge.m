@@ -433,8 +433,13 @@ classdef ProductCharge < AbstractCharge
         end
         
         function disp(a)
-            for i = 1:length(a.charges)
-                disp(a.charges{i});
+            s = string(a);
+            
+            
+            fprintf('\t%s (%s) Array:\n', ...
+                dim2str(size(a)), join(cellfun(@(x)string(class(x)), a.charges), 'x'));
+            for i = 1:size(a, 1)
+                fprintf('\t\t%s\n', join(s(i, :), '    '));
             end
         end
         
