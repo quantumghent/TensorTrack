@@ -59,6 +59,13 @@ classdef Vumps
         end
         
         function [mps, lambda, GL, GR] = fixedpoint(alg, mpo, mps)
+            
+            if period(mpo) ~= period(mps)
+                error('vumps:argerror', ...
+                    'periodicity of mpo (%d) should be equal to that of the mps (%d)', ...
+                    period(mpo), period(mps));
+            end
+            
             t_total = tic;
             disp_init(alg);
             

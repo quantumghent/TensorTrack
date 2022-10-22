@@ -104,6 +104,9 @@ classdef MpsTensor < Tensor
             
             eta_best = Inf;
             ctr_best = 0;
+            AL_best = AL;
+            C_best = C;
+            lambda_best = 0;
             
             for ctr = 1:kwargs.MaxIter
                 if ctr > kwargs.EigsInit && mod(ctr, kwargs.EigsFrequence) == 0
@@ -133,11 +136,8 @@ classdef MpsTensor < Tensor
                     lambdas(w) = norm(C(w));
                     if kwargs.Normalize, C(w) = C(w) ./ lambdas(w); end
                 end
-                try
+                lambda = prod(lambdas);
                 eta = norm(C_ - C(end), Inf);
-                catch
-                    bla
-                end
                 if eta < kwargs.Tol
                     if kwargs.Verbosity >= Verbosity.conv
                         fprintf('Conv %2d:\terror = %0.4e\n', ctr, eta);
@@ -146,8 +146,15 @@ classdef MpsTensor < Tensor
                 elseif eta < eta_best
                     eta_best = eta;
                     ctr_best = ctr;
-                elseif ctr - ctr_best > 3
+                    AL_best = AL;
+                    C_best = C;
+                    lambda_best = lambda;
+                elseif ctr > 40 && ctr - ctr_best > 5
                     warning('uniform_orthright:stagnate', 'Algorithm stagnated');
+                    eta = eta_best;
+                    AL = AL_best;
+                    C = C_best;
+                    lambda = lambda_best;
                     break;
                 end
                 
@@ -159,8 +166,6 @@ classdef MpsTensor < Tensor
             if kwargs.Verbosity >= Verbosity.warn && eta > kwargs.Tol
                 fprintf('Not converged %2d:\terror = %0.4e\n', ctr, eta);
             end
-            
-            if nargout > 2, lambda = prod(lambdas); end
         end
         
         function [R, AR] = rightorth(A, alg)

@@ -287,12 +287,8 @@ classdef AbstractTensor
             
             if flag && options.Verbosity > 0
                 warning('eigsolve did not converge.');
-            end
-            
-            if options.Verbosity > 1
-                if flag
-                    fprintf('eigsolve converged.\n');
-                end 
+            elseif ~flag && options.Verbosity > 1
+                fprintf('eigsolve converged.\n');
             end
         end
         
