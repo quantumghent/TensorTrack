@@ -97,9 +97,9 @@ classdef SU2 < AbstractCharge & uint8
         
         function varargout = prod(varargin)
             [varargout{1:nargout}] = prod@AbstractCharge(varargin{:});
-            if nargout > 0
-                varargout{1} = SU2(varargout{1});
-            end
+%             if nargout > 0
+%                 varargout{1} = SU2(varargout{1});
+%             end
         end
         
         function d = qdim(a)

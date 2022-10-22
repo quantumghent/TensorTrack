@@ -44,7 +44,6 @@ classdef U1 < AbstractCharge & int16
                 Nsymbol(e, c, d) .* Nsymbol(a, f, d));
         end
         
-        
         function style = fusionstyle(~)
             style = FusionStyle.Unique;
         end
