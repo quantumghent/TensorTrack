@@ -73,6 +73,7 @@ classdef InfMpo
                 eigopts.MaxIter = 1000
                 eigopts.ReOrth = 2
                 eigopts.Tol = eps(underlyingType(mps1))^(3/4)
+                eigopts.Verbosity = Verbosity.warn
             end
             N = period(mps1);
             T = transfermatrix(mpo, mps1, mps2, 'Type', 'LL');
@@ -96,6 +97,7 @@ classdef InfMpo
                 eigopts.MaxIter = 1000
                 eigopts.ReOrth = 2
                 eigopts.Tol = eps(underlyingType(mps1))^(3/4)
+                eigopts.Verbosity = Verbosity.warn
             end
             
             T = transfermatrix(mpo, mps1, mps2, 'Type', 'RR').';
@@ -120,6 +122,7 @@ classdef InfMpo
                 eigopts.MaxIter = 1000
                 eigopts.ReOrth = 2
                 eigopts.Tol = eps(underlyingType(mps1))^(3/4)
+                eigopts.Verbosity = Verbosity.warn
             end
             
             kwargs = namedargs2cell(eigopts);
@@ -130,9 +133,11 @@ classdef InfMpo
                 warning('lambdas disagree');
             end
             
-            for w = 1:length(mps1)
-                overlap = sqrt(contract(GL{w}, [1 3 2], mps1.C(w), [2 4], ...
-                    mps2.C(w)', [5 1], GR{w}, [4 3 5]));
+            for w = 1:period(mps1)
+                overlap = sqrt(contract(GL{w}, [1 3 2], ...
+                    mps1.C(prev(w, period(mps1))), [2 4], ...
+                    mps2.C(prev(w, period(mps1)))', [5 1], ...
+                    GR{w}, [4 3 5]));
                 GL{w} = GL{w} ./ overlap;
                 GR{w} = GR{w} ./ overlap;
             end
@@ -147,6 +152,7 @@ classdef InfMpo
             mpo = InfMpo([Os{:}]);
         end
     end
+    
     %% Derived operators
     methods
         function T = transfermatrix(mpo, mps1, mps2, sites, kwargs)
@@ -177,57 +183,54 @@ classdef InfMpo
                     twist(A2(i)', 1 + find(isdual(space(A1(i), 2:nspaces(A1(i))-1)))), ...
                     O(i), A1(i));
             end
+        end
+        
+        function H = AC_hamiltonian(mpo, mps, GL, GR, sites)
+            arguments
+                mpo
+                mps
+                GL = fixedpoint(transfermatrix(mpo, mps, 'Type', 'LL'))
+                GR = fixedpoint(transfermatrix(mpo, mps, 'Type', 'RR').')
+                sites = 1:period(mps)
+            end
             
-%             T = FiniteMpo(A2, {rot90(mpo.O{1})}, A1);
-        end
-        
-        function H = AC_hamiltonian(mpo, mps, GL, GR)
-            arguments
-                mpo
-                mps
-                GL = fixedpoint(transfermatrix(mpo, mps, 'Type', 'LL'))
-                GR = fixedpoint(transfermatrix(mpo, mps, 'Type', 'RR').')
-            end
-            H = cell(1, period(mps));
-            for i = 1:period(mps)
-                gl = GL{i};
+            H = cell(1, length(sites));
+            for i = 1:length(sites)
+                gl = GL{sites(i)};
                 for j = 1:numel(gl)
                     gl(j) = twist(gl(j), find(isdual(space(gl(j), 1))));
                 end
-                gr = GR{next(i, period(mps))};
+                gr = GR{next(sites(i), period(mps))};
                 for j = 1:numel(gr)
                     gr(j) = twist(gr(j), find(isdual(space(gr(j), nspaces(gr(j))))) + ...
                         nspaces(gr(j)) - 1);
                 end
-                H{i} = FiniteMpo(gl, mpo.O{i}, gr);
+                H{i} = FiniteMpo(gl, mpo.O{sites(i)}, gr);
             end
-%             GR = twist(GR, find(isdual(space(GR, nspaces(GR)))) + nspaces(GR)-1);
-%             GL = twist(GL, find(isdual(space(GL, 1))));
-%             H = FiniteMpo(GL, mpo.O, GR);
         end
         
-        function H = C_hamiltonian(mpo, mps, GL, GR)
+        function H = C_hamiltonian(~, mps, GL, GR, sites)
             arguments
-                mpo
+                ~
                 mps
                 GL = fixedpoint(transfermatrix(mpo, mps, 'Type', 'LL'))
                 GR = fixedpoint(transfermatrix(mpo, mps, 'Type', 'RR').')
+                sites = 1:period(mps)
             end
-            for i = 1:period(mps)
-                gl = GL{i};
+            
+            H = cell(1, length(sites));
+            for i = 1:length(sites)
+                gl = GL{next(sites(i), period(mps))};
                 for j = 1:numel(gl)
                     gl(j) = twist(gl(j), find(isdual(space(gl(j), 1))));
                 end
-                gr = GR{i};
+                gr = GR{next(sites(i), period(mps))};
                 for j = 1:numel(gr)
                     gr(j) = twist(gr(j), find(isdual(space(gr(j), nspaces(gr(j))))) + ...
                         nspaces(gr(j)) - 1);
                 end
-                H{prev(i, period(mps))} = FiniteMpo(gl, {}, gr);
+                H{i} = FiniteMpo(gl, {}, gr);
             end
-%             GR = twist(GR, find(isdual(space(GR, nspaces(GR)))) + nspaces(GR)-1);
-%             GL = twist(GL, find(isdual(space(GL, 1))));
-%             H = FiniteMpo(GL, {}, GR);
         end
     end
     

@@ -59,7 +59,7 @@ classdef MpsTensor < Tensor
         function [AL, L] = leftorth(A, alg)
             arguments
                 A
-                alg = 'polar'
+                alg = 'qrpos'
             end
             
             if A.alegs == 0
@@ -76,10 +76,10 @@ classdef MpsTensor < Tensor
             AL = MpsTensor(AL, A.alegs);
         end
         
-        function [AL, C, lambda, eta] = uniform_leftorth(A, C, kwargs)
+        function [AL, CL, lambda, eta] = uniform_leftorth(A, CL, kwargs)
             arguments
                 A
-                C = initializeC(A, circshift(A, 1))
+                CL = []
                 kwargs.Tol = eps(underlyingType(A))^(3/4)
                 kwargs.MaxIter = 500
                 kwargs.Method = 'polar'
@@ -97,20 +97,20 @@ classdef MpsTensor < Tensor
             
             % initialization
             N = size(A, 2);
-            if isempty(C), C = initializeC(A, circshift(A, 1)); end
-            if kwargs.Normalize, C(1) = normalize(C(1)); end
+            if isempty(CL), CL = initializeC(A, circshift(A, 1)); end
+            if kwargs.Normalize, CL(1) = normalize(CL(1)); end
             A = arrayfun(@(a) MpsTensor(repartition(a, [nspaces(a)-1 1])), A);
             AL = A;
             
             eta_best = Inf;
             ctr_best = 0;
             AL_best = AL;
-            C_best = C;
+            C_best = CL;
             lambda_best = 0;
             
             for ctr = 1:kwargs.MaxIter
                 if ctr > kwargs.EigsInit && mod(ctr, kwargs.EigsFrequence) == 0
-                    C_ = repartition(C(end), [2 0]);
+                    C_ = repartition(CL(end), [2 0]);
                     T = transfermatrix(A, AL);
                     [C_, ~] = eigsolve(T, C_, ...
                         1, 'largestabs', ...
@@ -120,24 +120,24 @@ classdef MpsTensor < Tensor
                             MAXKRYLOVDIM), ...
                         'NoBuild', 4, ...
                         'Verbosity', kwargs.Verbosity - 1);
-                    [~, C(end)] = leftorth(C_, 1, 2, kwargs.Method);
-                    if isdual(space(C(end), 2)) == isdual(space(C(end), 1))
-                        C(end).codomain = conj(C(end).codomain);
-                        C(end) = twist(C(end), 1);
+                    [~, CL(end)] = leftorth(C_, 1, 2, kwargs.Method);
+                    if isdual(space(CL(end), 2)) == isdual(space(CL(end), 1))
+                        CL(end).codomain = conj(CL(end).codomain);
+                        CL(end) = twist(CL(end), 1);
                     end
                 end
                 
-                C_ = C(end);
+                C_ = CL(end);
                 lambdas = ones(1, N);
                 for w = 1:N
                     ww = prev(w, N);
-                    CA = multiplyleft(A(w), C(ww));
-                    [AL(w), C(w)] = leftorth(CA, kwargs.Method);
-                    lambdas(w) = norm(C(w));
-                    if kwargs.Normalize, C(w) = C(w) ./ lambdas(w); end
+                    CA = multiplyleft(A(w), CL(ww));
+                    [AL(w), CL(w)] = leftorth(CA, kwargs.Method);
+                    lambdas(w) = norm(CL(w));
+                    if kwargs.Normalize, CL(w) = CL(w) ./ lambdas(w); end
                 end
                 lambda = prod(lambdas);
-                eta = norm(C_ - C(end), Inf);
+                eta = norm(C_ - CL(end), Inf);
                 if eta < kwargs.Tol
                     if kwargs.Verbosity >= Verbosity.conv
                         fprintf('Conv %2d:\terror = %0.4e\n', ctr, eta);
@@ -147,13 +147,13 @@ classdef MpsTensor < Tensor
                     eta_best = eta;
                     ctr_best = ctr;
                     AL_best = AL;
-                    C_best = C;
+                    C_best = CL;
                     lambda_best = lambda;
                 elseif ctr > 40 && ctr - ctr_best > 5
                     warning('uniform_orthright:stagnate', 'Algorithm stagnated');
                     eta = eta_best;
                     AL = AL_best;
-                    C = C_best;
+                    CL = C_best;
                     lambda = lambda_best;
                     break;
                 end
@@ -186,10 +186,10 @@ classdef MpsTensor < Tensor
 %             AR = MpsTensor(repartition(AR, rank(A)), A.alegs);
         end
         
-        function [AR, C, lambda, eta] = uniform_rightorth(A, C, kwargs)
+        function [AR, CR, lambda, eta] = uniform_rightorth(A, CR, kwargs)
             arguments
                 A
-                C = initializeC(A, circshift(A, 1))
+                CR = []
                 kwargs.Tol = eps(underlyingType(A))^(3/4)
                 kwargs.MaxIter = 500
                 kwargs.Method = 'polar'
@@ -202,12 +202,16 @@ classdef MpsTensor < Tensor
             opts = namedargs2cell(kwargs);
             
             Ad = arrayfun(@ctranspose, A);
-            Cd = arrayfun(@ctranspose, C);
+            if isempty(CR)
+                Cd = [];
+            else
+                Cd = circshift(arrayfun(@ctranspose, CR), -1);
+            end
             
-            [AR, C, lambda, eta] = uniform_leftorth(Ad, Cd, opts{:});
+            [AR, CR, lambda, eta] = uniform_leftorth(Ad, Cd, opts{:});
             
             AR = arrayfun(@ctranspose, AR);
-            C  = arrayfun(@ctranspose, C);
+            CR  = circshift(arrayfun(@ctranspose, CR), 1);
             lambda = conj(lambda);
         end
         

@@ -58,6 +58,20 @@ classdef TestInfJMpo < matlab.unittest.TestCase
             [mps2, lambda2] = fixedpoint(alg, mpo, mps);
             tc.verifyTrue(isapprox(lambda2/2, -1.27, 'RelTol', 5e-2))
         end
+        
+        function test1dHeisenberg(tc)
+            alg = Vumps('which', 'smallestreal', 'maxiter', 5);
+            
+            mpo = InfJMpo.Heisenberg('Spin', SU2(3), 'Symmetry', 'SU2');
+            mpo = [mpo mpo];
+            
+            mps = UniformMps.randnc(pspace(mpo), ...
+                GradedSpace.new(SU2(1:2:5), [5 5 1], false, SU2(1:2:5), [5 5 1], false));
+            
+            [gs_mps, lambda] = fixedpoint(alg, mpo, mps);
+            tc.verifyEqual(lambda / period(mps), -1.40, 'RelTol', 1e-2);
+            
+        end
     end
 end
 

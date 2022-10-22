@@ -194,5 +194,41 @@ classdef InfJMpo < InfMpo
             
             mpo = InfJMpo(O);
         end
+        
+        function mpo = Heisenberg(J, h, kwargs)
+            arguments
+                J = 1
+                h = 0
+                kwargs.Symmetry {mustBeMember(kwargs.Symmetry, {'Z1', 'U1', 'SU2'})} = 'Z1'
+                kwargs.Spin = SU2(3)
+            end
+            
+            switch kwargs.Symmetry
+                case 'SU2'
+                    assert(isscalar(J) || all(J == J(1)), ...
+                        'Different spin couplings not invariant under SU2');
+                    assert(h == 0, 'Magnetic field not invariant under SU2');
+                    
+                    pSpace = GradedSpace.new(kwargs.Spin, 1, false);
+                    aSpace = GradedSpace.new(SU2(3), 1, false);
+                    tSpace = one(aSpace);
+                    
+                    s = spin(kwargs.Spin);
+                    L = Tensor.ones([tSpace pSpace], [pSpace aSpace]);
+                    L = L * (-J(1) * (s^2 + s));
+                    R = Tensor.ones([aSpace pSpace], [pSpace tSpace]);
+                    
+                    
+                    O = MpoTensor.zeros(3, 1, 3, 1);
+                    O(1, 1, 1, 1) = 1;
+                    O(3, 1, 3, 1) = 1;
+                    O(1, 1, 2, 1) = L;
+                    O(2, 1, 3, 1) = R;
+                    
+                otherwise
+                    error('TBA');
+            end
+            mpo = InfJMpo(O);
+        end
     end
 end

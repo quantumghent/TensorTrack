@@ -10,15 +10,16 @@ classdef Vumps
         verbosity = Verbosity.iter
         which = 'largestabs'
         
-        
-        KrylovDim = 20
-        
         dynamical_tols = true
         tol_min                 = 1e-12
         tol_max                 = 1e-6
         eigs_tolfactor          = 1e-4
         canonical_tolfactor     = 1e-8
         environments_tolfactor  = 1e-4
+        
+        multiAC = 'parallel'
+        dynamical_multiAC = false;
+        tol_multiAC = Inf
     end
     
     properties (Access = private)
@@ -74,9 +75,10 @@ classdef Vumps
             
             for iter = 1:alg.maxiter
                 t_iter = tic;
-                AC = updateAC(alg, mpo, mps, GL, GR);
-                C  = updateC (alg, mpo, mps, GL, GR);
-                mps = updatemps(alg, AC, C);
+
+                AC = updateAC(alg, iter, mpo, mps, GL, GR);
+                C  = updateC (alg, iter, mpo, mps, GL, GR);
+                mps = updatemps(alg, iter, mps, AC, C);
                 
                 [GL, GR, lambda] = environments(alg, mpo, mps, GL, GR);
                 eta = convergence(alg, mpo, mps, GL, GR);
@@ -96,30 +98,49 @@ classdef Vumps
     
     %% Subroutines
     methods
-        function AC = updateAC(alg, mpo, mps, GL, GR)
+        function AC = updateAC(alg, iter, mpo, mps, GL, GR)
             kwargs = namedargs2cell(alg.alg_eigs);
-            H_AC = AC_hamiltonian(mpo, mps, GL, GR);
-            for i = period(mps):-1:1
-                [AC(i), ~] = eigsolve(H_AC{i}, mps.AC(i), 1, alg.which, kwargs{:});
+            if strcmp(alg.multiAC, 'sequential')
+                sites = mod(iter, period(mps)) + 1;
+            else
+                sites = 1:period(mps);
+            end
+            
+            H_AC = AC_hamiltonian(mpo, mps, GL, GR, sites);
+            for i = length(sites):-1:1
+                [AC(i), ~] = eigsolve(H_AC{sites(i)}, mps.AC(sites(i)), 1, alg.which, ...
+                    kwargs{:});
             end
         end
         
-        function C = updateC(alg, mpo, mps, GL, GR)
+        function C = updateC(alg, iter, mpo, mps, GL, GR)
             kwargs = namedargs2cell(alg.alg_eigs);
-            H_C = C_hamiltonian(mpo, mps, GL, GR);
-            for i = period(mps):-1:1
-                [C(i), ~] = eigsolve(H_C{i}, mps.C(i), 1, alg.which, kwargs{:});
+            if strcmp(alg.multiAC, 'sequential')
+                sites = mod(iter, period(mps)) + 1;
+            else
+                sites = 1:period(mps);
+            end
+            
+            H_C = C_hamiltonian(mpo, mps, GL, GR, sites);
+            for i = length(sites):-1:1
+                [C(i), ~] = eigsolve(H_C{sites(i)}, mps.C(sites(i)), 1, alg.which, ...
+                    kwargs{:});
             end
         end
         
-        function mps = updatemps(alg, AC, C)
+        function mps = updatemps(alg, iter, mps, AC, C)
+            if strcmp(alg.multiAC, 'sequential')
+                sites = mod(iter, period(mps)) + 1;
+            else
+                sites = 1:period(mps);
+            end
+            
             for i = length(AC):-1:1
-                [~, Q_AC] = rightorth(AC(i));
-                [~, Q_C]  = rightorth(C(prev(i, length(C))), 1, 2);
-                
-                AR(i) = contract(conj(Q_C), [1 -1], Q_AC, [1 -2 -3], 'Rank', [1 2]);
+                [Q_AC, ~] = leftorth(AC(i));
+                [Q_C, ~]  = leftorth(C(i), 1, 2);
+                mps.AL(sites(i)) = multiplyright(Q_AC, Q_C');
             end
-            mps = UniformMps([], AR, C, []);
+            
             kwargs = namedargs2cell(alg.alg_canonical);
             mps = canonicalize(mps, kwargs{:});
         end
@@ -163,18 +184,26 @@ classdef Vumps
     %% Option handling
     methods
         function alg = updatetols(alg, iter, eta)
-            if ~alg.dynamical_tols, return; end
+            if alg.dynamical_tols
+                alg.alg_eigs.Tol = between(alg.tol_min, eta * alg.eigs_tolfactor, ...
+                    alg.tol_max / iter);
+                alg.alg_canonical.Tol = between(alg.tol_min, ...
+                    eta * alg.canonical_tolfactor, alg.tol_max / iter);
+                alg.alg_environments.Tol = between(alg.tol_min, ...
+                    eta * alg.environments_tolfactor, alg.tol_max / iter);
+                
+                if alg.verbosity > Verbosity.iter
+                    fprintf('Updated subalgorithm tolerances: (%e,\t%e,\t%e)\n', ...
+                        alg.alg_eigs.Tol, alg.alg_canonical.Tol, alg.alg_environments.Tol);
+                end
+            end
             
-            alg.alg_eigs.Tol = between(alg.tol_min, eta * alg.eigs_tolfactor, ...
-                alg.tol_max / iter);
-            alg.alg_canonical.Tol = between(alg.tol_min, eta * alg.canonical_tolfactor, ...
-                alg.tol_max / iter);
-            alg.alg_environments.Tol = between(alg.tol_min, eta * alg.environments_tolfactor, ...
-                alg.tol_max / iter);
-            
-            if alg.verbosity > Verbosity.iter
-                fprintf('Updated subalgorithm tolerances: (%e,\t%e,\t%e)\n', ...
-                    alg.alg_eigs.Tol, alg.alg_canonical.Tol, alg.alg_environments.Tol);
+            if alg.dynamical_multiAC
+                if eta < alg.tol_multiAC
+                    alg.multiAC = 'sequential';
+                else
+                    alg.multiAC = 'parallel';
+                end
             end
         end
     end
