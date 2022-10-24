@@ -208,6 +208,12 @@ classdef ComplexSpace < AbstractSpace
             
             space = ComplexSpace(prod(dims(spaces)), false);
         end
+        
+        function space1 = infimum(space1, space2)
+            assert(isscalar(space1) && isscalar(space2));
+            assert(isdual(space1) == isdual(space2));
+            space1.dimensions = min(dims(space1), dims(space2));
+        end
     end
     
     
