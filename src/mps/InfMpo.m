@@ -63,6 +63,28 @@ classdef InfMpo
             mpo.O = O_;
         end
 
+        function s = pspace(mpo)
+            s = pspace(mpo.O{1});
+        end
+        
+        function mpo = horzcat(varargin)
+            Os = cellfun(@(x) x.O, varargin, 'UniformOutput', false);
+            mpo = InfMpo([Os{:}]);
+        end
+        
+        function mps = initialize_mps(mpo, vspaces)
+            arguments
+                mpo
+                vspaces
+            end
+            
+            mps = UniformMps.randnc(pspace(mpo), vspaces);
+        end
+    end
+    
+    
+    %% Environments
+    methods
         function [GL, lambda] = leftenvironment(mpo, mps1, mps2, GL, eigopts)
             arguments
                 mpo
@@ -142,16 +164,8 @@ classdef InfMpo
                 GR{w} = GR{w} ./ overlap;
             end
         end
-        
-        function s = pspace(mpo)
-            s = pspace(mpo.O{1});
-        end
-        
-        function mpo = horzcat(varargin)
-            Os = cellfun(@(x) x.O, varargin, 'UniformOutput', false);
-            mpo = InfMpo([Os{:}]);
-        end
     end
+    
     
     %% Derived operators
     methods
@@ -205,7 +219,31 @@ classdef InfMpo
                     gr(j) = twist(gr(j), find(isdual(space(gr(j), nspaces(gr(j))))) + ...
                         nspaces(gr(j)) - 1);
                 end
-                H{i} = FiniteMpo(gl, mpo.O{sites(i)}, gr);
+                H{i} = FiniteMpo(gl, mpo.O(sites(i)), gr);
+            end
+        end
+        
+        function H = AC2_hamiltonian(mpo, mps, GL, GR, sites)
+            arguments
+                mpo
+                mps
+                GL = fixedpoint(transfermatrix(mpo, mps, 'Type', 'LL'))
+                GR = fixedpoint(transfermatrix(mpo, mps, 'Type', 'RR').')
+                sites = 1:period(mps)
+            end
+            
+            H = cell(1, length(sites));
+            for i = 1:length(sites)
+                gl = GL{sites(i)};
+                for j = 1:numel(gl)
+                    gl(j) = twist(gl(j), find(isdual(space(gl(j), 1))));
+                end
+                gr = GR{mod1(sites(i) + 2, period(mps))};
+                for j = 1:numel(gr)
+                    gr(j) = twist(gr(j), find(isdual(space(gr(j), nspaces(gr(j))))) + ...
+                        nspaces(gr(j)) - 1);
+                end
+                H{i} = FiniteMpo(gl, mpo.O(mod1(sites(i) + [0 1], period(mps))), gr);
             end
         end
         

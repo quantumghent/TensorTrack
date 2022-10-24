@@ -117,84 +117,13 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) MpoTensor < Ab
             auxlegs_r = R.alegs;
             auxlegs = auxlegs_v + auxlegs_l + auxlegs_r;
             
-            Oinds = cellfun(@(x) [2*x-2 -x 2*x 2*x-1], 2:N-1, 'UniformOutput', false);
+            Oinds = arrayfun(@(x) [2*x-2 -x 2*x 2*x-1], 2:N-1, 'UniformOutput', false);
             O = [varargin(1:end-3); Oinds];
-            v = contract(v, [1:2:2*N-1 ((-1:auxlegs_v) - N - auxlegs_l)], ...
+            v = contract(v, [1:2:2*N-1 (-(1:auxlegs_v) - N - auxlegs_l)], ...
                 L, [-1 2 1 (-(1:auxlegs_l) - N)], ...
                 O{:}, ...
                 R, [2*N-1 2*N-2 -N (-(1:auxlegs_r) - N - auxlegs_l - auxlegs_v)], ...
                 'Rank', rank(v) + [0 auxlegs]);
-        end
-        
-        function y = applyleft(O, T, B, x)
-            arguments
-                O MpoTensor
-                T MpsTensor
-                B MpsTensor
-                x
-            end
-            
-            switch num2str([nspaces(x) nspaces(T) nspaces(B)])
-                case '3  3  3'
-                    if isdual(space(B, 2)), twist(B, 2); end
-                    
-                    y = contract(x, [4 2 1], O.tensors, [2 5 -2 3], ...
-                        T, [1 3 -3], B, [4 5 -1], ...
-                        'Rank', [2 1]);
-                    scals = reshape(O.scalars, size(O, 1), size(O, 3));
-                    for j = 1:size(O, 1)
-                         cols = find(scals(j, :));
-                         if isempty(cols), continue; end
-                         y_ = contract(x(j), [3 -2 1], T, [1 2 -3], B, [3 2 -1], ...
-                             'Rank', [2 1]);
-                         for i = cols
-                             y(i) = y(i) + scals(j, i) * y_;
-                         end
-                    end
-                    y2 = contract(x, [4 2 1], O, [2 5 -2 3], ...
-                        T, [1 3 -3], B, [4 5 -1], ...
-                        'Rank', [2 1]);
-                    try
-                    assert(isapprox(y, y2))
-                    catch
-                        bla
-                    end
-                    
-                otherwise
-                    error('not implemented.');
-            end
-        end
-        
-        function y = applyright(O, T, B, x)
-            arguments
-                O MpoTensor
-                T MpsTensor
-                B MpsTensor
-                x
-            end
-            
-            switch num2str([nspaces(x) nspaces(T) nspaces(B)])
-                case '3  3  3'
-                    if isdual(space(B, 2)), twist(B, 2); end
-                    
-                    y = contract(x, [1 2 4], O.tensors, [-2 5 2 3], ...
-                        T, [-1 3 1], B, [-3 5 4], ...
-                        'Rank', [2 1]);
-                    
-                    scals = reshape(O.scalars, size(O, 1), size(O, 3));
-                    for i = 1:size(O, 3)
-                        rows = find(scals(:, i));
-                        if isempty(rows), continue; end
-                        y_ = contract(x(i), [1 -2 4], T, [-1 2 1], B, [-3 2 4], ...
-                            'Rank', [2 1]);
-                        for j = rows
-                            y(j) = y(j) + scals(j, i) * y_;
-                        end
-                    end
-                    
-                otherwise
-                    error('not implemented.');
-            end
         end
         
         function O = rot90(O)

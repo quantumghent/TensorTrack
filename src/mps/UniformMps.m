@@ -195,6 +195,11 @@ classdef UniformMps
             end
         end
         
+        function mps = normalize(mps)
+            mps.C = arrayfun(@normalize, mps.C);
+            mps.AC = arrayfun(@normalize, mps.AC);
+        end
+        
         function T = transfermatrix(mps1, mps2, sites, kwargs)
             arguments
                 mps1
@@ -271,6 +276,37 @@ classdef UniformMps
             f = transfereigs(mps1, mps2, 1, 'largestabs', eigkwargs{:});
         end
         
+        function E = expectation_value(mps1, O, mps2)
+            arguments
+                mps1
+                O
+                mps2 = mps1
+            end
+            
+            if isa(O, 'InfMpo')
+                [GL, GR] = environments(O, mps1, mps2);
+                H = AC_hamiltonian(O, mps1, GL, GR);
+                E = zeros(size(H));
+                for i = 1:length(H)
+                    AC_ = apply(H{i}, mps1.AC(i));
+                    E(i) = dot(AC_, mps2.AC(i));
+                end
+            elseif isa(O, 'InfJMpo')
+                [GL, GR] = environments(O, mps1, mps2);
+                H = AC_hamiltonian(O, mps1, GL, GR);
+                E = zeros(size(H));
+                for i = 1:length(H)
+                    H{i}.R = H{i}.R(1, end, 1);
+                    H{i}.O{1} = H{i}.O{1}(:,:,end,:);
+                    
+                    AC_ = apply(H{i}, mps1.AC(i));
+                    E(i) = dot(AC_, mps2.AC(i));
+                end
+            else
+                error('Unknown operator type (%s)', class(O));
+            end
+        end
+        
         function rho = fixedpoint(mps, type, w)
             arguments
                 mps
@@ -322,6 +358,7 @@ classdef UniformMps
             if nargin == 1
                 mps = ax;
                 w = 1:period(mps);
+                figure;
                 ax = gobjects(depth(mps), width(mps));
                 for ww = 1:length(w)
                     ax(1, ww) = subplot(1, length(w), ww);
@@ -329,6 +366,7 @@ classdef UniformMps
             elseif nargin == 2
                 w = mps;
                 mps = ax;
+                figure;
                 ax = gobjects(depth(mps), width(mps));
                 for ww = 1:length(w)
                     ax(1, ww) = subplot(1, length(w), ww);
@@ -359,7 +397,7 @@ classdef UniformMps
                 set(ax(1, ww), 'TickLabelInterpreter', 'latex');
                 set(ax(1, ww), 'Xtick', ticks, 'XTickLabel', labels, 'fontsize', 10, ...
                     'XtickLabelRotation', 60, 'Xgrid', 'on');
-                xlim(ax(1, ww), [1 - 1e-9 lim_x + 1e-9]);
+                xlim(ax(1, ww), [1 - 1e-8 lim_x + 1e-8]);
             end
                 
             for ww = 1:length(w)

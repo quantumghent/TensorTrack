@@ -274,6 +274,11 @@ classdef CartesianSpace < AbstractSpace
             bool = degeneracies(space1) <= degeneracies(space2);
         end
         
+        function space = infimum(space1, space2)
+            assert(isscalar(space1) && isscalar(space2));
+            space = CartesianSpace.new(min(dims(space1), dims(space2)));
+        end
+        
         function hashable = GetMD5_helper(spaces)
             % Helper function for hash algorithm. This converts the space object to a data
             % structure which can be processed by :func:`GetMD5`.
@@ -310,7 +315,7 @@ classdef CartesianSpace < AbstractSpace
             if numel(spaces) > 1
                 s = strings(size(spaces));
                 for i = 1:numel(spaces)
-                    s(i) = string(spaces);
+                    s(i) = string(spaces(i));
                 end
                 return
             end
