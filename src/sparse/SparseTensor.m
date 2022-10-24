@@ -557,8 +557,13 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor}) SparseTensor < AbstractTensor
                 idx = sub2ind_(t.sz, t.ind);
                 t1 = t1(idx);
                 idx2 = find(t1);
-                t.var = t.var(idx2) .* t1(idx2);
-                t.ind = t.ind(idx2, :);
+                if ~isempty(idx2)
+                    t.var = t.var(idx2) .* t1(idx2);
+                    t.ind = t.ind(idx2, :);
+                else
+                    t.var = t.var(idx2);
+                    t.ind = t.ind(idx2, :);
+                end
                 return
             end
             
