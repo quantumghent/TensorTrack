@@ -147,7 +147,7 @@ classdef IDmrg2
                 lambda = prod(sqrt(lambdas));
                 
                 if iter > alg.miniter && eta < alg.tol
-                    mps = canonicalize(mps);
+                    mps = canonicalize(mps, 'Order', 'rl');
                     disp_conv(alg, iter, lambda, eta, toc(t_total));
                     return
                 end
@@ -156,7 +156,7 @@ classdef IDmrg2
                 disp_iter(alg, iter, lambda, eta, toc(t_iter));
             end
             
-            mps = canonicalize(mps);
+            mps = canonicalize(mps, 'Order', 'rl');
             disp_maxiter(alg, iter, lambda, eta, toc(t_total));
         end
     end
