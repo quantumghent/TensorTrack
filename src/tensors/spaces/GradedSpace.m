@@ -63,6 +63,18 @@ classdef GradedSpace < AbstractSpace
                 struct('charges', one(spaces(1).dimensions.charges), 'degeneracies', 1), ...
                 false);
         end
+        
+        function space = infimum(space1, space2)
+            assert(isscalar(space1) && isscalar(space2));
+            assert(isdual(space1) == isdual(space2));
+            
+            [dims.charges, ia, ib] = intersect(charges(space1), charges(space2));
+            d1 = degeneracies(space1);
+            d2 = degeneracies(space2);
+            dims.degeneracies = min(d1(ia), d2(ib));
+            
+            space = GradedSpace.new(dims, isdual(space1));
+        end
     end
     
     methods (Static)

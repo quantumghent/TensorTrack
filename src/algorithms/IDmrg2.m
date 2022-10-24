@@ -12,7 +12,7 @@ classdef IDmrg2
         tol_min                 = 1e-12
         tol_max                 = 1e-6
         eigs_tolfactor          = 1e-4
-        trunc = {'TruncDim', 10}
+        trunc                   = {'TruncDim', 10}
     end
     
     properties (Access = private)
@@ -116,7 +116,8 @@ classdef IDmrg2
                     TL = transfermatrix(mpo, mps, mps, pos, 'Type', 'LL');
                     GL{pos + 1} = apply(TL, GL{pos}) / sqrt(lambdas(pos));
                     TR = transfermatrix(mpo, mps, mps, pos + 1, 'Type', 'RR');
-                    GR{pos} = apply(TR.', GR{pos + 1}) / sqrt(lambdas(pos));
+                    GR{pos + 1} = apply(TR.', GR{mod1(pos + 2, period(mps))}) / ...
+                        sqrt(lambdas(pos));
                 end
                 
                 % update edge
@@ -135,7 +136,7 @@ classdef IDmrg2
                 TL = transfermatrix(mpo, mps, mps, period(mps), 'Type', 'LL');
                 GL{1} = apply(TL, GL{end}) / sqrt(lambdas(end));
                 TR = transfermatrix(mpo, mps, mps, 1, 'Type', 'RR');
-                GR{end} = apply(TR.', GR{1}) / sqrt(lambdas(end));
+                GR{1} = apply(TR.', GR{2}) / sqrt(lambdas(end));
                 
                 % error measure
                 infspace = infimum(space(C_, 1), space(mps.C(end), 1));
