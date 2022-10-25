@@ -1,4 +1,4 @@
-classdef Vumps
+classdef Vumps < handle
     % Variational fixed point algorithm for uniform matrix product states.
     
     %% Options
@@ -7,6 +7,7 @@ classdef Vumps
         miniter = 5
         maxiter = 100
         verbosity = Verbosity.iter
+        doplot = false
         which = 'largestabs'
         
         dynamical_tols = true
@@ -25,6 +26,8 @@ classdef Vumps
         alg_eigs = struct('MaxIter', 100, 'KrylovDim', 20)
         alg_canonical = struct('Method', 'polar')
         alg_environments = struct
+        
+        progressfig
     end
     
     
@@ -87,6 +90,7 @@ classdef Vumps
                     return
                 end
                 alg = updatetols(alg, iter, eta);
+                plot(alg, iter, mps, eta);
                 disp_iter(alg, iter, lambda, eta, toc(t_iter));
             end
             
@@ -100,14 +104,14 @@ classdef Vumps
         function AC = updateAC(alg, iter, mpo, mps, GL, GR)
             kwargs = namedargs2cell(alg.alg_eigs);
             if strcmp(alg.multiAC, 'sequential')
-                sites = mod(iter, period(mps)) + 1;
+                sites = mod1(iter, period(mps));
             else
                 sites = 1:period(mps);
             end
             
             H_AC = AC_hamiltonian(mpo, mps, GL, GR, sites);
             for i = length(sites):-1:1
-                [AC(i), ~] = eigsolve(H_AC{sites(i)}, mps.AC(sites(i)), 1, alg.which, ...
+                [AC(i), ~] = eigsolve(H_AC{i}, mps.AC(sites(i)), 1, alg.which, ...
                     kwargs{:});
             end
         end
@@ -115,21 +119,21 @@ classdef Vumps
         function C = updateC(alg, iter, mpo, mps, GL, GR)
             kwargs = namedargs2cell(alg.alg_eigs);
             if strcmp(alg.multiAC, 'sequential')
-                sites = mod(iter, period(mps)) + 1;
+                sites = mod1(iter, period(mps));
             else
                 sites = 1:period(mps);
             end
             
             H_C = C_hamiltonian(mpo, mps, GL, GR, sites);
             for i = length(sites):-1:1
-                [C(i), ~] = eigsolve(H_C{sites(i)}, mps.C(sites(i)), 1, alg.which, ...
+                [C(i), ~] = eigsolve(H_C{i}, mps.C(sites(i)), 1, alg.which, ...
                     kwargs{:});
             end
         end
         
         function mps = updatemps(alg, iter, mps, AC, C)
             if strcmp(alg.multiAC, 'sequential')
-                sites = mod(iter, period(mps)) + 1;
+                sites = mod1(iter, period(mps));
             else
                 sites = 1:period(mps);
             end
@@ -209,6 +213,41 @@ classdef Vumps
     
     %% Display
     methods (Access = private)
+        function plot(alg, iter, mps, eta)
+            if ~alg.doplot, return; end
+            persistent axhistory axspectrum
+            
+            D = depth(mps);
+            W = period(mps);
+            
+            if isempty(alg.progressfig) || ~isvalid(alg.progressfig) || iter == 1
+                alg.progressfig = figure('Name', 'Vumps');
+                axhistory = subplot(D + 1, W, 1:W);
+                axspectrum = gobjects(D, W);
+                for d = 1:D, for w = 1:W
+                        axspectrum(d, w) = subplot(D + 1, W, w + d * W);
+                    end, end
+                linkaxes(axspectrum, 'y');
+            end
+           
+            
+            if isempty(axhistory.Children)
+                semilogy(axhistory, iter, eta, '.', 'Color', colors(1), ...
+                    'DisplayName', 'Errors', 'MarkerSize', 10);
+                hold on
+                ylim(axhistory, [alg.tol / 5, max([1 eta])]);
+                yline(axhistory, alg.tol, '-', 'Convergence', ...
+                    'LineWidth', 2);
+                hold off
+            else
+                axhistory.Children(end).XData(end+1) = iter;
+                axhistory.Children(end).YData(end+1) = eta;
+            end
+            
+            plot_entanglementspectrum(mps, 1:period(mps), axspectrum);
+            drawnow
+        end
+        
         function disp_init(alg)
             if alg.verbosity < Verbosity.conv, return; end
             fprintf('---- VUMPS ----\n');

@@ -354,9 +354,8 @@ classdef UniformMps
             svals = cellfun(@diag, svals, 'UniformOutput', false);
         end
         
-        function plot_entanglementspectrum(ax, mps, w)
+        function plot_entanglementspectrum(mps, w, ax)
             if nargin == 1
-                mps = ax;
                 w = 1:period(mps);
                 figure;
                 ax = gobjects(depth(mps), width(mps));
@@ -364,8 +363,6 @@ classdef UniformMps
                     ax(1, ww) = subplot(1, length(w), ww);
                 end
             elseif nargin == 2
-                w = mps;
-                mps = ax;
                 figure;
                 ax = gobjects(depth(mps), width(mps));
                 for ww = 1:length(w)
@@ -382,27 +379,23 @@ classdef UniformMps
                 
                 ticks = zeros(size(svals));
                 labels = arrayfun(@string, charges, 'UniformOutput', false);
-                
-                for i = 1:length(svals)
-                    ticks(i) = ctr + 1;
-                    lim_x = max(lim_x, ctr + length(svals{i}));
-                    semilogy(ax(1, ww), ctr+1:ctr+length(svals{i}), svals{i}, ...
-                        '.', 'MarkerSize', 10, 'Color', colors(i));
-                    hold on
-                    
-                    ctr = ctr + length(svals{i}) + 3;
-                    lim_y = min(lim_y, min(svals{i}));
+                lengths = cellfun(@length, svals);
+                ticks = cumsum(lengths);
+                try
+                semilogy(ax(1, ww), 1:sum(lengths), vertcat(svals{:}).', '.', 'MarkerSize', 10);
+                catch
+                    bla
                 end
-                
                 set(ax(1, ww), 'TickLabelInterpreter', 'latex');
                 set(ax(1, ww), 'Xtick', ticks, 'XTickLabel', labels, 'fontsize', 10, ...
                     'XtickLabelRotation', 60, 'Xgrid', 'on');
-                xlim(ax(1, ww), [1 - 1e-8 lim_x + 1e-8]);
+                xlim(ax(1, ww), [1 - 1e-8 ticks(end) + 1e-8]);
+                
             end
                 
-            for ww = 1:length(w)
-                ylim(ax(1, ww), [10^(floor(log10(lim_y))) 1]);
-            end
+%             for ww = 1:length(w)
+%                 ylim(ax(1, ww), [10^(floor(log10(lim_y))) 1]);
+%             end
         end
         
         function mps = desymmetrize(mps)
