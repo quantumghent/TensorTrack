@@ -5,18 +5,25 @@ classdef IDmrg2
         tol = 1e-10
         miniter = 5
         maxiter = 100
-        verbosity = Verbosity.iter
+        verbosity   = Verbosity.iter
+        doplot = false
+        
         which = 'largestabs'
         
-        dynamical_tols = true
+        dynamical_tols          = true
         tol_min                 = 1e-12
         tol_max                 = 1e-6
         eigs_tolfactor          = 1e-4
+        
         trunc                   = {'TruncDim', 10}
+        
+        
     end
     
     properties (Access = private)
         alg_eigs = struct('MaxIter', 100, 'KrylovDim', 20)
+        
+        progressfig
     end
     
     methods
@@ -76,10 +83,9 @@ classdef IDmrg2
                     mps.AC(pos + 1) = multiplyleft(mps.AR(pos + 1), mps.C(pos));
                     
                     TL = transfermatrix(mpo, mps, mps, pos, 'Type', 'LL');
-                    GL{pos + 1} = apply(TL, GL{pos}) / sqrt(lambdas(pos));
+                    GL{pos + 1} = apply(TL, GL{pos});
                     TR = transfermatrix(mpo, mps, mps, pos + 1, 'Type', 'RR');
-                    GR{pos + 1} = apply(TR.', GR{mod1(pos + 2, length(GR))}) / ...
-                        sqrt(lambdas(pos));
+                    GR{pos + 1} = apply(TR.', GR{mod1(pos + 2, length(GR))});
                 end
                 
                 % update edge
@@ -96,9 +102,9 @@ classdef IDmrg2
                 mps.AL(1) = multiplyright(mps.AC(1), inv(mps.C(1)));
                 
                 TL = transfermatrix(mpo, mps, mps, period(mps), 'Type', 'LL');
-                GL{1} = apply(TL, GL{end}) / sqrt(lambdas(end));
+                GL{1} = apply(TL, GL{end});
                 TR = transfermatrix(mpo, mps, mps, 1, 'Type', 'RR');
-                GR{1} = apply(TR.', GR{2}) / sqrt(lambdas(end));
+                GR{1} = apply(TR.', GR{2});
                 
                 % sweep from right to left
                 for pos = period(mps)-1:-1:1
@@ -114,10 +120,9 @@ classdef IDmrg2
                     mps.AC(pos + 1) = multiplyleft(mps.AR(pos + 1), mps.C(pos));
                     
                     TL = transfermatrix(mpo, mps, mps, pos, 'Type', 'LL');
-                    GL{pos + 1} = apply(TL, GL{pos}) / sqrt(lambdas(pos));
+                    GL{pos + 1} = apply(TL, GL{pos});
                     TR = transfermatrix(mpo, mps, mps, pos + 1, 'Type', 'RR');
-                    GR{pos + 1} = apply(TR.', GR{mod1(pos + 2, period(mps))}) / ...
-                        sqrt(lambdas(pos));
+                    GR{pos + 1} = apply(TR.', GR{mod1(pos + 2, period(mps))});
                 end
                 
                 % update edge
@@ -134,9 +139,9 @@ classdef IDmrg2
                     inv(mps.C(end - 1)));
                 
                 TL = transfermatrix(mpo, mps, mps, period(mps), 'Type', 'LL');
-                GL{1} = apply(TL, GL{end}) / sqrt(lambdas(end));
+                GL{1} = apply(TL, GL{end});
                 TR = transfermatrix(mpo, mps, mps, 1, 'Type', 'RR');
-                GR{1} = apply(TR.', GR{2}) / sqrt(lambdas(end));
+                GR{1} = apply(TR.', GR{2});
                 
                 % error measure
                 infspace = infimum(space(C_, 1), space(mps.C(end), 1));
@@ -153,6 +158,7 @@ classdef IDmrg2
                 end
                 
                 alg = updatetols(alg, iter, eta);
+                plot(alg, iter, mps, eta);
                 disp_iter(alg, iter, lambda, eta, toc(t_iter));
             end
             
@@ -190,6 +196,41 @@ classdef IDmrg2
     
     %% Display
     methods (Access = private)
+        function plot(alg, iter, mps, eta)
+            if ~alg.doplot, return; end
+            persistent axhistory axspectrum
+            
+            D = depth(mps);
+            W = period(mps);
+            
+            if isempty(alg.progressfig) || ~isvalid(alg.progressfig) || iter == 1
+                alg.progressfig = figure('Name', 'Vumps');
+                axhistory = subplot(D + 1, W, 1:W);
+                axspectrum = gobjects(D, W);
+                for d = 1:D, for w = 1:W
+                        axspectrum(d, w) = subplot(D + 1, W, w + d * W);
+                    end, end
+                linkaxes(axspectrum, 'y');
+            end
+           
+            
+            if isempty(axhistory.Children)
+                semilogy(axhistory, iter, eta, '.', 'Color', colors(1), ...
+                    'DisplayName', 'Errors', 'MarkerSize', 10);
+                hold on
+                ylim(axhistory, [alg.tol / 5, max([1 eta])]);
+                yline(axhistory, alg.tol, '-', 'Convergence', ...
+                    'LineWidth', 2);
+                hold off
+            else
+                axhistory.Children(end).XData(end+1) = iter;
+                axhistory.Children(end).YData(end+1) = eta;
+            end
+            
+            plot_entanglementspectrum(mps, 1:period(mps), axspectrum);
+            drawnow
+        end
+        
         function disp_init(alg)
             if alg.verbosity < Verbosity.conv, return; end
             fprintf('---- IDmrg2 ----\n');
