@@ -105,9 +105,9 @@ classdef LRU < handle
             cache.mem = cache.mem + memsize(val, 'B');
             while cache.mem > cache.memlimit || length(cache.map) > cache.itemlimit
                 dll_oldest = -cache.sentinel;
-                pop(dll_oldest);
                 cache.mem = cache.mem - memsize(dll_oldest.val{2}, 'B');
-                cache.map.remove(key);
+                cache.map.remove(dll_oldets.val{1});
+                pop(dll_oldest);
             end
         end
         
