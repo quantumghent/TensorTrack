@@ -62,6 +62,10 @@ classdef InfJMpo < InfMpo
                 end
             end
             
+            if nnz(GL{1}) == numel(GL{1})
+                GL{1} = full(GL{1});
+            end
+            
             for w = 1:period(mps1)-1
                 T = transfermatrix(mpo, mps1, mps2, w, 'Type', 'LL');
                 GL{next(w, period(mps1))} = apply(T, GL{w});
@@ -115,6 +119,10 @@ classdef InfJMpo < InfMpo
                     [GR{1}(i), ~] = linsolve(@(x) x - apply(Tdiag, x), rhs, GR{1}(i), ...
                         linkwargs{:});
                 end
+            end
+            
+            if nnz(GR{1}) == numel(GR{1})
+                GR{1} = full(GR{1});
             end
             
             for w = period(mps1):-1:2

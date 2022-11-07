@@ -1080,6 +1080,7 @@ classdef Tensor < AbstractTensor
                 return
             end
             
+            
             uncA = 1:nspaces(A);    uncA(dimA) = [];
             iA = [uncA dimA];       rA = [length(uncA) length(dimA)];
             

@@ -96,10 +96,8 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor}) SparseTensor < AbstractTensor
         
         function B = full(A)
             inds = ind2sub_(A.sz, 1:prod(A.sz));
-            
             [lia, locb] = ismember(inds, A.ind, 'rows');
             B(lia) = A.var(locb(lia));
-            
             if ~all(lia)
                 s = arrayfun(@(i) space(A, i), 1:ndims(A), 'UniformOutput', false);
                 r = rank(A.var(1));
@@ -108,6 +106,7 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor}) SparseTensor < AbstractTensor
                     B(i) = Tensor.zeros(allspace(1:r(1)), allspace(r(1)+1:end)');
                 end
             end
+            
             B = reshape(B, A.sz);
         end
         
@@ -116,10 +115,7 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor}) SparseTensor < AbstractTensor
                 'Can only obtain spaces for single index.');
             for j = size(t, i):-1:1
                 el = t.var(find(t.ind(:, i) == j, 1));
-                if isempty(el)
-                    warning('cannot deduce space.');
-                    continue;
-                end
+                assert(~isempty(el), 'sparse:argerror', 'cannot deduce space');
                 s(j) = space(t.var(find(t.ind(:, i) == j, 1)), i);
             end
         end
@@ -260,6 +256,14 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor}) SparseTensor < AbstractTensor
             if ~isempty(a.var)
                 a.var = conj(a.var);
             end
+        end
+        
+        function a = ctranspose(a)
+            for i = 1:nnz(a)
+                a.var(i) = a.var(i)';
+            end
+            a.ind = fliplr(a.ind);
+            a.sz = fliplr(a.sz);
         end
         
         function d = dot(a, b)
@@ -491,7 +495,7 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor}) SparseTensor < AbstractTensor
             end
             
             A = reshape(permute(A, [uncA dimA]), [prod(szA(uncA)), prod(szA(dimA))]);
-            B = reshape(permute(B, [dimB uncB]), [prod(szB(dimB)), prod(szB(uncB))]);
+            B = reshape(permute(B, [flip(dimB) uncB]), [prod(szB(dimB)), prod(szB(uncB))]);
             
             if isempty(uncA) && isempty(uncB)
                 C = 0;

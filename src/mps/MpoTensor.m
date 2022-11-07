@@ -142,7 +142,9 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) MpoTensor < Ab
                 options.NumDimensionsA = ndims(A)
             end
             
-            assert(~isa(A, 'MpoTensor') || ~isa(B, 'MpoTensor'));
+            assert(~isa(A, 'MpoTensor') || ~isa(B, 'MpoTensor'), 'mpotensor:tensorprod', ...
+                'cannot contract two mpotensors.');
+        
             if isa(A, 'MpoTensor')
                 C = tensorprod(A.tensors, B, dimA, dimB, ca, cb);
                 
@@ -155,11 +157,22 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) MpoTensor < Ab
                     uncA = 1:nspaces(A); uncA(dimA) = [];
                     uncB = 1:nspaces(B); uncB(dimB) = [];
                     
-                    A = reshape(permute(A.scalars, [uncA flip(dimA)]), ...
+                    rB = [length(dimB) length(uncB)];
+                    
+                    iA = [uncA dimA];
+                    iB = [flip(dimB) uncB];
+                    
+                    if mod1(dimA(1) + 1, 4) ~= dimA(2)
+                        iA(end-1:end) = flip(iA(end-1:end));
+                        iB(1:2) = flip(iB(1:2));
+                    end
+                    
+                    A_ = reshape(permute(A.scalars, iA), ...
                         [prod(size(A, uncA)) prod(size(A, dimA))]);
-                    B = reshape(tpermute(B, [dimB uncB], [length(dimB) length(uncB)]), ...
+                    B = reshape(tpermute(B, iB, rB), ...
                         [prod(size(B, dimB)) prod(size(B, uncB))]);
-                    C = C + reshape(sparse(A) * B, size(C));
+                    
+                    C = C + reshape(sparse(A_) * B, size(C));
                 end
             else
                 C = tensorprod(A, B.tensors, dimA, dimB, ca, cb);
@@ -173,11 +186,23 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) MpoTensor < Ab
                     uncA = 1:nspaces(A); uncA(dimA) = [];
                     uncB = 1:nspaces(B); uncB(dimB) = [];
                     
-                    A = reshape(tpermute(A, [uncA flip(dimA)], [length(uncA) length(dimA)]), ...
+                    rA = [length(uncA) length(dimA)];
+                    
+                    iA = [uncA dimA];
+                    iB = [flip(dimB) uncB];
+                    
+                    if mod1(dimB(1) + 1, 4) ~= dimB(2)
+                        iA(end-1:end) = flip(iA(end-1:end));
+                        iB(1:2) = flip(iB(1:2));
+                    end
+                    
+                    A = reshape(tpermute(A, iA, rA), ...
                         [prod(size(A, uncA)) prod(size(A, dimA))]);
-                    B = reshape(permute(B.scalars, [flip(dimB) uncB]), ...
+                    
+                    B_ = reshape(permute(B.scalars, iB), ...
                         [prod(size(B, dimB)) prod(size(B, uncB))]);
-                    C = C + reshape(A * sparse(B), size(C));
+                    
+                    C = C + reshape(A * sparse(B_), szC);
                 end
             end
         end
