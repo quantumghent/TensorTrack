@@ -253,9 +253,65 @@ In order to only change the partition without permuting indices, :code:`repartit
     While the partition of tensor indices might seem of little importance for tensors without internal structure, it can still have non-trivial consequences.
     This is demonstrated by comparing the ``matrixblocks`` and the ``tensorblocks`` before and after repartitioning.
 
+
 Contractions 
 ------------
+
+It is also possible to combine multiple tensors by contracting one or more indices.
+This is only possible if the contracted spaces are compatible, i.e. one is the dual space of the other.
+In general, all contractions will be performed pairwise, such that contracting ``A`` and ``B`` consists of permuting all uncontracted indices of ``A`` to its codomain, all contracted indices of ``A`` to its domain, and the reverse for ``B``.
+Then, contraction is just a composition of linear maps, hence the need for the contracted spaces to be compatible.
+
+The syntax for specifying tensor contractions is based on the ``NCon`` (network contraction) algorithm described here (https://arxiv.org/abs/1402.0939).
+The core principle is that contracted indices are indicated by incrementing positive integers, which are then pairwise contracted in ascending order.
+Uncontracted indices are specified with negative integers, which are sorted in descending order (ascending absolute value).
+It is also possible to specify the rank of the resulting tensor with a name-value argument ``'Rank'``, and use in-place conjugation with the name-value argument ``'Conj'``.
+
+.. autofunction:: src.utility.linalg.contract
+    :noindex:
 
 
 Factorizations 
 --------------
+
+The reverse process, of splitting a single tensor into different, usually smaller, tensors with specific properties is done by means of factorizations.
+In short, these are all analogies of their matrix counterpart, by performing the factorization on the tensor interpreted as a linear map.
+
+Many of these factorizations use the notion of orthogonality (unitarity when working over complex numbers).
+An orthogonal tensor map ``t`` is characterised by the fact that ``t' * t = eye = t * t'``, which can be further relaxed to left- or right- orthogonal by respectively dropping the right- and left- hand side of the previous equation.
+
+.. automethod:: src.tensors.Tensor.leftorth
+    :noindex:
+
+.. automethod:: src.tensors.Tensor.rightorth
+    :noindex:
+    
+.. automethod:: src.tensors.Tensor.tsvd
+    :noindex:
+
+.. automethod:: src.tensors.Tensor.leftnull
+    :noindex:
+
+.. automethod:: src.tensors.Tensor.rightnull
+    :noindex:
+
+.. automethod:: src.tensors.Tensor.eig
+    :noindex:
+
+
+Matrix functions
+----------------
+
+Finally, several functions that are defined for matrices have a generalisation to tensors, again by interpreting them as linear maps.
+
+.. automethod:: src.tensors.Tensor.expm
+    :noindex:
+
+.. automethod:: src.tensors.Tensor.sqrtm
+    :noindex:
+
+.. automethod:: src.tensors.Tensor.inv
+    :noindex:
+
+.. automethod:: src.tensors.Tensor.mpower
+    :noindex:
