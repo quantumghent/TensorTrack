@@ -135,8 +135,10 @@ classdef IDmrg2
                     tsvd(AC2, [1 2], [3 4], alg.trunc{:});
                 mps.C(end) = normalize(C);
                 mps.AC(1) = multiplyleft(mps.AR(1), mps.C(end));
+                
                 mps.AR(end) = multiplyleft(multiplyright(mps.AL(end), mps.C(end)), ...
                     inv(mps.C(end - 1)));
+                
                 
                 TL = transfermatrix(mpo, mps, mps, period(mps), 'Type', 'LL');
                 GL{1} = apply(TL, GL{end});
