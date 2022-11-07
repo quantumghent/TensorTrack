@@ -86,12 +86,12 @@ classdef TestAlgorithms < matlab.unittest.TestCase
             alg = Vumps('which', 'smallestreal', 'maxiter', 5);
             [gs, lambda] = fixedpoint(alg, mpo, mps);
             tc.verifyEqual(lambda, -1.273, 'RelTol', 1e-2);
-%             tc.verifyEqual(lambda, expectation_value(gs, mpo, gs), 'RelTol', 1e-2);
+            tc.verifyEqual(lambda, expectation_value(gs, mpo, gs), 'RelTol', 1e-2);
             
             alg = IDmrg('which', 'smallestreal', 'maxiter',10);
             [gs, lambda] = fixedpoint(alg, mpo, mps);
-            tc.verifyEqual(lambda, -1.273, 'RelTol', 1e-2);
-%             tc.verifyEqual(lambda, expectation_value(gs, mpo, gs), 'RelTol', 1e-2);
+%             tc.verifyEqual(lambda, -1.273, 'RelTol', 1e-2);
+            tc.verifyEqual(-1.273, expectation_value(gs, mpo, gs), 'RelTol', 1e-2);
             
 %             mps2 = approximate(Vomps(), ...
 %                 mpo, gs, initialize_mps(mpo, CartesianSpace.new(24)));
@@ -102,20 +102,20 @@ classdef TestAlgorithms < matlab.unittest.TestCase
             alg = IDmrg2('which', 'smallestreal', 'maxiter', 10);
             [gs, lambda] = fixedpoint(alg, mpo, mps);
 %             tc.verifyEqual(lambda, 2.533^2, 'RelTol', 1e-2);
-%             tc.verifyEqual(expectation_value(gs, mpo, gs), [2.533 2.533], ...
-%                 'RelTol', 1e-2);
+            tc.verifyEqual(expectation_value(gs, mpo, gs), [2.533 2.533], ...
+                'RelTol', 1e-2);
             
             alg = IDmrg('which', 'smallestreal', 'maxiter', 10);
             [gs, lambda] = fixedpoint(alg, mpo, mps);
 %             tc.verifyEqual(lambda, 2.533^2, 'RelTol', 1e-2);
-%             tc.verifyEqual(expectation_value(gs, mpo, gs), [2.533 2.533], ...
-%                 'RelTol', 1e-2);
+            tc.verifyEqual(expectation_value(gs, mpo, gs), [2.533 2.533], ...
+                'RelTol', 1e-2);
             
             alg = Vumps('which', 'smallestreal', 'maxiter', 5);
             [gs, lambda] = fixedpoint(alg, mpo, mps);
-%             tc.verifyEqual(lambda, 2.533^2, 'RelTol', 1e-2);
-%             tc.verifyEqual(expectation_value(gs, mpo, gs), [2.533 2.533], ...
-%                 'RelTol', 1e-2);
+            tc.verifyEqual(lambda, 2.533^2, 'RelTol', 1e-2);
+            tc.verifyEqual(expectation_value(gs, mpo, gs), [2.533 2.533], ...
+                'RelTol', 1e-2);
 
             mpo = InfJMpo.Ising('Symmetry', 'Z2');
             mps = initialize_mps(mpo, GradedSpace.new(Z2(0, 1), [6 6], false));
@@ -123,12 +123,12 @@ classdef TestAlgorithms < matlab.unittest.TestCase
             alg = Vumps('which', 'smallestreal', 'maxiter', 5);
             [gs, lambda] = fixedpoint(alg, mpo, mps);
             tc.verifyEqual(lambda, -1.273, 'RelTol', 1e-2);
-%             tc.verifyEqual(lambda, expectation_value(gs, mpo, gs), 'RelTol', 1e-2);
+            tc.verifyEqual(lambda, expectation_value(gs, mpo, gs), 'RelTol', 1e-2);
             
             alg = IDmrg('which', 'smallestreal', 'maxiter',10);
             [gs, lambda] = fixedpoint(alg, mpo, mps);
-            tc.verifyEqual(lambda, -1.273, 'RelTol', 1e-2);
-%             tc.verifyEqual(lambda, expectation_value(gs, mpo, gs), 'RelTol', 1e-2);
+%             tc.verifyEqual(lambda, -1.273, 'RelTol', 1e-2);
+            tc.verifyEqual(-1.273, expectation_value(gs, mpo, gs), 'RelTol', 1e-2);
             
 %             mps2 = approximate(Vomps(), ...
 %                 mpo, gs, initialize_mps(mpo, CartesianSpace.new(24)));
@@ -140,20 +140,20 @@ classdef TestAlgorithms < matlab.unittest.TestCase
                 'trunc', {'TruncBelow', 1e-3});
             [gs, lambda] = fixedpoint(alg, mpo, mps);
 %             tc.verifyEqual(lambda, 2.533^2, 'RelTol', 1e-2);
-%             tc.verifyEqual(expectation_value(gs, mpo, gs), [2.533 2.533], ...
-%                 'RelTol', 1e-2);
+            tc.verifyEqual(expectation_value(gs, mpo, gs), [2.533 2.533], ...
+                'RelTol', 1e-2);
             
             alg = IDmrg('which', 'smallestreal', 'maxiter', 10);
             [gs, lambda] = fixedpoint(alg, mpo, mps);
 %             tc.verifyEqual(lambda, 2.533^2, 'RelTol', 1e-2);
-%             tc.verifyEqual(expectation_value(gs, mpo, gs), [2.533 2.533], ...
-%                 'RelTol', 1e-2);
+            tc.verifyEqual(expectation_value(gs, mpo, gs), [2.533 2.533], ...
+                'RelTol', 1e-2);
             
             alg = Vumps('which', 'smallestreal', 'maxiter', 5);
             [gs, lambda] = fixedpoint(alg, mpo, mps);
-%             tc.verifyEqual(lambda, 2.533^2, 'RelTol', 1e-2);
-%             tc.verifyEqual(expectation_value(gs, mpo, gs), [2.533 2.533], ...
-%                 'RelTol', 1e-2);
+            tc.verifyEqual(lambda, 2.533^2, 'RelTol', 1e-2);
+            tc.verifyEqual(expectation_value(gs, mpo, gs), [2.533 2.533], ...
+                'RelTol', 1e-2);
         end
     end
 end

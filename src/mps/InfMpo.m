@@ -47,7 +47,6 @@ classdef InfMpo
             if depth(mpo) == 1, return; end
             O_ = mpo(1, 1).O;
             for d = 2:depth(mpo)
-                
                 for w = period(mpo):-1:1
                     vspaces = [rightvspace(O_{w})' rightvspace(mpo(d, 1).O{w})'];
                     fuser(w) = Tensor.eye(vspaces, prod(vspaces));
@@ -70,6 +69,11 @@ classdef InfMpo
         function mpo = horzcat(varargin)
             Os = cellfun(@(x) x.O, varargin, 'UniformOutput', false);
             mpo = InfMpo([Os{:}]);
+        end
+        
+        function mpo = vertcat(varargin)
+            Os = cellfun(@(x) x.O, varargin, 'UniformOutput', false);
+            mpo = InfMpo(vertcat(Os{:}));
         end
         
         function mps = initialize_mps(mpo, vspaces)

@@ -283,7 +283,19 @@ classdef UniformMps
                 mps2 = mps1
             end
             
-            if isa(O, 'InfMpo')
+            if isa(O, 'InfJMpo')
+                [GL, GR] = environments(O, mps1, mps2);
+                H = AC_hamiltonian(O, mps1, GL, GR);
+                E = zeros(size(H));
+                for i = 1:length(H)
+                    N = size(H{i}.R, 2);
+                    H{i}.R = H{i}.R(1, N, 1);
+                    H{i}.O{1} = H{i}.O{1}(:, :, N, :);
+                    AC_ = apply(H{i}, mps1.AC(i));
+                    E(i) = dot(AC_, mps2.AC(i));
+                end
+                
+            elseif isa(O, 'InfMpo')
                 [GL, GR] = environments(O, mps1, mps2);
                 H = AC_hamiltonian(O, mps1, GL, GR);
                 E = zeros(size(H));
@@ -291,17 +303,9 @@ classdef UniformMps
                     AC_ = apply(H{i}, mps1.AC(i));
                     E(i) = dot(AC_, mps2.AC(i));
                 end
-            elseif isa(O, 'InfJMpo')
-                [GL, GR] = environments(O, mps1, mps2);
-                H = AC_hamiltonian(O, mps1, GL, GR);
-                E = zeros(size(H));
-                for i = 1:length(H)
-                    H{i}.R = H{i}.R(1, end, 1);
-                    H{i}.O{1} = H{i}.O{1}(:,:,end,:);
-                    
-                    AC_ = apply(H{i}, mps1.AC(i));
-                    E(i) = dot(AC_, mps2.AC(i));
-                end
+                
+            elseif isa(O, 'AbstractTensor')
+                error('TBA');
             else
                 error('Unknown operator type (%s)', class(O));
             end

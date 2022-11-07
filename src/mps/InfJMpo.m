@@ -157,6 +157,30 @@ classdef InfJMpo < InfMpo
             Os = cellfun(@(x) x.O, varargin, 'UniformOutput', false);
             mpo = InfJMpo([Os{:}]);
         end
+        
+        function mpo = plus(a, b)
+            if isa(a, 'InfJMpo') && isnumeric(b)
+                if period(a) > 1 && isscalar(b)
+                    b = repmat(b, 1, period(a));
+                end
+                
+                for i = 1:period(a)
+                    a.O{i}(1, 1, end, 1) = a.O{i}(1, 1, end, 1) + b(i);
+                end
+                
+            elseif isnumeric(a) && isa(b, 'InfJMpo')
+                mpo = b + a;
+            end
+        end
+        
+        function mpo = mtimes(mpo, b)
+            if isnumeric(mpo) || isnumeric(b)
+                mpo = mpo .* b;
+                return
+            end
+            
+            mpo = [mpo; b];
+        end
     end
     
     methods (Static)
