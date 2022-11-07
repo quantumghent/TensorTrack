@@ -352,10 +352,18 @@ classdef ProductCharge < AbstractCharge
             end
         end
         
-        function c = intersect(a, b)
+        %function c = intersect(a, b)
+         %   c = subsref(a, substruct('()', ...
+         %       {mod(find(reshape(a, [], 1) == reshape(b, 1, [])) - 1, length(a)) + 1}));
+        %end
+        
+        function [c, ia, ib] = intersect(a, b)
             c = subsref(a, substruct('()', ...
-                {mod(find(reshape(a, [], 1) == reshape(b, 1, [])) - 1, length(a)) + 1}));
+                        {mod(find(reshape(a, [], 1) == reshape(b, 1, [])) - 1, length(a)) + 1}));
+            [~,ia]  = ismember(c, a);
+            [~,ib]    = ismember(c, b);
         end
+
         
         function F = Fsymbol(a, b, c, d, e, f)
             if hasmultiplicity(fusionstyle(a))

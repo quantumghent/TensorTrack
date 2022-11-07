@@ -17,6 +17,10 @@ classdef IDmrg2
         
         trunc                   = {'TruncDim', 10}
         
+        doSave = false
+        saveIterations = false
+        saveMethod = 'full'
+        name = 'IDmrg2'
         
     end
     
@@ -162,6 +166,10 @@ classdef IDmrg2
                 alg = updatetols(alg, iter, eta);
                 plot(alg, iter, mps, eta);
                 disp_iter(alg, iter, lambda, eta, toc(t_iter));
+
+                if alg.doSave && mod(iter, alg.saveIterations) == 0
+                    save(alg, mps, lambdas);
+                end
             end
             
             mps = canonicalize(mps, 'Order', 'rl');
@@ -293,6 +301,32 @@ classdef IDmrg2
                     
             end
             fprintf('---------------\n');
+        end
+
+        function save(alg, mps, lambdas)
+            fileName = alg.name;
+
+            fileData = struct;
+            fileData.mps            = mps;
+            fileData.lambdas         = lambdas;
+
+            % save
+            if exist(fileName,'file')
+                old_file=load(fileName);
+                fileName_temp=[fileName(1:end-4),'_temp.mat'];
+                save(fileName_temp, '-struct', 'old_file', '-v7.3');
+                saved_temp=1;
+            else
+                saved_temp=0;
+            end
+            
+            save(fileName, '-struct', 'fileData', '-v7.3');
+            
+            if saved_temp
+                delete(fileName_temp);
+            end
+            
+
         end
     end
 end

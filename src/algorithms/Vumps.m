@@ -188,12 +188,12 @@ classdef Vumps < handle
     methods
         function alg = updatetols(alg, iter, eta)
             if alg.dynamical_tols
-                alg.alg_eigs.Tol = between(alg.tol_min, eta * alg.eigs_tolfactor, ...
-                    alg.tol_max / iter);
+                alg.alg_eigs.Tol = between(alg.tol_min, eta * alg.eigs_tolfactor / iter, ...
+                    alg.tol_max);
                 alg.alg_canonical.Tol = between(alg.tol_min, ...
-                    eta * alg.canonical_tolfactor, alg.tol_max / iter);
+                    eta * alg.canonical_tolfactor / iter, alg.tol_max);
                 alg.alg_environments.Tol = between(alg.tol_min, ...
-                    eta * alg.environments_tolfactor, alg.tol_max / iter);
+                    eta * alg.environments_tolfactor / iter, alg.tol_max);
                 
                 if alg.verbosity > Verbosity.iter
                     fprintf('Updated subalgorithm tolerances: (%e,\t%e,\t%e)\n', ...
