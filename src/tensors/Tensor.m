@@ -885,7 +885,7 @@ classdef Tensor < AbstractTensor
             
             if (all(p == 1:nspaces(t)) && all(rank(t) == r)), return; end
             
-            persistent cache
+            global cache
             if isempty(cache), cache = LRU; end
             
             if Options.CacheEnabled()
@@ -1099,7 +1099,7 @@ classdef Tensor < AbstractTensor
                 iB = idx(iB);
             end
             
-            persistent cache
+            global cache
             if isempty(cache), cache = LRU; end
             
             if Options.CacheEnabled()
@@ -1337,7 +1337,7 @@ classdef Tensor < AbstractTensor
                 return
             end
             
-            persistent cache
+            global cache
             if isempty(cache), cache = LRU; end
             
             if Options.CacheEnabled()

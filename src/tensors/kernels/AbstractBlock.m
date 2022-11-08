@@ -34,7 +34,7 @@ classdef (Abstract) AbstractBlock
                 return
             end
             
-            persistent cache
+            global cache
             if isempty(cache), cache = LRU; end
             
             if Options.CacheEnabled()
