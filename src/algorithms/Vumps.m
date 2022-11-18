@@ -20,6 +20,12 @@ classdef Vumps < handle
         multiAC = 'parallel'
         dynamical_multiAC = false;
         tol_multiAC = Inf
+
+        doSave = false
+        saveIterations = 1
+        saveMethod = 'full'
+        name = 'VUMPS'
+
     end
     
     properties (Access = private)
@@ -92,6 +98,10 @@ classdef Vumps < handle
                 alg = updatetols(alg, iter, eta);
                 plot(alg, iter, mps, eta);
                 disp_iter(alg, iter, lambda, eta, toc(t_iter));
+
+                if alg.doSave && mod(iter, alg.saveIterations) == 0
+                    save_iteration(alg, mps, lambda, iter);
+                end
             end
             
             disp_maxiter(alg, iter, lambda, eta, toc(t_total));
@@ -188,12 +198,12 @@ classdef Vumps < handle
     methods
         function alg = updatetols(alg, iter, eta)
             if alg.dynamical_tols
-                alg.alg_eigs.Tol = between(alg.tol_min, eta * alg.eigs_tolfactor / iter, ...
-                    alg.tol_max);
+                alg.alg_eigs.Tol = between(alg.tol_min, eta * alg.eigs_tolfactor, ...
+                    alg.tol_max / iter);
                 alg.alg_canonical.Tol = between(alg.tol_min, ...
-                    eta * alg.canonical_tolfactor / iter, alg.tol_max);
+                    eta * alg.canonical_tolfactor, alg.tol_max / iter);
                 alg.alg_environments.Tol = between(alg.tol_min, ...
-                    eta * alg.environments_tolfactor / iter, alg.tol_max);
+                    eta * alg.environments_tolfactor, alg.tol_max / iter);
                 
                 if alg.verbosity > Verbosity.iter
                     fprintf('Updated subalgorithm tolerances: (%e,\t%e,\t%e)\n', ...
@@ -308,6 +318,31 @@ classdef Vumps < handle
                     
             end
             fprintf('---------------\n');
+        end
+                
+        function save_iteration(alg, mps, lambda, iter)
+            fileName = alg.name;
+
+            fileData = struct;
+            fileData.mps            = mps;
+            fileData.lambda         = lambda;
+            fileData.iteration = iter;
+            % save
+            
+            %if exist(fileName,'file')
+            %    old_file=load(fileName);
+            %    fileName_temp=[fileName(1:end-4),'_temp.mat'];
+            %    save(fileName_temp, '-struct', 'old_file', '-v7.3');
+            %    saved_temp=1;
+            %else
+            %    saved_temp=0;
+            %end
+            
+            save(fileName, '-struct', 'fileData', '-v7.3');
+            
+            %if saved_temp
+            %    delete(fileName_temp);
+            %end
         end
     end
 end

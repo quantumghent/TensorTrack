@@ -13,7 +13,7 @@ classdef IDmrg2
         dynamical_tols          = true
         tol_min                 = 1e-12
         tol_max                 = 1e-6
-        eigs_tolfactor          = 1e-4
+        eigs_tolfactor          = 1e-7
         
         trunc                   = {'TruncDim', 10}
         
@@ -311,20 +311,20 @@ classdef IDmrg2
             fileData.lambdas         = lambdas;
 
             % save
-            if exist(fileName,'file')
-                old_file=load(fileName);
-                fileName_temp=[fileName(1:end-4),'_temp.mat'];
-                save(fileName_temp, '-struct', 'old_file', '-v7.3');
-                saved_temp=1;
-            else
-                saved_temp=0;
-            end
+            %if exist(fileName,'file')
+            %    old_file=load(fileName);
+            %    fileName_temp=[fileName(1:end-4),'_temp.mat'];
+            %    save(fileName_temp, '-struct', 'old_file', '-v7.3');
+            %    saved_temp=1;
+            %else
+            %    saved_temp=0;
+            %end
             
             save(fileName, '-struct', 'fileData', '-v7.3');
             
-            if saved_temp
-                delete(fileName_temp);
-            end
+            %if saved_temp
+            %    delete(fileName_temp);
+            %end
             
 
         end
