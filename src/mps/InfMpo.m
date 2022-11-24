@@ -240,12 +240,16 @@ classdef InfMpo
             for i = 1:length(sites)
                 gl = GL{sites(i)};
                 for j = 1:numel(gl)
-                    gl(j) = twist(gl(j), find(isdual(space(gl(j), 1))));
+                    if nnz(gl(j)) ~= 0
+                        gl(j) = twist(gl(j), find(isdual(space(gl(j), 1))));
+                    end
                 end
                 gr = GR{mod1(sites(i) + 2, period(mps))};
                 for j = 1:numel(gr)
-                    gr(j) = twist(gr(j), find(isdual(space(gr(j), nspaces(gr(j))))) + ...
+                    if nnz(gr(j)) ~= 0
+                        gr(j) = twist(gr(j), find(isdual(space(gr(j), nspaces(gr(j))))) + ...
                         nspaces(gr(j)) - 1);
+                    end
                 end
                 H{i} = FiniteMpo(gl, mpo.O(mod1(sites(i) + [0 1], period(mps))), gr);
             end
@@ -264,12 +268,16 @@ classdef InfMpo
             for i = 1:length(sites)
                 gl = GL{next(sites(i), period(mps))};
                 for j = 1:numel(gl)
-                    gl(j) = twist(gl(j), find(isdual(space(gl(j), 1))));
+                    if nnz(gl(j)) ~= 0
+                        gl(j) = twist(gl(j), find(isdual(space(gl(j), 1))));
+                    end
                 end
                 gr = GR{next(sites(i), period(mps))};
                 for j = 1:numel(gr)
-                    gr(j) = twist(gr(j), find(isdual(space(gr(j), nspaces(gr(j))))) + ...
-                        nspaces(gr(j)) - 1);
+                    if nnz(gr(j)) ~= 0
+                        gr(j) = twist(gr(j), find(isdual(space(gr(j), nspaces(gr(j))))) + ...
+                            nspaces(gr(j)) - 1);
+                    end
                 end
                 H{i} = FiniteMpo(gl, {}, gr);
             end
