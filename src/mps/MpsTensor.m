@@ -97,7 +97,7 @@ classdef MpsTensor < Tensor
             
             % initialization
             N = size(A, 2);
-            if isempty(CL), CL = initializeC(A, circshift(A, 1)); end
+            if isempty(CL), CL = initializeC(A, circshift(A, -1)); end
             if kwargs.Normalize, CL(1) = normalize(CL(1)); end
             A = arrayfun(@(a) MpsTensor(repartition(a, [nspaces(a)-1 1])), A);
             AL = A;
@@ -201,17 +201,17 @@ classdef MpsTensor < Tensor
             
             opts = namedargs2cell(kwargs);
             
-            Ad = arrayfun(@ctranspose, A);
+            Ad = flip(arrayfun(@ctranspose, A));
             if isempty(CR)
                 Cd = [];
             else
-                Cd = circshift(arrayfun(@ctranspose, CR), -1);
+                Cd = circshift(flip(arrayfun(@ctranspose, CR)), -1);
             end
             
             [AR, CR, lambda, eta] = uniform_leftorth(Ad, Cd, opts{:});
             
-            AR = arrayfun(@ctranspose, AR);
-            CR  = circshift(arrayfun(@ctranspose, CR), 1);
+            AR = flip(arrayfun(@ctranspose, AR));
+            CR  = flip(circshift(arrayfun(@ctranspose, CR), 1));
             lambda = conj(lambda);
         end
         
