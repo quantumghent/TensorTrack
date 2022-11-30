@@ -7,10 +7,9 @@ classdef LRU < handle
         sentinel            % sentinel of DLL, +sentinel is MRU, -sentinel is LRU
         map                 % map of key --> dll
         itemlimit = Inf     % maximum size of cache in number of items
-        memlimit = 0.005 * 2^30 % maximum size of cache in bytes
+        memlimit = 20 * 2^30 % maximum size of cache in bytes
         mem = 0;            % current memory usage in bytes.
     end
-    
     methods
         function cache = LRU(itemlimit, memlimit)
             % Construct a new LRU cache.
@@ -93,7 +92,7 @@ classdef LRU < handle
                 dll_old = cache.map(key);
                 pop(dll_old);
                 cache.mem = cache.mem - memsize(dll_old.val{2}, 'B');
-                cache.map.remove(key);
+                cache.map.(key);
             end
             
             % add new data

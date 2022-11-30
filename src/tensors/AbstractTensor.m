@@ -303,7 +303,6 @@ classdef AbstractTensor
                 kwargs.Rank = []
                 kwargs.Debug = false
             end
-            
             assert(length(kwargs.Conj) == length(tensors));
             for i = 1:length(tensors)
                 if length(indices{i}) > 1

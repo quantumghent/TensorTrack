@@ -113,16 +113,8 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) MpoTensor < Ab
             N = nargin - 1;
             
             auxlegs_v = nspaces(v) - N;
-            if isa(L, 'MpsTensor')
-                auxlegs_l = L.alegs;
-            else
-                auxlegs_l = 0;
-            end
-            if isa(R, 'MpsTensor')
-                auxlegs_r = R.alegs;
-            else
-                auxlegs_r = 0;
-            end
+            auxlegs_l = L.alegs;
+            auxlegs_r = R.alegs;
             auxlegs = auxlegs_v + auxlegs_l + auxlegs_r;
             
             Oinds = arrayfun(@(x) [2*x-2 -x 2*x 2*x-1], 2:N-1, 'UniformOutput', false);
@@ -165,22 +157,11 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) MpoTensor < Ab
                     uncA = 1:nspaces(A); uncA(dimA) = [];
                     uncB = 1:nspaces(B); uncB(dimB) = [];
                     
-                    rB = [length(dimB) length(uncB)];
-                    
-                    iA = [uncA dimA];
-                    iB = [flip(dimB) uncB];
-                    
-                    if mod1(dimA(1) + 1, 4) ~= dimA(2)
-                        iA(end-1:end) = flip(iA(end-1:end));
-                        iB(1:2) = flip(iB(1:2));
-                    end
-                    
-                    A_ = reshape(permute(A.scalars, iA), ...
+                    A = reshape(permute(A.scalars, [uncA flip(dimA)]), ...
                         [prod(size(A, uncA)) prod(size(A, dimA))]);
-                    B = reshape(tpermute(B, iB, rB), ...
+                    B = reshape(tpermute(B, [dimB uncB], [length(dimB) length(uncB)]), ...
                         [prod(size(B, dimB)) prod(size(B, uncB))]);
-                    
-                    C = C + reshape(sparse(A_) * B, size(C));
+                    C = C + reshape(sparse(A) * B, size(C));
                 end
             else
                 C = tensorprod(A, B.tensors, dimA, dimB, ca, cb);
@@ -194,23 +175,11 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) MpoTensor < Ab
                     uncA = 1:nspaces(A); uncA(dimA) = [];
                     uncB = 1:nspaces(B); uncB(dimB) = [];
                     
-                    rA = [length(uncA) length(dimA)];
-                    
-                    iA = [uncA dimA];
-                    iB = [flip(dimB) uncB];
-                    
-                    if mod1(dimB(1) + 1, 4) ~= dimB(2)
-                        iA(end-1:end) = flip(iA(end-1:end));
-                        iB(1:2) = flip(iB(1:2));
-                    end
-                    
-                    A = reshape(tpermute(A, iA, rA), ...
+                    A = reshape(tpermute(A, [uncA dimA], [length(uncA) length(dimA)]), ...
                         [prod(size(A, uncA)) prod(size(A, dimA))]);
-                    
-                    B_ = reshape(permute(B.scalars, iB), ...
+                    B = reshape(permute(B.scalars, [flip(dimB) uncB]), ...
                         [prod(size(B, dimB)) prod(size(B, uncB))]);
-                    
-                    C = C + reshape(A * sparse(B_), szC);
+                    C = C + reshape(A * sparse(B), szC);
                 end
             end
         end

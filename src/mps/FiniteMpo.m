@@ -2,9 +2,9 @@ classdef FiniteMpo
     % Finite Matrix product operators
     
     properties
-        L MpsTensor
+        L %MpsTensor
         O
-        R MpsTensor
+        R %MpsTensor
     end
     
     methods
