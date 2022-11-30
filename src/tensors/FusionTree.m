@@ -77,8 +77,8 @@ classdef FusionTree < matlab.mixin.CustomDisplay
             f.vertices = vertices;
             f.isdual = isdual;
             f.rank = rank;
-
-%             assert(all(isallowed(f)));  % comment out for debugging
+            
+            %             assert(all(isallowed(f)));  % comment out for debugging
         end
     end
     
@@ -301,7 +301,7 @@ classdef FusionTree < matlab.mixin.CustomDisplay
                 for j = 1:length(ia2)
                     blocks{j} = Rsymbol(abc(j, 1), abc(j, 2), abc(j, 3), inv);
                 end
-
+                
                 f.charges = f.charges(order, [2 1 3:end]);
                 f.vertices = f.vertices(order, :);
                 f.isdual(1:2) = f.isdual([2 1]);
@@ -588,20 +588,39 @@ classdef FusionTree < matlab.mixin.CustomDisplay
             assert(N == f.legs, 'tensors:trees:ArgError', ...
                 'p has the wrong number of elements.');
             
-            if all(p == 1:f.legs)
-                [c, f] = repartition(f, rank);
-                return
+            global cache
+            if isempty(cache), cache = LRU; end
+            
+            if Options.CacheEnabled()
+                key = GetMD5({f, p, lvl, rank}, 'Array', 'hex');
+                med = get(cache, key);
+                
+                if ~isempty(med)
+                    c = med.c;
+                    f = med.f;
+                    return
+                end
             end
             
-            swaps = perm2swap(p);
-            [c, f] = repartition(f, [f.legs 0]);
-            for s = swaps
-                [c_, f] = artinbraid(f, s, lvl(s) > lvl(s + 1));
+            if all(p == 1:f.legs)
+                [c, f] = repartition(f, rank);
+            else
+                swaps = perm2swap(p);
+                [c, f] = repartition(f, [f.legs 0]);
+                for s = swaps
+                    [c_, f] = artinbraid(f, s, lvl(s) > lvl(s + 1));
+                    c = c * c_;
+                    lvl(s:s + 1) = lvl([s + 1 s]);
+                end
+                [c_, f] = repartition(f, rank);
                 c = c * c_;
-                lvl(s:s + 1) = lvl([s + 1 s]);
             end
-            [c_, f] = repartition(f, rank);
-            c = c * c_;
+            
+            if Options.CacheEnabled()
+                med.c = c;
+                med.f = f;
+                cache = set(cache, key, med);
+            end
         end
         
         function [c, f] = elementary_trace(f, i)
@@ -911,8 +930,8 @@ classdef FusionTree < matlab.mixin.CustomDisplay
                     'Col', cols);
             else
                 cols = [treeindsequence(f.rank(1)) + 1 ...                                  % center charge
-                (1:treeindsequence(f.rank(2))) + treeindsequence(f.rank(1)) + 1 ...         % fuse charges
-                fliplr(1:treeindsequence(f.rank(1)))];                                      % split charges
+                    (1:treeindsequence(f.rank(2))) + treeindsequence(f.rank(1)) + 1 ...         % fuse charges
+                    fliplr(1:treeindsequence(f.rank(1)))];                                      % split charges
                 if nargout > 1
                     [f.charges, p] = sortrows(f.charges, cols);
                 else
@@ -1261,6 +1280,10 @@ classdef FusionTree < matlab.mixin.CustomDisplay
                     conj(C_fuse), [-(f.rank(2):-1:1)-f.rank(1) 1]);
             end
             C = {C};
+        end
+        
+        function s = GetMD5_helper(f)
+            s = {f.charges, f.vertices, f.isdual, f.rank};
         end
     end
 end
