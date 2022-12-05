@@ -414,6 +414,7 @@ classdef Tensor < AbstractTensor
         function tdst = zerosLike(t, varargin)
             tdst = repmat(0 * t, varargin{:});
         end
+        
     end
     
     
@@ -1025,8 +1026,8 @@ classdef Tensor < AbstractTensor
             %   spaces remain.
             
             arguments
-                A
-                B
+                A Tensor
+                B Tensor
                 dimA
                 dimB
                 ca = false

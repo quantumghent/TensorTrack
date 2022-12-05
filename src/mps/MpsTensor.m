@@ -1,7 +1,8 @@
-classdef MpsTensor < Tensor
+classdef MpsTensor < AbstractTensor
     % Generic mps tensor objects that have a notion of virtual, physical and auxiliary legs.
     
     properties
+        var
         plegs = 1
         alegs = 0
     end
@@ -22,14 +23,9 @@ classdef MpsTensor < Tensor
                     'Input sizes incompatible.');
             end
             
-            if isempty(tensor)
-                args = {};
-            else
-                args = {full(tensor)};
-            end
-            A@Tensor(args{:});
             if ~isempty(tensor)
-                for i = numel(A):-1:1
+                for i = numel(tensor):-1:1
+                    A(i).var = tensor(i);
                     A(i).plegs = nspaces(tensor(i)) - alegs(i) - 2;
                     A(i).alegs = alegs(i);
                 end
@@ -40,6 +36,14 @@ classdef MpsTensor < Tensor
     
     %% Properties
     methods
+        function s = space(A, varargin)
+            s = space(A.var, varargin{:});
+        end
+        
+        function n = nspaces(A)
+            n = nspaces(A.var);
+        end
+        
         function s = pspace(A)
             s = space(A, 1 + (1:A.plegs));
         end
@@ -51,29 +55,135 @@ classdef MpsTensor < Tensor
         function s = rightvspace(A)
             s = space(A, nspaces(A) - A.alegs);
         end
+        
+        function cod = codomain(A)
+            cod = A.var.codomain;
+        end
+        
+        function dom = domain(A)
+            dom = A.var.domain;
+        end
+        
+        function r = rank(A)
+            r = rank([A.var]);
+        end
     end
     
     
     %% Linear Algebra
     methods
-        function [AL, L] = leftorth(A, alg)
+        function [A, L] = leftorth(A, alg)
             arguments
                 A
                 alg = 'qrpos'
             end
             
+            if numel(A) > 1
+                for i = numel(A):-1:1
+                    [A(i), L(i)] = leftorth(A, alg);
+                end
+                return
+            end
+            
             if A.alegs == 0
-                [AL, L] = leftorth@Tensor(A, 1:nspaces(A)-1, nspaces(A), alg);
+                [A.var, L] = leftorth(A.var, 1:nspaces(A)-1, nspaces(A), alg);
                 if isdual(space(L, 1)) == isdual(space(L, 2))
                     L.codomain = conj(L.codomain);
                     L = twist(L, 1);
-                    AL.domain = conj(AL.domain);
+                    A.var.domain = conj(A.var.domain);
                 end
             else
-                [AL, L] = leftorth@Tensor(A, [1:A.plegs+1 A.plegs+3], A.plegs+2, alg);
-                AL = permute(AL, [1:A.plegs+1 A.plegs+3 A.plegs+2], rank(A));
+                [A.var, L] = leftorth(A.var, [1:A.plegs+1 A.plegs+3], A.plegs+2, alg);
+                A.var = permute(A.var, [1:A.plegs+1 A.plegs+3 A.plegs+2], rank(A));
             end
-            AL = MpsTensor(AL, A.alegs);
+        end
+        
+        function A = repartition(A, r)
+            arguments
+                A
+                r = [nspaces(A)-1 1]
+            end
+            for i = 1:numel(A)
+                A(i).var = repartition(A(i).var, r);
+            end
+        end
+        
+        function A = plus(varargin)
+            for i = 1:2
+                if isa(varargin{i}, 'MpsTensor')
+                    varargin{i} = varargin{i}.var;
+                end
+            end
+            A = plus(varargin{:});
+        end
+        
+        function A = minus(varargin)
+            for i = 1:2
+                if isa(varargin{i}, 'MpsTensor')
+                    varargin{i} = varargin{i}.var;
+                end
+            end
+            A = minus(varargin{:});
+        end
+        
+        function n = norm(A)
+            n = norm([A.var]);
+        end
+        
+        function [R, A] = rightorth(A, alg)
+            arguments
+                A
+                alg = 'rqpos'
+            end
+            
+            if numel(A) > 1
+                for i = numel(A):-1:1
+                    [R(i), A(i)] = rightorth(A, alg);
+                end
+                return
+            end
+            
+            [R, A.var] = rightorth(A.var, 1, 2:nspaces(A), alg);
+            if isdual(space(R, 1)) == isdual(space(R, 2))
+                R.domain = conj(R.domain);
+                R = twist(R, 2);
+                A.var.codomain = conj(A.var.codomain);
+            end
+        end
+        
+        function t = ctranspose(t)
+            % Compute the adjoint of a tensor. This is defined as swapping the codomain and
+            % domain, while computing the adjoint of the matrix blocks.
+            %
+            % Usage
+            % -----
+            % :code:`t = ctranspose(t)`
+            % :code:`t = t'`
+            %
+            % Arguments
+            % ---------
+            % t : :class:`Tensor`
+            %   input tensor.
+            %
+            % Returns
+            % -------
+            % t : :class:`Tensor`
+            %   adjoint tensor.
+            
+            for i = 1:numel(t)
+                t(i).var = t(i).var';
+            end
+            
+            t = permute(t, ndims(t):-1:1);
+        end
+        
+        function C = tensorprod(varargin)
+            for i = 1:2
+                if isa(varargin{i}, 'MpsTensor')
+                    varargin{i} = varargin{i}.var;
+                end
+            end
+            C = tensorprod(varargin{:});
         end
         
         function [AL, CL, lambda, eta] = uniform_leftorth(A, CL, kwargs)
@@ -99,7 +209,9 @@ classdef MpsTensor < Tensor
             N = size(A, 2);
             if isempty(CL), CL = initializeC(A, circshift(A, -1)); end
             if kwargs.Normalize, CL(1) = normalize(CL(1)); end
-            A = arrayfun(@(a) MpsTensor(repartition(a, [nspaces(a)-1 1])), A);
+            for i = 1:numel(A)
+                A(i).var = repartition(A(i).var, [nspaces(A(i).var) - 1, 1]);
+            end
             AL = A;
             
             eta_best = Inf;
@@ -168,23 +280,7 @@ classdef MpsTensor < Tensor
             end
         end
         
-        function [R, AR] = rightorth(A, alg)
-            arguments
-                A
-                alg = 'rqpos'
-            end
-            
-            for i = numel(A):-1:1
-                [R(i), AR(i)] = rightorth@Tensor(A(i), 1, 2:nspaces(A(i)), alg);
-                if isdual(space(R(i), 1)) == isdual(space(R(i), 2))
-                    R(i).domain = conj(R(i).domain);
-                    R(i) = twist(R(i), 2);
-                    AR(i).codomain = conj(AR(i).codomain);
-                end
-            end
-            
-%             AR = MpsTensor(repartition(AR, rank(A)), A.alegs);
-        end
+        
         
         function [AR, CR, lambda, eta] = uniform_rightorth(A, CR, kwargs)
             arguments
@@ -223,8 +319,8 @@ classdef MpsTensor < Tensor
             
             
             for i = length(A):-1:1
-                B(i) = twist(B(i), [isdual(space(B(i), 1:2)) ~isdual(space(B(i), 3))]);
-                T(i, 1) = FiniteMpo(B(i)', {}, A(i));
+                B(i).var = twist(B(i).var, [isdual(space(B(i), 1:2)) ~isdual(space(B(i), 3))]);
+                T(i, 1) = FiniteMpo(B(i).var', {}, A(i));
             end
         end
         
@@ -353,7 +449,7 @@ classdef MpsTensor < Tensor
 %                 C = twist(C, 2);
 %             end
 %             if isdual(space(A, 1)), C = twist(C, 2); end
-            A = MpsTensor(contract(C, [-1 1], A, [1 -2 -3], 'Rank', rank(A)));
+            [A.var] = contract(C, [-1 1], [A.var], [1 -2 -3], 'Rank', rank(A));
 %             A = MpsTensor(tpermute(...
 %                 multiplyright(MpsTensor(tpermute(A, [3 2 1])), tpermute(C, [2 1])), [3 2 1]));
 %             A = MpsTensor(multiplyright(A', C')');
@@ -380,7 +476,7 @@ classdef MpsTensor < Tensor
         
         function C = initializeC(AL, AR)
             for i = length(AL):-1:1
-                C(i) = AL.eye(rightvspace(AL(i))', leftvspace(AR(i)));
+                C(i) = AL(i).var.eye(rightvspace(AL(i))', leftvspace(AR(i)));
             end
         end
         
@@ -394,6 +490,20 @@ classdef MpsTensor < Tensor
                 A(i) = embed(A(i), ...
                     NOISE_FACTOR * ...
                     normalize(A.randnc(spaces(1:r(1)), spaces(r(1)+1:end)')));
+            end
+        end
+        
+        function type = underlyingType(A)
+            type = underlyingType(A.var);
+        end
+    end
+    
+    
+    %% Converter
+    methods
+        function t = Tensor(A)
+            for i = numel(A):-1:1
+                t(i) = full(A(i).var);
             end
         end
     end
