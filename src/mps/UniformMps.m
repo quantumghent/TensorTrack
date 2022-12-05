@@ -4,10 +4,10 @@ classdef UniformMps
     %       AL(w) * C(w) = AC(w) = C(w-1) * AR(w)
     
     properties
-        AL (1,:) MpsTensor  = MpsTensor.empty(1, 0)
-        AR (1,:) MpsTensor  = MpsTensor.empty(1, 0)
-        C  (1,:) Tensor     = Tensor.empty(1, 0)
-        AC (1,:) MpsTensor  = MpsTensor.empty(1, 0)
+        AL (1,:) MpsTensor
+        AR (1,:) MpsTensor
+        C  (1,:) Tensor
+        AC (1,:) MpsTensor
     end
     
     
@@ -31,11 +31,19 @@ classdef UniformMps
                     % by default we take the input as AR, as canonicalize right
                     % orthogonalizes before left orthogonalization
                     for i = height(varargin{1}):-1:1
-                        mps(i).AR = varargin{1}(i, :);
-                        mps(i).AL = varargin{1}(i, :);
+                        mps.AR = varargin{1};
+                        mps.AL = varargin{1};
                     end
                     mps = canonicalize(mps);
                     
+                elseif iscell(varargin{1})
+                    for i = flip(1:width(varargin{1}))
+                        for j = 1:height(varargin{1})
+                            mps(j).AR(i) = varargin{1}{j, i};
+                            mps(j).AL(i) = varargin{1}{j, i};
+                        end
+                    end
+                    mps = canonicalize(mps);
                 else
                     error('Invalid constructor for UniformMps.')
                 end
@@ -43,7 +51,7 @@ classdef UniformMps
             elseif nargin == 4
                 mps.AL = varargin{1};
                 mps.AR = varargin{2};
-                mps.C = varargin{3};
+                mps.C  = varargin{3};
                 mps.AC = varargin{4};
                 
             else
@@ -66,7 +74,7 @@ classdef UniformMps
             end
             
             for w = length(pspaces):-1:1
-                A(w) = Tensor.new(fun, [vspaces(w) pspaces(w)], ...
+                A{w} = Tensor.new(fun, [vspaces(w) pspaces(w)], ...
                     vspaces(next(w, length(pspaces))));
             end
             
@@ -164,6 +172,8 @@ classdef UniformMps
                 end
             end
         end
+        
+        
         
         function mps = diagonalizeC(mps)
             for i = 1:height(mps)

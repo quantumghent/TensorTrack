@@ -22,7 +22,7 @@ classdef MatrixBlock < AbstractBlock
             if isempty(trees)
                 warning('tensors:empty', ...
                     'No fusion channels available for the given spaces.');
-                b = MatrixBlock.empty(0, 1);
+%                 b = MatrixBlock.empty(0, 1);
                 return
             end
             assert(~isempty(trees), 'tensors:empty', ...

@@ -601,11 +601,7 @@ classdef Tensor < AbstractTensor
                 mblocks2 = matrixblocks(t2(i).var);
                 qdims = qdim(mcharges);
                 for j = 1:length(mblocks1)
-                    try
                     d = d + qdims(j) * sum(conj(mblocks1{j}) .* mblocks2{j}, 'all');
-                    catch
-                        bla
-                    end
                 end
             end
         end
@@ -1026,8 +1022,8 @@ classdef Tensor < AbstractTensor
             %   spaces remain.
             
             arguments
-                A Tensor
-                B Tensor
+                A
+                B
                 dimA
                 dimB
                 ca = false
@@ -1354,6 +1350,36 @@ classdef Tensor < AbstractTensor
             end
             
             t.var = axpby(1, t.var, 0, t.var, 1:nspaces(t), med);
+        end
+        
+        function t = twistdual(t, i, inv)
+            % Twist the spaces of a tensor if they are dual.
+            %
+            % Arguments
+            % ---------
+            % t : :class:`Tensor`
+            %   input tensor.
+            %
+            % i : (1, :) int or logical
+            %   indices to twist.
+            %
+            % inv : logical
+            %   flag to indicate inverse twisting.
+            %
+            % Returns
+            % -------
+            % t : :class:`Tensor`
+            %   twisted tensor with desired rank.
+            arguments
+                t
+                i
+                inv = false
+            end
+            
+            for i = 1:numel(t)
+                i_dual = i(isdual(space(t(i), i)));
+                t(i) = twist(t(i), i_dual, inv);
+            end
         end
         
         function t = uplus(t)

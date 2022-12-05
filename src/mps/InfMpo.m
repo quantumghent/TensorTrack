@@ -214,15 +214,9 @@ classdef InfMpo
             
             H = cell(1, length(sites));
             for i = 1:length(sites)
-                gl = GL{sites(i)};
-                for j = 1:numel(gl)
-                    gl(j) = twist(gl(j), find(isdual(space(gl(j), 1))));
-                end
+                gl = twistdual(GL{sites(i)}, 1);
                 gr = GR{next(sites(i), period(mps))};
-                for j = 1:numel(gr)
-                    gr(j) = twist(gr(j), find(isdual(space(gr(j), nspaces(gr(j))))) + ...
-                        nspaces(gr(j)) - 1);
-                end
+                gr = twistdual(gr, nspaces(gr));
                 H{i} = FiniteMpo(gl, mpo.O(sites(i)), gr);
             end
         end
@@ -239,18 +233,9 @@ classdef InfMpo
             H = cell(1, length(sites));
             for i = 1:length(sites)
                 gl = GL{sites(i)};
-                for j = 1:numel(gl)
-                    if nnz(gl(j)) ~= 0
-                        gl(j) = twist(gl(j), find(isdual(space(gl(j), 1))));
-                    end
-                end
+                gl = twistdual(gl, 1);
                 gr = GR{mod1(sites(i) + 2, period(mps))};
-                for j = 1:numel(gr)
-                    if nnz(gr(j)) ~= 0
-                        gr(j) = twist(gr(j), find(isdual(space(gr(j), nspaces(gr(j))))) + ...
-                        nspaces(gr(j)) - 1);
-                    end
-                end
+                gr = twistdual(gr, nspaces(gr));
                 H{i} = FiniteMpo(gl, mpo.O(mod1(sites(i) + [0 1], period(mps))), gr);
             end
         end

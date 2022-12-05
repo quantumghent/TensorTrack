@@ -120,8 +120,9 @@ classdef Vumps < handle
             end
             
             H_AC = AC_hamiltonian(mpo, mps, GL, GR, sites);
+            AC = mps.AC(sites);
             for i = length(sites):-1:1
-                [AC(i), ~] = eigsolve(H_AC{i}, mps.AC(sites(i)), 1, alg.which, ...
+                [AC(i).var, ~] = eigsolve(H_AC{i}, mps.AC(sites(i)).var, 1, alg.which, ...
                     kwargs{:});
             end
         end

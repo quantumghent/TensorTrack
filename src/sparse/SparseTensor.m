@@ -1,4 +1,4 @@
-classdef (InferiorClasses = {?Tensor, ?MpsTensor}) SparseTensor < AbstractTensor
+classdef (InferiorClasses = {?Tensor}) SparseTensor < AbstractTensor
     % Class for multi-dimensional sparse objects.
     
     properties (Access = private)
@@ -562,7 +562,7 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor}) SparseTensor < AbstractTensor
                 t1 = t1(idx);
                 idx2 = find(t1);
                 if ~isempty(idx2)
-                    t.var = t.var(idx2) .* t1(idx2);
+                    t.var = t.var(idx2) .* full(t1(idx2));
                     t.ind = t.ind(idx2, :);
                 else
                     t.var = t.var(idx2);
@@ -610,9 +610,25 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor}) SparseTensor < AbstractTensor
             end
         end
         
-        function t = twist(t, i)
+        function t = twist(t, i, inv)
+            arguments
+                t
+                i
+                inv = false
+            end
             if nnz(t) > 0
-                t.var = twist(t.var, i);
+                t.var = twist(t.var, i, inv);
+            end
+        end
+        
+        function t = twistdual(t, i, inv)
+            arguments
+                t
+                i
+                inv = false
+            end
+            if nnz(t) > 0
+                t.var = twist(t.var, i, inv);
             end
         end
         

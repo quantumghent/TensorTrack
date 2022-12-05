@@ -1,9 +1,9 @@
-classdef MpsTensor < AbstractTensor
+classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
     % Generic mps tensor objects that have a notion of virtual, physical and auxiliary legs.
     
     properties
         var
-        plegs = 1
+        plegs
         alegs = 0
     end
     
@@ -13,22 +13,13 @@ classdef MpsTensor < AbstractTensor
         function A = MpsTensor(tensor, alegs)
             arguments
                 tensor = []
-                alegs = zeros(size(tensor))
-            end
-            
-            if isscalar(alegs) && ~isscalar(tensor)
-                alegs = repmat(alegs, size(tensor));
-            else
-                assert(isequal(size(alegs, 1:ndims(tensor)), size(tensor)), 'mps:ArgError', ...
-                    'Input sizes incompatible.');
+                alegs = 0
             end
             
             if ~isempty(tensor)
-                for i = numel(tensor):-1:1
-                    A(i).var = tensor(i);
-                    A(i).plegs = nspaces(tensor(i)) - alegs(i) - 2;
-                    A(i).alegs = alegs(i);
-                end
+                A.var = tensor;
+                A.plegs = nspaces(tensor) - alegs - 2;
+                A.alegs = alegs;
             end
         end
     end
@@ -49,11 +40,11 @@ classdef MpsTensor < AbstractTensor
         end
         
         function s = leftvspace(A)
-            s = space(A, 1);
+            s = space(A.var(1), 1);
         end
         
         function s = rightvspace(A)
-            s = space(A, nspaces(A) - A.alegs);
+            s = space(A.var(1), nspaces(A.var(1)) - A.alegs);
         end
         
         function cod = codomain(A)
@@ -98,13 +89,19 @@ classdef MpsTensor < AbstractTensor
             end
         end
         
-        function A = repartition(A, r)
-            arguments
-                A
-                r = [nspaces(A)-1 1]
+        function d = dot(A, B)
+            if isa(A, 'MpsTensor')
+                A = A.var;
             end
+            if isa(B, 'MpsTensor')
+                B = B.var;
+            end
+            d = dot(A, B);
+        end
+        
+        function A = repartition(A, varargin)
             for i = 1:numel(A)
-                A(i).var = repartition(A(i).var, r);
+                A(i).var = repartition(A(i).var, varargin{:});
             end
         end
         
@@ -128,6 +125,10 @@ classdef MpsTensor < AbstractTensor
         
         function n = norm(A)
             n = norm([A.var]);
+        end
+        
+        function A = twist(A, varargin)
+            [A.var] = twist([A.var], varargin{:});
         end
         
         function [R, A] = rightorth(A, alg)
@@ -185,6 +186,7 @@ classdef MpsTensor < AbstractTensor
             end
             C = tensorprod(varargin{:});
         end
+        
         
         function [AL, CL, lambda, eta] = uniform_leftorth(A, CL, kwargs)
             arguments
@@ -279,7 +281,6 @@ classdef MpsTensor < AbstractTensor
                 fprintf('Not converged %2d:\terror = %0.4e\n', ctr, eta);
             end
         end
-        
         
         
         function [AR, CR, lambda, eta] = uniform_rightorth(A, CR, kwargs)
@@ -499,12 +500,17 @@ classdef MpsTensor < AbstractTensor
     end
     
     
-    %% Converter
+    %% Converters
     methods
         function t = Tensor(A)
             for i = numel(A):-1:1
                 t(i) = full(A(i).var);
             end
+        end
+        
+        function t = SparseTensor(A)
+            t = reshape([A.var], size(A));
+            t = sparse(t);
         end
     end
 end
