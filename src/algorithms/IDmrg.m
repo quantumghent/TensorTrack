@@ -57,8 +57,8 @@ classdef IDmrg
                 lambdas = zeros(1, period(mps));
                 for pos = 1:period(mps)
                     H = AC_hamiltonian(mpo, mps, GL, GR, pos);
-                    [mps.AC(pos), lambdas(pos)] = ...
-                        eigsolve(H{1}, mps.AC(pos), 1, alg.which, kwargs{:});
+                    [mps.AC(pos).var, lambdas(pos)] = ...
+                        eigsolve(H{1}, mps.AC(pos).var, 1, alg.which, kwargs{:});
                     [mps.AL(pos), mps.C(pos)] = leftorth(mps.AC(pos));
                     
                     T = transfermatrix(mpo, mps, mps, pos, 'Type', 'LL');
@@ -67,8 +67,8 @@ classdef IDmrg
                 
                 for pos = period(mps):-1:1
                     H = AC_hamiltonian(mpo, mps, GL, GR, pos);
-                    [mps.AC(pos), lambdas(pos)] = ...
-                        eigsolve(H{1}, mps.AC(pos), 1, alg.which, kwargs{:});
+                    [mps.AC(pos).var, lambdas(pos)] = ...
+                        eigsolve(H{1}, mps.AC(pos).var, 1, alg.which, kwargs{:});
                     [mps.C(prev(pos, period(mps))), mps.AR(pos)] = rightorth(mps.AC(pos));
                     
                     T = transfermatrix(mpo, mps, mps, pos, 'Type', 'RR').';

@@ -296,14 +296,12 @@ classdef UniformMps
             if isa(O, 'InfJMpo')
                 [GL, GR] = environments(O, mps1, mps2);
                 H = AC_hamiltonian(O, mps1, GL, GR);
-                E = zeros(size(H));
-                for i = 1:length(H)
-                    N = size(H{i}.R, 2);
-                    H{i}.R = H{i}.R(1, N, 1);
-                    H{i}.O{1} = H{i}.O{1}(:, :, N, :);
-                    AC_ = apply(H{i}, mps1.AC(i));
-                    E(i) = dot(AC_, mps2.AC(i));
-                end
+                i = length(H);
+                N = size(H{i}.R.var, 2);
+                H{i}.R.var = H{i}.R.var(1, N, 1);
+                H{i}.O{1} = H{i}.O{1}(:, :, N, :);
+                AC_ = apply(H{i}, mps1.AC(i));
+                E = dot(AC_, mps2.AC(i));
                 
             elseif isa(O, 'InfMpo')
                 [GL, GR] = environments(O, mps1, mps2);

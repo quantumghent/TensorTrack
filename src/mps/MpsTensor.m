@@ -16,6 +16,13 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
                 alegs = 0
             end
             
+            if iscell(tensor)
+                for i = length(tensor):-1:1
+                    A(i) = MpsTensor(tensor{i});
+                end
+                return
+            end
+            
             if ~isempty(tensor)
                 A.var = tensor;
                 A.plegs = nspaces(tensor) - alegs - 2;
@@ -209,7 +216,7 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
             
             % initialization
             N = size(A, 2);
-            if isempty(CL), CL = initializeC(A, circshift(A, -1)); end
+            if isempty(CL), CL = initializeC(A, A); end
             if kwargs.Normalize, CL(1) = normalize(CL(1)); end
             for i = 1:numel(A)
                 A(i).var = repartition(A(i).var, [nspaces(A(i).var) - 1, 1]);
@@ -305,10 +312,10 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
                 Cd = circshift(flip(arrayfun(@ctranspose, CR)), -1);
             end
             
-            [AR, CR, lambda, eta] = uniform_leftorth(Ad, Cd, opts{:});
+            [ARd, CRd, lambda, eta] = uniform_leftorth(Ad, Cd, opts{:});
             
-            AR = flip(arrayfun(@ctranspose, AR));
-            CR  = flip(circshift(arrayfun(@ctranspose, CR), 1));
+            AR = flip(arrayfun(@ctranspose, ARd));
+            CR  = circshift(flip(arrayfun(@ctranspose, CRd)), -1);
             lambda = conj(lambda);
         end
         
@@ -477,7 +484,7 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
         
         function C = initializeC(AL, AR)
             for i = length(AL):-1:1
-                C(i) = AL(i).var.eye(rightvspace(AL(i))', leftvspace(AR(i)));
+                C(i) = AL(i).var.eye(rightvspace(AL(i))', leftvspace(AR(next(i, length(AR)))));
             end
         end
         
