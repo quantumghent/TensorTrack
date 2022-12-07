@@ -1767,7 +1767,11 @@ classdef Tensor < AbstractTensor
             % Keyword Arguments
             % -----------------
             % TruncDim : int
-            %   truncate such that the size of S is not larger than this value.
+            %   truncate such that the dim of S is not larger than this value for any given
+            %   charge.
+            %
+            % TruncTotalDim : int
+            %   truncate such that the total dim of S is not larger than this value. 
             %
             % TruncBelow : numeric
             %   truncate such that there are no singular values below this value.
@@ -1789,6 +1793,7 @@ classdef Tensor < AbstractTensor
                 p1 = 1:t.rank(1)
                 p2 = t.rank(1) + (1:t.rank(2))
                 trunc.TruncDim
+                trunc.TruncTotalDim
                 trunc.TruncBelow
                 trunc.TruncSpace
             end
@@ -1822,6 +1827,23 @@ classdef Tensor < AbstractTensor
                     Us{i} = Us{i}(:, 1:dims.degeneracies(i));
                     Ss{i} = diag(s(1:dims.degeneracies(i)));
                     Vs{i} = Vs{i}(1:dims.degeneracies(i), :);
+                end
+            end
+            if isfield(trunc, 'TruncTotalDim')
+                qdims = qdim(dims.charges);
+                totaldim = sum(dims.degeneracies .* qdims);
+                minvals = cellfun(@(x) min(diag(x)), Ss);
+                while totaldim > trunc.TruncTotalDim
+                    [~, i] = min(minvals);
+                    eta = eta + Ss{i}(end, end);
+                    dims.degeneracies(i) = dims.degeneracies(i) - 1;
+                    Ss{i} = Ss{i}(1:end-1, 1:end-1);
+                    if dims.degeneracies(i) > 0
+                        minvals(i) = Ss{i}(end,end);
+                    else
+                        minvals(i) = Inf;
+                    end
+                    totaldim = totaldim - qdims(i);
                 end
             end
             if isfield(trunc, 'TruncDim')
