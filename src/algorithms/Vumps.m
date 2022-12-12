@@ -12,10 +12,10 @@ classdef Vumps < handle
         
         dynamical_tols = true
         tol_min                 = 1e-12
-        tol_max                 = 1e-6
-        eigs_tolfactor          = 1e-4
+        tol_max                 = 1e-10
+        eigs_tolfactor          = 1e-6
         canonical_tolfactor     = 1e-8
-        environments_tolfactor  = 1e-4
+        environments_tolfactor  = 1e-6
         
         multiAC = 'parallel'
         dynamical_multiAC = false;
@@ -122,7 +122,7 @@ classdef Vumps < handle
             H_AC = AC_hamiltonian(mpo, mps, GL, GR, sites);
             AC = mps.AC(sites);
             for i = length(sites):-1:1
-                [AC(i).var, ~] = eigsolve(H_AC{i}, mps.AC(sites(i)).var, 1, alg.which, ...
+                [AC(i).var, ~] = eigsolve(H_AC{i}, AC(sites(i)).var, 1, alg.which, ...
                     kwargs{:});
             end
         end
@@ -150,8 +150,8 @@ classdef Vumps < handle
             end
             
             for i = length(AC):-1:1
-                [Q_AC, ~] = leftorth(AC(i));
-                [Q_C, ~]  = leftorth(C(i), 1, 2);
+                [Q_AC, ~] = leftorth(AC(i), 'polar');
+                [Q_C, ~]  = leftorth(C(i), 1, 2, 'polar');
                 mps.AL(sites(i)) = multiplyright(Q_AC, Q_C');
             end
             
@@ -199,12 +199,12 @@ classdef Vumps < handle
     methods
         function alg = updatetols(alg, iter, eta)
             if alg.dynamical_tols
-                alg.alg_eigs.Tol = between(alg.tol_min, eta * alg.eigs_tolfactor, ...
-                    alg.tol_max / iter);
+                alg.alg_eigs.Tol = between(alg.tol_min, eta * alg.eigs_tolfactor / iter, ...
+                    alg.tol_max);
                 alg.alg_canonical.Tol = between(alg.tol_min, ...
-                    eta * alg.canonical_tolfactor, alg.tol_max / iter);
+                    eta * alg.canonical_tolfactor / iter, alg.tol_max);
                 alg.alg_environments.Tol = between(alg.tol_min, ...
-                    eta * alg.environments_tolfactor, alg.tol_max / iter);
+                    eta * alg.environments_tolfactor / iter, alg.tol_max);
                 
                 if alg.verbosity > Verbosity.iter
                     fprintf('Updated subalgorithm tolerances: (%e,\t%e,\t%e)\n', ...

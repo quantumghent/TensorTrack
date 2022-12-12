@@ -28,8 +28,9 @@ classdef TestInfJMpo < matlab.unittest.TestCase
             
             H_AC = AC_hamiltonian(mpo, mps, GL, GR);
             for i = 1:numel(H_AC)
-                [AC_, lambda] = eigsolve(H_AC{i}, mps.AC(i), 1, 'largestabs');
-                tc.assertTrue(isapprox(apply(H_AC{i}, AC_), lambda * AC_));
+                AC_ = mps.AC(i);
+                [AC_.var, lambda] = eigsolve(H_AC{i}, mps.AC(i).var, 1, 'largestabs');
+                tc.assertTrue(isapprox(apply(H_AC{i}, AC_), lambda * AC_.var));
             end
             
             H_C = C_hamiltonian(mpo, mps, GL, GR);

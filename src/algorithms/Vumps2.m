@@ -12,14 +12,14 @@ classdef Vumps2 < handle
         
         dynamical_tols          = true
         tol_min                 = 1e-12
-        tol_max                 = 1e-6
-        eigs_tolfactor          = 1e-4
+        tol_max                 = 1e-7
+        eigs_tolfactor          = 1e-6
         canonical_tolfactor     = 1e-8
-        environments_tolfactor  = 1e-4
+        environments_tolfactor  = 1e-6
         
-        trunc                   = {'TruncDim', 100}
+        trunc                   = {'TruncTotalDim', 100}
         
-        multiAC                 = 'parallel'
+        multiAC {mustBeMember(multiAC, {'sequential'})} = 'sequential'
         dynamical_multiAC       = false;
         tol_multiAC = Inf
 
@@ -125,7 +125,6 @@ classdef Vumps2 < handle
                 sites = 1:period(mps);
                 sites = sites(mod(sites, 2) == mod(iter, 2));
             end
-            
             H_AC2 = AC2_hamiltonian(mpo, mps, GL, GR, sites);
             for i = length(sites):-1:1
                 AC2 = MpsTensor(contract(mps.AC(sites(i)), [-1 -2 1], ...
@@ -142,9 +141,9 @@ classdef Vumps2 < handle
                 sites = mod1(iter, period(mps));
             else
                 sites = 1:period(mps);
-                sites = next(sites(mod(sites, 2) == mod(iter, 2)), period(mps));
+                sites = sites(mod(sites, 2) == mod(iter, 2));
             end
-            
+            sites = next(sites, period(mps));
             H_C = C_hamiltonian(mpo, mps, GL, GR, sites);
             for i = length(sites):-1:1
                 [C(i), ~] = eigsolve(H_C{i}, mps.C(sites(i)), 1, alg.which, ...
@@ -159,10 +158,9 @@ classdef Vumps2 < handle
                 sites = 1:period(mps);
                 sites = sites(mod(sites, 2) == mod(iter, 2));
             end
-            
             for i = length(AC2):-1:1
-                [Q_AC, ~] = leftorth(AC2(i));
-                [Q_C, ~]  = leftorth(C(i), 1, 2);
+                [Q_AC, ~] = leftorth(AC2(i), 'polar');
+                [Q_C, ~]  = leftorth(C(i), 1, 2, 'polar');
                 AL = multiplyright(Q_AC, Q_C');
                 [AL1, C, AL2] = tsvd(AL.var, [1 2], [3 4], alg.trunc{:});
                 mps.AL(sites(i)) = multiplyright(MpsTensor(AL1), C);
