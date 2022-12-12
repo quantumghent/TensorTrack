@@ -1807,7 +1807,7 @@ classdef Tensor < AbstractTensor
             dims.degeneracies = zeros(size(mblocks));
             
             doTrunc = ~isempty(fieldnames(trunc));
-            if doTrunc, eta = 0; end
+            eta = 0;
             for i = 1:length(mblocks)
                 if doTrunc
                     [Us{i}, Ss{i}, Vs{i}] = svd(mblocks{i}, 'econ');
@@ -1822,7 +1822,7 @@ classdef Tensor < AbstractTensor
                 for i = 1:length(mblocks)
                     s = diag(Ss{i});
                     dims.degeneracies(i) = sum(s > trunc.TruncBelow);
-                    eta = eta + sum(s(dims.degeneracies(i) + 1:end));
+                    eta = eta + sum(s(dims.degeneracies(i) + 1:end).^2 * qdim(dims.charges(i)));
                     Us{i} = Us{i}(:, 1:dims.degeneracies(i));
                     Ss{i} = diag(s(1:dims.degeneracies(i)));
                     Vs{i} = Vs{i}(1:dims.degeneracies(i), :);
@@ -1834,8 +1834,10 @@ classdef Tensor < AbstractTensor
                 minvals = cellfun(@(x) min(diag(x)), Ss);
                 while totaldim > trunc.TruncTotalDim
                     [~, i] = min(minvals);
-                    eta = eta + Ss{i}(end, end);
+                    eta = eta + Ss{i}(end, end)^2 * qdims(i);
                     dims.degeneracies(i) = dims.degeneracies(i) - 1;
+                    Us{i} = Us{i}(:, 1:end-1);
+                    Vs{i} = Vs{i}(1:end-1, :);
                     Ss{i} = Ss{i}(1:end-1, 1:end-1);
                     if dims.degeneracies(i) > 0
                         minvals(i) = Ss{i}(end,end);
@@ -1849,10 +1851,10 @@ classdef Tensor < AbstractTensor
                 for i = 1:length(mblocks)
                     dims.degeneracies(i) = min(dims.degeneracies(i), trunc.TruncDim);
                     s = diag(Ss{i});
-                    eta = eta + sum(s(dims.degeneracies(i) + 1:end));
+                    eta = eta + sum(s(dims.degeneracies(i) + 1:end).^2 * qdim(dims.charges(i)));
                     Us{i} = Us{i}(:, 1:dims.degeneracies(i));
                     Ss{i} = diag(s(1:dims.degeneracies(i)));
-                    Vs{i} = Vs{i}(1:1:dims.degeneracies(i), :);
+                    Vs{i} = Vs{i}(1:dims.degeneracies(i), :);
                 end
             end
             if isfield(trunc, 'TruncSpace')
@@ -1888,6 +1890,7 @@ classdef Tensor < AbstractTensor
             if nargout <= 1
                 U = S;
             end
+            eta = sqrt(eta);
         end
     end
     

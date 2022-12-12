@@ -305,7 +305,7 @@ classdef TestTensor < matlab.unittest.TestCase
         end
         
         function singularvalues(tc, spaces)
-            t = Tensor.randnc(spaces, []);
+            t = normalize(Tensor.randc(spaces, []));
             [U, S, V] = tsvd(t, [3 4 2], [1 5]);
             assertTrue(tc, isapprox(tpermute(t, [3 4 2 1 5], [3 2]), U * S * V), ...
                 'USV should be a factorization.');
@@ -315,6 +315,32 @@ classdef TestTensor < matlab.unittest.TestCase
                 'V should be an isometry.');
             
             %% truncation
+            d = max(cellfun(@(x) min(size(x, 1), size(x, 2)), matrixblocks(S)));
+            [Utrunc, Strunc, Vtrunc, eta] = tsvd(t, [3 4 2], [1 5], 'TruncDim', d-1);
+            assertTrue(tc, isapprox(norm(tpermute(t, [3 4 2 1 5], [3 2]) - ...
+                Utrunc * Strunc * Vtrunc), eta, 'AbsTol', 1e-10, 'RelTol', 1e-6));
+            assertTrue(tc, isisometry(U, 'left'));
+            assertTrue(tc, isisometry(V, 'right'));
+            d2 = max(cellfun(@(x) max(size(x, 1), size(x, 2)), matrixblocks(Strunc)));
+            assertTrue(tc, d2 <= ceil(0.95*d));
+            
+            d = min(dims(S, 1:2));
+            [Utrunc, Strunc, Vtrunc, eta] = tsvd(t, [3 4 2], [1 5], 'TruncTotalDim', ceil(0.9*d));
+            assertTrue(tc, isapprox(norm(tpermute(t, [3 4 2 1 5], [3 2]) - ...
+                Utrunc * Strunc * Vtrunc), eta, 'AbsTol', 1e-10, 'RelTol', 1e-6));
+            assertTrue(tc, isisometry(U, 'left'));
+            assertTrue(tc, isisometry(V, 'right'));
+            d2 = max(dims(Strunc, 1:2));
+            assertTrue(tc, d2 <= ceil(0.9*d));
+            
+            s = min(cellfun(@(x) min(diag(x), [], 'all'), matrixblocks(S)));
+            [Utrunc, Strunc, Vtrunc, eta] = tsvd(t, [3 4 2], [1 5], 'TruncBelow', s * 1.2);
+            assertTrue(tc, isapprox(norm(tpermute(t, [3 4 2 1 5], [3 2]) - ...
+                Utrunc * Strunc * Vtrunc), eta, 'AbsTol', 1e-10, 'RelTol', 1e-6));
+            assertTrue(tc, isisometry(U, 'left'));
+            assertTrue(tc, isisometry(V, 'right'));
+            s2 = min(cellfun(@(x) min(diag(x)), matrixblocks(Strunc)));
+            assertTrue(tc, s * 1.2 <= s2);
             
         end
         
