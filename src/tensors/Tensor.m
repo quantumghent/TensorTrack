@@ -1375,9 +1375,9 @@ classdef Tensor < AbstractTensor
                 inv = false
             end
             
-            for i = 1:numel(t)
-                i_dual = i(isdual(space(t(i), i)));
-                t(i) = twist(t(i), i_dual, inv);
+            for j = 1:numel(t)
+                i_dual = i(isdual(space(t(j), i)));
+                t(j) = twist(t(j), i_dual, inv);
             end
         end
         
