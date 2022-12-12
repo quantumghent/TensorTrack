@@ -33,6 +33,10 @@ classdef Z1 < AbstractCharge
             C = 1;
         end
         
+        function s = GetMD5_helper(data)
+            s = uint8(0);
+        end
+        
         function a = intersect(a, ~)
         end
         

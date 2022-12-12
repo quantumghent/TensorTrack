@@ -1,5 +1,5 @@
 classdef UniformMps
-    %UNIFORMMPS Implementation of infinite translation invariant MPS
+    % UniformMps - Implementation of infinite translation invariant MPS
     %   MPS is stored in center gauge, where
     %       AL(w) * C(w) = AC(w) = C(w-1) * AR(w)
     
@@ -74,6 +74,14 @@ classdef UniformMps
             end
             
             for w = length(pspaces):-1:1
+                if vspaces(w) * pspaces(w) < vspaces(next(w, length(pspaces)))
+                    error('mps:rank', ...
+                        'Cannot create a full rank mps with given spaces.');
+                end
+                if vspaces(w) > pspaces(w) * vspaces(next(w, length(pspaces)))
+                    error('mps:rank', ...
+                        'Cannot create a full rank mps with given spaces.');
+                end
                 A{w} = Tensor.new(fun, [vspaces(w) pspaces(w)], ...
                     vspaces(next(w, length(pspaces))));
             end

@@ -275,6 +275,14 @@ classdef (Abstract) AbstractSpace
             error('tensors:AbstractMethod', 'This method should be overloaded.');
         end
         
+        function bool = lt(space1, space2)
+            bool = ~ge(space1, space2);
+        end
+        
+        function bool = gt(space1, space2)
+            bool = ~le(space1, space2);
+        end
+        
         function bool = isequal(spaces)
             % Check whether all input spaces are equal. Spaces are considered equal if they
             % are of same size, and are equal element-wise. For convenience, empty spaces

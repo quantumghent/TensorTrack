@@ -1,5 +1,5 @@
 classdef IDmrg2
-    % Infinite Density Matrix Renormalization Group algorithm
+    % Infinite Density Matrix Renormalization Group algorithm with 2-site updates.
     
     properties
         tol = 1e-10
@@ -21,12 +21,10 @@ classdef IDmrg2
         saveIterations = false
         saveMethod = 'full'
         name = 'IDmrg2'
-        
     end
     
     properties (Access = private)
         alg_eigs = struct('MaxIter', 100, 'KrylovDim', 20)
-        
         progressfig
     end
     

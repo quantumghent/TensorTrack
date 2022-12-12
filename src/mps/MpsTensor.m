@@ -18,7 +18,7 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
             
             if iscell(tensor)
                 for i = length(tensor):-1:1
-                    A(i) = MpsTensor(tensor{i});
+                    A(i) = MpsTensor(tensor{i}, alegs);
                 end
                 return
             end
@@ -73,7 +73,7 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
         function [A, L] = leftorth(A, alg)
             arguments
                 A
-                alg = 'qrpos'
+                alg = 'polar'
             end
             
             if numel(A) > 1

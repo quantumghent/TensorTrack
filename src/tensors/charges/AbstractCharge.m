@@ -746,10 +746,4 @@ classdef (Abstract) AbstractCharge
             end
         end
     end
-    
-    methods
-%         bool = issortedrows(A)
-%         bools = ne(A, B)
-%         [B, I] = sort(A, varargin)
-    end
 end

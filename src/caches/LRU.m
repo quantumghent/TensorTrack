@@ -92,7 +92,7 @@ classdef LRU < handle
                 dll_old = cache.map(key);
                 pop(dll_old);
                 cache.mem = cache.mem - memsize(dll_old.val{2}, 'B');
-                cache.map.(key);
+                cache.map.remove(key);
             end
             
             % add new data

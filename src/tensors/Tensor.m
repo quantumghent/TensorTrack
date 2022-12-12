@@ -1,6 +1,5 @@
 classdef Tensor < AbstractTensor
-    %TENSOR Summary of this class goes here
-    %   Detailed explanation goes here
+    % Tensor - Base implementation of a dense tensor array with optional symmetries.
     
     properties
         codomain

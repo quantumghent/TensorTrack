@@ -221,6 +221,10 @@ classdef O2 < AbstractCharge
             end
         end
         
+        function s = GetMD5_helper(data)
+            s = [data.j] + [data.s];
+        end
+        
         function bool = issortedrows(A)
             bool = issortedrows(reshape([A.j] + [A.s], size(A)));
         end
