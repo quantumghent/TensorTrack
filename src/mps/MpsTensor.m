@@ -134,6 +134,10 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
             n = norm([A.var]);
         end
         
+        function A = conj(A)
+            [A.var] = conj([A.var]);
+        end
+
         function A = twist(A, varargin)
             [A.var] = twist([A.var], varargin{:});
         end
