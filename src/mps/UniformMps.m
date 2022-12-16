@@ -1,7 +1,22 @@
 classdef UniformMps
     % UniformMps - Implementation of infinite translation invariant MPS
-    %   MPS is stored in center gauge, where
-    %       AL(w) * C(w) = AC(w) = C(w-1) * AR(w)
+    %
+    % The center gauge is defined to have:
+    %   :math:`AL_w * C_w = AC_w = C_{w-1} * AR_w`
+    %
+    % Properties
+    % ----------
+    % AL : :class:`MpsTensor`
+    %   left-gauged mps tensors.
+    %
+    % AR : :class:`MpsTensor`
+    %   right-gauged mps tensors.
+    %
+    % C : :class:`Tensor`
+    %   center gauge transform.
+    %
+    % AC : :class:`MpsTensor`
+    %   center-gauged mps tensors.
     
     properties
         AL (1,:) MpsTensor
@@ -14,6 +29,27 @@ classdef UniformMps
     %% Constructors
     methods
         function mps = UniformMps(varargin)
+            % Usage
+            % -----
+            % :code:`mps = UniformMps(A)`
+            %
+            % :code:`mps = UniformMps(AL, AR, C [, AC])`
+            %
+            % Arguments
+            % ---------
+            % A : :class:`MpsTensor` or :class:`PeriodicCell`
+            %   set of tensors per site that define an MPS to be gauged.
+            %
+            % AL, AR, AC : :class:`MpsTensor` or :class:`PeriodicCell`
+            %   set of gauged MpsTensors.
+            %
+            % C : :class:`Tensor`
+            %   gauge tensor.
+            %
+            % Returns
+            % -------
+            % mps : :class:`UniformMps`
+            %   gauged uniform MPS.
             
             if nargin == 0, return; end % default empty constructor
             
@@ -48,6 +84,11 @@ classdef UniformMps
                     error('Invalid constructor for UniformMps.')
                 end
                 
+            elseif nargin == 3
+                mps.AL = varargin{1};
+                mps.AR = varargin{2};
+                mps.C  = varargin{3};
+                
             elseif nargin == 4
                 mps.AL = varargin{1};
                 mps.AR = varargin{2};
@@ -62,35 +103,65 @@ classdef UniformMps
     
     methods (Static)
         function mps = new(fun, pspaces, vspaces)
-            if isempty(fun), fun = @randnc; end
+            % Create a uniform matrix product state with data using a function handle.
+            %
+            % Usage
+            % -----
+            % :code:`UniformMps.new(fun, pspaces, vspaces)`
+            %
+            % Arguments
+            % ---------
+            % fun : :class:`function_handle`
+            %   function to initialize the tensor.
+            %
+            % Repeating Aruguments
+            % --------------------
+            % pspaces : :class:`AbstractSpace`
+            %   physical spaces for each site.
+            %
+            % vspaces : :class:`AbstractSpace`
+            %   virtual spaces between each site. (entry `i` corresponds to left of site
+            %   `i`.)
             
-            if isscalar(pspaces) && ~isscalar(vspaces)
-                pspaces = repmat(pspaces, size(vspaces));
-            elseif isscalar(vspaces) && ~isscalar(pspaces)
-                vspaces = repmat(vspaces, size(pspaces));
-            else
-                assert(isequal(size(vspaces), size(pspaces)), 'mps:dimagree', ...
-                    'Invalid sizes of input spaces.');
+            arguments
+                fun = []
+            end
+            arguments (Repeating)
+                pspaces
+                vspaces
             end
             
+            if isempty(fun), fun = @randnc; end
+            L = length(pspaces);
+            
             for w = length(pspaces):-1:1
-                if vspaces(w) * pspaces(w) < vspaces(next(w, length(pspaces)))
+                rankdefficient = vspaces{w} * pspaces{w} < vspaces{next(w, L)} || ...
+                        vspaces{w} > pspaces{w} * vspaces{next(w, L)};
+                if rankdefficient
                     error('mps:rank', ...
                         'Cannot create a full rank mps with given spaces.');
                 end
-                if vspaces(w) > pspaces(w) * vspaces(next(w, length(pspaces)))
-                    error('mps:rank', ...
-                        'Cannot create a full rank mps with given spaces.');
-                end
-                A{w} = Tensor.new(fun, [vspaces(w) pspaces(w)], ...
-                    vspaces(next(w, length(pspaces))));
+                
+                A{w} = Tensor.new(fun, [vspaces{w} pspaces{w}], ...
+                    vspaces{next(w, L)});
             end
             
             mps = UniformMps(A);
         end
         
         function mps = randnc(pspaces, vspaces)
-            mps = UniformMps.new(@randnc, pspaces, vspaces);
+            % Create a uniform matrix product state with random entries.
+            %
+            % See Also
+            % --------
+            % :method:`UniformMps.new`
+            
+            arguments (Repeating)
+                pspaces
+                vspaces
+            end
+            args = [pspaces; vspaces];
+            mps = UniformMps.new(@randnc, args{:});
         end
     end
     
@@ -98,12 +169,14 @@ classdef UniformMps
     %% Properties
     methods
         function p = period(mps)
+            % period over which the mps is translation invariant.
             for i = numel(mps):-1:1
                 p(i) = length(mps(i).AL);
             end
         end
         
         function d = depth(mps)
+            % amount of lines in a multi-line mps.
             d = size(mps, 1);
         end
         
@@ -116,11 +189,18 @@ classdef UniformMps
         end
         
         function s = leftvspace(mps, w)
+            % return the virtual space to the left of site w.
             if nargin == 1 || isempty(w), w = 1:period(mps); end
             s = arrayfun(@leftvspace, mps.AL(w));
         end
         
+        function s = pspace(mps, w)
+            % return the physical space at site w.
+            s = pspace(mps.AL(w));
+        end
+        
         function s = rightvspace(mps, w)
+            % return the virtual space to the right of site w.
             if nargin == 1 || isempty(w), w = 1:period(mps); end
             s = arrayfun(@rightvspace, mps.AL(w));
         end
@@ -134,6 +214,43 @@ classdef UniformMps
     %% Methods
     methods
         function [mps, lambda] = canonicalize(mps, kwargs)
+            % Compute the center-gauged form of an mps.
+            %
+            % Usage
+            % -----
+            % :code:`[mps, lambda] = canonicalize(mps, kwargs)`
+            %
+            % Arguments
+            % ---------
+            % mps : :class:`UniformMps`
+            %   input mps, from which AL or AR is used as the state, and optionally C as an
+            %   initial guess for the gauge.
+            %
+            % Keyword Arguments
+            % -----------------
+            % Tol : numeric
+            %   tolerance for the algorithm.
+            %
+            % MaxIter : integer
+            %   maximum amount of iterations.
+            %
+            % Method : char
+            %   algorithm used for decomposition. Must be 'polar', 'qr' or 'qrpos'.
+            %
+            % Verbosity : :class:`Verbosity`
+            %   level of output.
+            %
+            % DiagC : logical
+            %   flag to indicate if `C` needs to be diagonalized.
+            %
+            % ComputeAC : logical
+            %   flag to indicate if `AC` needs to be computed.
+            %
+            % Order : 'lr' or 'rl'
+            %   order of gauge fixing:
+            %       'lr' uses AL as input tensors, first leftorth, then rightorth.
+            %       'rl' uses AR as input tensors, first rightorth, then leftorth.
+            
             arguments
                 mps
                 kwargs.Tol = eps(underlyingType(mps))^(3/4)
@@ -171,6 +288,7 @@ classdef UniformMps
             if kwargs.DiagC
                 mps = diagonalizeC(mps);
             end
+            
             if kwargs.ComputeAC
                 for i = 1:height(mps)
                     for w = period(mps(i)):-1:1
@@ -181,9 +299,9 @@ classdef UniformMps
             end
         end
         
-        
-        
         function mps = diagonalizeC(mps)
+            % gauge transform an mps such that C is diagonal.
+            
             for i = 1:height(mps)
                 for w = 1:period(mps(i))
                     C_iw = mps(i).C(w);
@@ -214,11 +332,43 @@ classdef UniformMps
         end
         
         function mps = normalize(mps)
+            % normalize an mps state.
+            
             mps.C = arrayfun(@normalize, mps.C);
             mps.AC = arrayfun(@normalize, mps.AC);
         end
         
         function T = transfermatrix(mps1, mps2, sites, kwargs)
+            % A finite matrix product operator that represents the transfer matrix of an
+            % mps.
+            %
+            % Usage
+            % -----
+            % :code:`T = transfermatrix(mps1, mps2, sites, kwargs)`
+            %
+            % Arguments
+            % ---------
+            % mps1 : :class:`UniformMps`
+            %   input mps for top layer.
+            %
+            % mps2 : :class:`UniformMps`
+            %   input mps for bottom layer, by default equal to the top.
+            %
+            % sites : integer
+            %   optionally slice the unit cell of the mps and only define the transfer
+            %   matrix for this slice.
+            %
+            % Keyword Arguments
+            % -----------------
+            % Type : char
+            %   'LL', 'LR', 'RL', 'RR' to determine if the top or bottom respectively are AL
+            %   or AR.
+            %
+            % Returns
+            % -------
+            % T : FiniteMpo
+            %   transfer matrix of an mps, acting to the left.
+            
             arguments
                 mps1
                 mps2 = mps1
@@ -240,6 +390,64 @@ classdef UniformMps
             end
             
             T = transfermatrix(A1, A2);
+        end
+        
+        function rho = fixedpoint(mps, type, w)
+            % compute the fixed point of the transfer matrix of an mps.
+            %
+            % Usage
+            % -----
+            % :code:`rho = fixedpoint(mps, type, w)`
+            %
+            % Arguments
+            % ---------
+            % mps : :class:`UniformMps`
+            %   input state.
+            %
+            % type : char
+            %   specification of the type of transfer matrix: 
+            %   general format: sprintf(%c_%c%c, side, top, bot) where side is 'l' or 'r' to
+            %   determine which fixedpoint, and top and bot are 'L' or 'R' to specify
+            %   whether to use AL or AR in the transfer matrix.
+            %
+            % w : integer
+            %   position within the mps unitcell of the fixed point.
+            
+            arguments
+                mps
+                type {mustBeMember(type, ...
+                    {'l_LL' 'l_LR' 'l_RL' 'l_RR' 'r_LL' 'r_LR' 'r_RL' 'r_RR'})}
+                w = strcmp(type(1), 'l') * 1 + strcmp(type(1), 'r') * period(mps)
+            end
+            
+            ww = prev(w, period(mps));
+            switch type
+                case 'l_RR'
+                    rho = contract(mps.C(ww)', [-1 1], mps.C(ww), [1 -2], 'Rank', [1 1]);
+%                     if isdual(space(rho, 1)), rho = twist(rho, 1); end
+                case 'l_RL'
+                    rho = mps.C(ww);
+%                     if isdual(space(rho, 1)), rho = twist(rho, 1); end
+                case 'l_LR'
+                    rho = mps.C(ww)';
+%                     if isdual(space(rho, 1)), rho = twist(rho, 1); end
+                case 'l_LL'
+                    rho = mps.C.eye(leftvspace(mps, w), leftvspace(mps, w));
+                    if isdual(space(rho, 1)), rho = twist(rho, 1); end
+                    
+                case 'r_RR'
+                    rho = mps.C.eye(rightvspace(mps, w)', rightvspace(mps, w)');
+                    if isdual(space(rho, 2)), rho = twist(rho, 2); end
+                case 'r_RL'
+                    rho = twist(mps.C(w)', 2);
+%                     if isdual(space(rho, 1)), rho = twist(rho, 2); end
+                case 'r_LR'
+                    rho = twist(mps.C(w), 2);
+%                     if ~isdual(space(rho, 2)), rho = twist(rho, 2); end
+                case 'r_LL'
+                    rho = contract(mps.C(w), [-1 1], mps.C(w)', [1 -2], 'Rank', [1 1]);
+                    rho = twist(rho, 2);
+            end
         end
         
         function [V, D] = transfereigs(mps1, mps2, howmany, which, eigopts, kwargs)
@@ -327,43 +535,6 @@ classdef UniformMps
             end
         end
         
-        function rho = fixedpoint(mps, type, w)
-            arguments
-                mps
-                type {mustBeMember(type, ...
-                    {'l_LL' 'l_LR' 'l_RL' 'l_RR' 'r_LL' 'r_LR' 'r_RL' 'r_RR'})}
-                w = strcmp(type(1), 'l') * 1 + strcmp(type(1), 'r') * period(mps)
-            end
-            ww = prev(w, period(mps));
-            switch type
-                case 'l_RR'
-                    rho = contract(mps.C(ww)', [-1 1], mps.C(ww), [1 -2], 'Rank', [1 1]);
-%                     if isdual(space(rho, 1)), rho = twist(rho, 1); end
-                case 'l_RL'
-                    rho = mps.C(ww);
-%                     if isdual(space(rho, 1)), rho = twist(rho, 1); end
-                case 'l_LR'
-                    rho = mps.C(ww)';
-%                     if isdual(space(rho, 1)), rho = twist(rho, 1); end
-                case 'l_LL'
-                    rho = mps.C.eye(leftvspace(mps, w), leftvspace(mps, w));
-                    if isdual(space(rho, 1)), rho = twist(rho, 1); end
-                    
-                case 'r_RR'
-                    rho = mps.C.eye(rightvspace(mps, w)', rightvspace(mps, w)');
-                    if isdual(space(rho, 2)), rho = twist(rho, 2); end
-                case 'r_RL'
-                    rho = twist(mps.C(w)', 2);
-%                     if isdual(space(rho, 1)), rho = twist(rho, 2); end
-                case 'r_LR'
-                    rho = twist(mps.C(w), 2);
-%                     if ~isdual(space(rho, 2)), rho = twist(rho, 2); end
-                case 'r_LL'
-                    rho = contract(mps.C(w), [-1 1], mps.C(w)', [1 -2], 'Rank', [1 1]);
-                    rho = twist(rho, 2);
-            end
-        end
-        
         function [svals, charges] = schmidt_values(mps, w)
             arguments
                 mps
@@ -429,14 +600,6 @@ classdef UniformMps
             mps.AC = desymmetrize(mps.AC);
         end
         
-        % essential
-        [mps, lambda] = Canonical(mps, options);
-        [f, rho] = TransferEigs(mps1, mps2, x0, num, charge, choice, options);
-        
-        % utility
-        PlotTransferEigs(mps1, mps2, x0, num, charges);
-        [schmidt, charges] = SchmidtValues(mps, loc)
-        PlotEntSpectrum(mps, svalue, opts)
         xi = CorrelationLength(mps, charge);
         [epsilon, delta, spectrum] = MarekGap(mps, charge, angle, num)
         S = EntanglementEntropy(mps, loc);
@@ -466,33 +629,7 @@ classdef UniformMps
         [mps, xi] = Retract(mps, eta, alpha)
         n = Inner(x, eta, xi)
         
-        mps = TensorNone(mps)
-        
-        % to be done later
-        
-        Add; % is this useful?
-        MultiplyLeft; % no clue
-        MultiplyRight; % no clue
         
     end
-    
-    methods (Static)
-        
-        [AR, C, lambda, error] = OrthRight(A, C, options)
-        [AL, C, lambda, error] = OrthLeft (A, C, options)
-        out = Random(virtualLeg, varargin);
-        
-        % conversion from legacy datastructure
-        mps = FromCell(A);
-        
-    end
-    
-    
-    methods (Access = protected)
-        
-        % anything?
-        
-    end
-    
 end
 

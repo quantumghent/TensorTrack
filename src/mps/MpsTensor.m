@@ -329,7 +329,6 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
                 B MpsTensor = A
             end
             
-            
             for i = length(A):-1:1
                 B(i).var = twist(B(i).var, [isdual(space(B(i), 1:2)) ~isdual(space(B(i), 3))]);
                 T(i, 1) = FiniteMpo(B(i).var', {}, A(i));

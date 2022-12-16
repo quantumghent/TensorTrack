@@ -59,7 +59,7 @@ classdef TestUniformMps < matlab.unittest.TestCase
         function testDiagonalC(tc, A)
             mps = UniformMps(A);
             mps2 = diagonalizeC(mps);
-            f = fidelity(mps, mps2, 'Verbosity', Verbosity.diagnostics);
+            f = fidelity(mps, mps2);
             tc.assertTrue(isapprox(f, 1), 'Diagonalizing C should not alter the state.');
         end
         
