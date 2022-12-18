@@ -333,7 +333,8 @@ classdef GradedSpace < AbstractSpace
         end
         
         function bool = le(space1, space2)
-            assert(isscalar(space1) && isscalar(space2));
+            assert(isscalar(space1) && isscalar(space2), 'spaces:scalar', ...
+                'method only defined for scalar inputs.');
             [lia, locb] = ismember(charges(space1), charges(space2));
             if ~all(lia)
                 bool = false;
