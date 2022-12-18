@@ -209,19 +209,6 @@ classdef ComplexSpace < AbstractSpace
             space = ComplexSpace(prod(dims(spaces)), false);
         end
         
-        function spaces = insertone(spaces, i, dual)
-            arguments
-                spaces
-                i = length(spaces) + 1
-                dual = false
-            end
-            
-            trivialspace = ComplexSpace(1, false);
-            if dual, trivialspace = conj(trivialspace); end
-            spaces = [spaces(1:i-1) trivialspace spaces(i:end)];
-        end
-
-
         function space1 = infimum(space1, space2)
             assert(isscalar(space1) && isscalar(space2));
             assert(isdual(space1) == isdual(space2));
