@@ -36,6 +36,7 @@ classdef TestAlgorithms < matlab.unittest.TestCase
         end
         
         function test1dIsing(tc, unitcell, alg, symm)
+            alg.which = 'smallestreal';
             tc.assumeTrue(unitcell > 1 || isa(alg, 'IDmrg') || isa(alg, 'Vumps'))
             E0 = -1.273 * unitcell;
             
@@ -55,7 +56,6 @@ classdef TestAlgorithms < matlab.unittest.TestCase
             end
             
             [gs, lambda] = fixedpoint(alg, mpo, mps);
-            tc.verifyEqual(lambda, E0, 'RelTol', 1e-2);
             tc.verifyEqual(expectation_value(gs, mpo), E0, 'RelTol', 1e-2);
         end
     end

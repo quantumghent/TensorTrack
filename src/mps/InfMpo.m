@@ -62,8 +62,8 @@ classdef InfMpo
             mpo.O = O_;
         end
 
-        function s = pspace(mpo)
-            s = pspace(mpo.O{1});
+        function s = pspace(mpo, x)
+            s = pspace(mpo.O{x});
         end
         
         function mpo = horzcat(varargin)
@@ -79,10 +79,14 @@ classdef InfMpo
         function mps = initialize_mps(mpo, vspaces)
             arguments
                 mpo
+            end
+            arguments (Repeating)
                 vspaces
             end
             
-            mps = UniformMps.randnc(pspace(mpo), vspaces);
+            pspaces = arrayfun(@(x) pspace(mpo, x), 1:period(mpo), 'UniformOutput', false);
+            args = [pspaces; vspaces];
+            mps = UniformMps.randnc(args{:});
         end
     end
     

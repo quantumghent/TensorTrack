@@ -511,7 +511,7 @@ classdef UniformMps
             
             if isa(O, 'InfJMpo')
                 [GL, GR] = environments(O, mps1, mps2);
-                Hs = AC_hamiltonian(O, mps1, GL, GR, length(H));
+                Hs = AC_hamiltonian(O, mps1, GL, GR, period(mps1));
                 H = Hs{1};
                 N = size(H.R.var, 2);
                 H.R.var = H.R.var(1, N, 1);
