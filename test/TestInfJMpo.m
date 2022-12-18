@@ -49,8 +49,7 @@ classdef TestInfJMpo < matlab.unittest.TestCase
             tc.verifyTrue(isapprox(lambda, -1.27, 'RelTol', 1e-2))
             
             mpo = InfJMpo.Ising(1, 1, 'Symmetry', 'Z2');
-            mps = UniformMps.randnc(pspace(mpo), ...
-                GradedSpace.new(Z2(0, 1), [D D] ./ 2, false));
+            mps = initialize_mps(mpo, GradedSpace.new(Z2(0, 1), [D D] ./ 2, false));
             [mps2, lambda2] = fixedpoint(alg, mpo, mps);
             tc.verifyTrue(isapprox(lambda, -1.27, 'RelTol', 1e-2))
             
