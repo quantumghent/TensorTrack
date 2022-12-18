@@ -511,22 +511,23 @@ classdef UniformMps
             
             if isa(O, 'InfJMpo')
                 [GL, GR] = environments(O, mps1, mps2);
-                H = AC_hamiltonian(O, mps1, GL, GR);
-                i = length(H);
-                N = size(H{i}.R.var, 2);
-                H{i}.R.var = H{i}.R.var(1, N, 1);
-                H{i}.O{1} = H{i}.O{1}(:, :, N, :);
-                AC_ = apply(H{i}, mps1.AC(i));
-                E = dot(AC_, mps2.AC(i));
+                Hs = AC_hamiltonian(O, mps1, GL, GR, length(H));
+                H = Hs{1};
+                N = size(H.R.var, 2);
+                H.R.var = H.R.var(1, N, 1);
+                H.O{1} = H.O{1}(:, :, N, :);
+                AC_ = apply(H, mps1.AC(end));
+                E = dot(AC_, mps2.AC(end));
                 
             elseif isa(O, 'InfMpo')
-                [GL, GR] = environments(O, mps1, mps2);
-                H = AC_hamiltonian(O, mps1, GL, GR);
-                E = zeros(size(H));
-                for i = 1:length(H)
-                    AC_ = apply(H{i}, mps1.AC(i));
+                [GL, GR] = environments(O, mps1, mps2); % should be normalized
+                Hs = AC_hamiltonian(O, mps1, GL, GR);
+                E = zeros(size(Hs));
+                for i = 1:length(Hs)
+                    AC_ = apply(Hs{i}, mps1.AC(i));
                     E(i) = dot(AC_, mps2.AC(i));
                 end
+                E = prod(E);
                 
             elseif isa(O, 'AbstractTensor')
                 error('TBA');
