@@ -283,18 +283,6 @@ classdef GradedSpace < AbstractSpace
             space = GradedSpace(newdimensions, false);
         end
         
-        function spaces = insertone(spaces, i, dual)
-            arguments
-                spaces
-                i = length(spaces) + 1
-                dual = false
-            end
-            
-            trivialspace = one(spaces);
-            if dual, trivialspace = conj(trivialspace); end
-            spaces = [spaces(1:i-1) trivialspace spaces(i:end)];
-        end
-        
         
         %% Utility
         function bools = eq(spaces1, spaces2)
