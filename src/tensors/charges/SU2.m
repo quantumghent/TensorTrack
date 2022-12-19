@@ -129,5 +129,9 @@ classdef SU2 < AbstractCharge & uint8
             end
             charge@uint8(labels);
         end
+        
+        function s = GetMD5_helper(a)
+            s = uint8(a);
+        end
     end
 end

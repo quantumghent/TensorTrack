@@ -209,13 +209,13 @@ fprintf('  ok: Null pointer\n');
 if MatlabV >= 901  % R2016b
    Data = string('hello');
    S1   = GetMD5(Data, 'Array');
-   if ~isequal(S1, '2614526bcbd4af5a8e7bf79d1d0d92ab')
+   if ~isequal(S1, '54d669bbc5d2f755929a1ade4869f80b')
       error([ErrID, ':String'], 'Bad result for string.');
    end
    
    Data = string({'hello', 'world'});
    S1   = GetMD5(Data, 'Array');
-   if ~isequal(S1, 'a1bdbbe9a15c249764847ead9bf47326')
+   if ~isequal(S1, '0b633f8d7bc5bc54171f8ce6b60a096b')
       error([ErrID, ':String'], 'Bad result for string.');
    end
    fprintf('  ok: String class\n');

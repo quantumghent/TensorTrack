@@ -49,8 +49,7 @@ classdef TestInfJMpo < matlab.unittest.TestCase
             tc.verifyTrue(isapprox(lambda, -1.27, 'RelTol', 1e-2))
             
             mpo = InfJMpo.Ising(1, 1, 'Symmetry', 'Z2');
-            mps = UniformMps.randnc(pspace(mpo), ...
-                GradedSpace.new(Z2(0, 1), [D D] ./ 2, false));
+            mps = initialize_mps(mpo, GradedSpace.new(Z2(0, 1), [D D] ./ 2, false));
             [mps2, lambda2] = fixedpoint(alg, mpo, mps);
             tc.verifyTrue(isapprox(lambda, -1.27, 'RelTol', 1e-2))
             
@@ -66,10 +65,12 @@ classdef TestInfJMpo < matlab.unittest.TestCase
             mpo = InfJMpo.Heisenberg('Spin', SU2(3), 'Symmetry', 'SU2');
             mpo = [mpo mpo];
             
-            mps = UniformMps.randnc(pspace(mpo), ...
-                GradedSpace.new(SU2(1:2:5), [5 5 1], false, SU2(1:2:5), [5 5 1], false));
+            vspace1 = GradedSpace.new(SU2(1:2:5), [5 5 1], false);
+            vspace2 = GradedSpace.new(SU2(1:2:5), [5 5 1], false);
+            mps = initialize_mps(mpo, vspace1, vspace2);
             
-            [gs_mps, lambda] = fixedpoint(alg, mpo, mps);
+            [gs_mps] = fixedpoint(alg, mpo, mps);
+            lambda = expectation_value(gs_mps, mpo);
             tc.verifyEqual(lambda / period(mps), -1.40, 'RelTol', 1e-2);
             
         end
