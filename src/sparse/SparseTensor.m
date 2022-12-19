@@ -1,6 +1,8 @@
 classdef (InferiorClasses = {?Tensor}) SparseTensor < AbstractTensor
     % Class for multi-dimensional sparse objects.
     
+    %#ok<*PROPLC>
+    
     properties (Access = private)
         ind = []
         sz = []
@@ -108,6 +110,9 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor < AbstractTensor
             end
             
             B = reshape(B, A.sz);
+        end
+        
+        function A = sparse(A)
         end
         
         function s = space(t, i)
@@ -793,6 +798,30 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor < AbstractTensor
             if isempty(t), return; end
             [t.ind, p] = sortrows(t.ind, width(t.ind):-1:1);
             t.var = t.var(p);
+        end
+        
+        function t = horzcat(varargin)
+            t = cat(2, varargin{:});
+        end
+        
+        function t = vertcat(varargin)
+            t = cat(1, varargin{:});
+        end
+        
+        function t = cat(dim, t, varargin)
+            for i = 1:length(varargin)
+                t2 = sparse(varargin{i});
+                N = max(ndims(t), ndims(t2));
+                dimcheck = 1:N;
+                dimcheck(dim) = [];
+                assert(isequal(size(t, dimcheck), size(t2, dimcheck)), ...
+                    'sparse:dimagree', 'incompatible sizes for concatenation.');
+                newinds = t2.ind;
+                newinds(:, dim) = newinds(:, dim) + size(t, dim);
+                t.var = vertcat(t.var, t2.var);
+                t.ind = vertcat(t.ind, newinds);
+                t.sz(dim) = t.sz(dim) + size(t2, dim);
+            end
         end
     end
     
