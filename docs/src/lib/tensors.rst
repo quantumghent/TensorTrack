@@ -37,5 +37,3 @@ Tensors
 -------
 
 .. autoclass:: src.tensors.Tensor
-
-.. autoclass:: src.tensors.SpTensor

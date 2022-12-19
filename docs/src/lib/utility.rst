@@ -28,6 +28,11 @@ Permutations
 
 .. automodule:: src.utility.permutations
 
+Sparse Arrays
+-------------
+
+.. automodule:: src.utility.sparse
+
 
 Uninit
 ------

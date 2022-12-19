@@ -172,20 +172,12 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor < AbstractTensor
                 dim2str(t.sz), nz);
             
             spc = floor(log10(max(double(t.ind), [], 1))) + 1;
-            if numel(spc) == 1
-                fmt = strcat("\t(%", num2str(spc(1)), "u)");
-            else
-                fmt = strcat("\t(%", num2str(spc(1)), "u,");
-                for i = 2:numel(spc) - 1
-                    fmt = strcat(fmt, "%", num2str(spc(i)), "u,");
-                end
-                fmt = strcat(fmt, "%", num2str(spc(end)), "u)");
-            end
-            
+            fmt_subs = sprintf("%%%du,", spc(1:end-1));
+            fmt_subs = sprintf("%s%%%du", fmt_subs, spc(end));
+            fmt = sprintf("\t(%s)", fmt_subs);
             for i = 1:nz
                 fprintf('%s\t\t', compose(fmt, t.ind(i,:)));
                 disp(t.var(i));
-                fprintf('\n');
             end
         end
         
