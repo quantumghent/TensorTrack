@@ -69,7 +69,7 @@ classdef Vumps2 < handle
             end
         end
         
-        function [mps, lambda, GL, GR] = fixedpoint(alg, mpo, mps)
+        function [mps, lambda, GL, GR, eta] = fixedpoint(alg, mpo, mps)
             if period(mpo) ~= period(mps)
                 error('vumps:argerror', ...
                     'periodicity of mpo (%d) should be equal to that of the mps (%d)', ...

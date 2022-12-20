@@ -67,7 +67,7 @@ classdef Vumps < handle
             end
         end
         
-        function [mps, lambda, GL, GR] = fixedpoint(alg, mpo, mps)
+        function [mps, lambda, GL, GR, eta] = fixedpoint(alg, mpo, mps)
             
             if period(mpo) ~= period(mps)
                 error('vumps:argerror', ...
