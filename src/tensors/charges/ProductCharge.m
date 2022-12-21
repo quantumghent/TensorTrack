@@ -37,17 +37,28 @@ classdef ProductCharge < AbstractCharge
         
         function a = cat(dim, a, varargin)
             % Concatenate charges.
-            
-            for i = 1:length(varargin)
-                if isempty(varargin{i}), continue; end
-                if isempty(a)
-                    a = varargin{i};
-                    continue;
-                end
-                for j = 1:length(a.charges)
-                    a.charges{j} = cat(dim, a.charges{j}, varargin{i}.charges{j});
-                end
+            mask = cellfun(@isempty, varargin);
+            if isempty(a)
+                firstnonempty = find(~mask, 1);
+                a = varargin{firstnonempty};
+                mask(firstnonempty) = true;
             end
+            
+            for i = 1:length(a.charges)
+                catcharges = cellfun(@(x) x.charges{i}, varargin(~mask), 'UniformOutput', false);
+                a.charges{i} = cat(dim, a.charges{i}, catcharges{:});
+            end
+%             
+%             for i = 1:length(varargin)
+%                 if isempty(varargin{i}), continue; end
+%                 if isempty(a)
+%                     a = varargin{i};
+%                     continue;
+%                 end
+%                 for j = 1:length(a.charges)
+%                     a.charges{j} = cat(dim, a.charges{j}, varargin{i}.charges{j});
+%                 end
+%             end
         end
         
         function a = horzcat(a, varargin)
