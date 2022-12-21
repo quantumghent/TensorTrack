@@ -477,6 +477,7 @@ classdef Tensor < AbstractTensor
         end
         
         function tdst = insert_onespace(tsrc, i, dual)
+            % insert a trivial space at position i. 
             arguments
                 tsrc
                 i = nspaces(tsrc)
