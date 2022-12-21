@@ -258,6 +258,7 @@ classdef (Abstract) AbstractSpace
         end
         
         function spaces = insertone(spaces, i, dual)
+            % insert a trivial space at position i.
             arguments
                 spaces
                 i = length(spaces) + 1
