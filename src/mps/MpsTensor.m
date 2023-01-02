@@ -345,12 +345,12 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
             auxlegs_v = nspaces(v) - 2;
             auxlegs_l = L.alegs;
             auxlegs_r = R.alegs;
-            auxlegs = auxlegs_v + auxlegs_l + auxlegs_r;
+            newrank = rank(v); newrank(2) = newrank(2) + auxlegs_l + auxlegs_r;
             
             v = contract(v, [1 3 (-(1:auxlegs_v) - 2 - auxlegs_l)], ...
                 L, [-1 2 1 (-(1:auxlegs_l) - 2)], ...
                 R, [3 2 -2 (-(1:auxlegs_r) - 3 - auxlegs_l - auxlegs_v)], ...
-                'Rank', rank(v) + [0 auxlegs]);
+                'Rank', newrank);
         end
         
         function rho = applyleft(T, B, rho)

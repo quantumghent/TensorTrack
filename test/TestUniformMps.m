@@ -75,7 +75,16 @@ classdef TestUniformMps < matlab.unittest.TestCase
                     tc.verifyTrue(isapprox(rhoR, apply(T', rhoR)), ...
                         sprintf('rho_right should be a %c%c fixed point.', top, bot));
                 end
-            end 
+            end
+        end
+        
+        function testTransferEigs(tc, A)
+           mps = UniformMps(A);
+           
+           [V, D] = transfereigs(mps, mps, 1, 'largestabs');
+           [~, charges] = matrixblocks(V);
+           [V2, D2] = transfereigs(mps, mps, 1, 'largestabs', 'Charge', one(charges));
+           
         end
     end
 end

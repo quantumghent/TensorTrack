@@ -171,6 +171,10 @@ classdef ComplexSpace < AbstractSpace
             
             style = FusionStyle.Unique;
         end
+        
+        function space = one(~)
+            space = ComplexSpace(1, false);
+        end
     end
     
     

@@ -451,6 +451,40 @@ classdef UniformMps
         end
         
         function [V, D] = transfereigs(mps1, mps2, howmany, which, eigopts, kwargs)
+            % Compute the eigenvalues of the transfer matrix of an mps.
+            %
+            % Usage
+            % -----
+            % :code:`[V, D] = transfereigs(mps1, mps2, howmany, which, eigopts, kwargs)`
+            %
+            % Arguments
+            % ---------
+            % mps1 : :class:`UniformMps`
+            %   input mps for top layer.
+            %
+            % mps2 : :class:`UniformMps`
+            %   input mps for bottom layer. Default value equal to `mps1`.
+            %
+            % howmany : integer
+            %   number of eigenvectors and eigenvalues to compute.
+            %
+            % which : 'char'
+            %   type of eigenvectors to target.
+            %
+            % Keyword Arguments
+            % -----------------
+            % eigopts
+            %   see keyword arguments for :method:`eigs`.
+            %
+            % Verbosity : integer
+            %   detail level for output.
+            %
+            % Type : 'char'
+            %   type of transfer matrix to construct.
+            %
+            % Charge : :class:`AbstractCharge`
+            %   charge of eigenvectors to target.
+            
             arguments
                 mps1
                 mps2 = mps1
@@ -479,9 +513,9 @@ classdef UniformMps
                 v0 = [];
             end
             
-            eigkwargs = [fieldnames(eigopts).'; struct2cell(eigopts).'];
-            [V, D] = eigsolve(T, v0, howmany, which, ...
-                eigkwargs{:}, 'Verbosity', kwargs.Verbosity);
+            eigkwargs.Verbosity = kwargs.Verbosity;
+            eigkwargs = namedargs2cell(eigopts);
+            [V, D] = eigsolve(T, v0, howmany, which, eigkwargs{:});
             
             if kwargs.Type(1) == 'r', V = V'; end
             if nargout < 2, V = D; end

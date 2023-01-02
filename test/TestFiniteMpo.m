@@ -14,6 +14,9 @@ classdef TestFiniteMpo < matlab.unittest.TestCase
         function testFixedpoints(tc, mpo)
             [V, D] = eigsolve(mpo);
             tc.assertTrue(isapprox(mpo.apply(V), D * V));
+            
+            v2 = insert_onespace(V);
+            v3 = apply(mpo, v2);
         end
         
         function testProperties(tc, mpo)
@@ -36,7 +39,6 @@ classdef TestFiniteMpo < matlab.unittest.TestCase
                 'transpose should not change mpo');
             tc.assertTrue(isequal(domain(mpo.'), codomain(mpo)'));
             tc.assertTrue(isequal(codomain(mpo.'), domain(mpo)'));
-            
         end
     end
 end

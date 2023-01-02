@@ -96,13 +96,13 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) MpoTensor < Ab
             auxlegs_v = nspaces(v) - 3;
             auxlegs_l = nspaces(L) - 3;
             auxlegs_r = nspaces(R) - 3;
-            auxlegs = auxlegs_v + auxlegs_l + auxlegs_r;
+            newrank = rank(v); newrank(2) = newrank(2) + auxlegs_l + auxlegs_r;
             
             v = contract(v, [1 3 5 (-(1:auxlegs_v) - 3 - auxlegs_l)], ...
                 L, [-1 2 1 (-(1:auxlegs_l) - 3)], ...
                 O, [2 -2 4 3], ...
                 R, [5 4 -3 (-(1:auxlegs_r) - 3 - auxlegs_l - auxlegs_v)], ...
-                'Rank', rank(v) + [0 auxlegs]);
+                'Rank', newrank);
         end
         
         function v = applympo(varargin)
