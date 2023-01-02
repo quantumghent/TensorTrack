@@ -480,7 +480,7 @@ classdef Tensor < AbstractTensor
             % insert a trivial space at position i. 
             arguments
                 tsrc
-                i = nspaces(tsrc)
+                i = nspaces(tsrc) + 1
                 dual = false
             end
             

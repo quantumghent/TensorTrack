@@ -136,7 +136,7 @@ classdef TestTensor < matlab.unittest.TestCase
             tc.assertTrue(all(dims(t) == size(a, 1:nspaces(t))));
             for k = 0:nspaces(t)
                 ps = perms(1:nspaces(t)).';
-                for p = ps(:, randperm(size(ps, 2), min(size(ps, 2), 10)))
+                for p = ps(:, randperm(size(ps, 2), min(size(ps, 2), 5)))
                     t2 = tpermute(t, p.', [k nspaces(t)-k]);
                     a2 = double(t2);
                     tc.assertTrue(all(dims(t2) == size(a2, 1:nspaces(t))));

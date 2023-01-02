@@ -3,12 +3,18 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor < AbstractTensor
     
     %#ok<*PROPLC>
     
+    properties
+        codomain
+        domain
+    end
+    
     properties (Access = private)
         ind = []
         sz = []
         var (:, 1) Tensor = Tensor.empty(0, 1);
     end
     
+    %% Constructors
     methods
         function t = SparseTensor(varargin)
             if nargin == 0 || (nargin == 1 && isempty(varargin{1}))
@@ -22,6 +28,9 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor < AbstractTensor
                     t.sz = source.sz;
                     t.var = source.var;
                     
+                    t.codomain = source.codomain;
+                    t.domain = source.domain;
+                    
                 elseif isa(source, 'Tensor')
                     t.sz = ones(1, nspaces(source(1)));
                     t.sz(1:ndims(source)) = size(source);
@@ -29,6 +38,7 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor < AbstractTensor
                     t.ind = ind2sub_(t.sz, 1:numel(source));
                     t.var = source(:);
                     
+                    [t.codomain, t.domain] = deduce_spaces(t);
                 else
                     error('sparse:ArgError', 'Unknown syntax.');
                 end
@@ -42,6 +52,7 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor < AbstractTensor
                 t.ind = ind;
                 t.var = var;
                 t.sz = max(ind, [], 1);
+                [t.codomain, t.domain] = deduce_spaces(t);
                 
             elseif nargin == 3  % indices, values and size
                 ind = varargin{1};
@@ -61,10 +72,84 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor < AbstractTensor
                 end
                 t.ind = ind;
                 t.sz = sz;
+                [t.codomain, t.domain] = deduce_spaces(t);
                 
-            else
-                error('sparse:argerror', 'unknown syntax.');
+            elseif nargin == 5 % indices, values, size, codomain, domain
+                ind = varargin{1};
+                if ~isempty(ind) && ~isempty(varargin{2})
+                    var = reshape(varargin{2}, [], 1);
+                    if isscalar(var), var = repmat(var, size(ind, 1), 1); end
+                    assert(size(ind, 1) == size(var, 1), 'sparse:argerror', ...
+                        'indices and values must be the same size.');
+                    sz = reshape(varargin{3}, 1, []);
+                    assert(isempty(ind) || size(ind, 2) == length(sz), 'sparse:argerror', ...
+                        'number of indices does not match size vector.');
+                    assert(isempty(ind) || all(max(ind, [], 1) <= sz), 'sparse:argerror', ...
+                        'indices must not exceed size vector.');
+                    t.var = var;
+                else
+                    sz = reshape(varargin{3}, 1, []);
+                end
+                t.ind = ind;
+                t.sz = sz;
+                t.codomain = varargin{4};
+                t.domain = varargin{5};
             end
+        end
+    end
+    
+    methods (Static)
+        function t = new(f, codomain, domain, kwargs)
+            arguments
+                f
+                codomain SumSpace
+                domain SumSpace
+                kwargs.Density = 1
+            end
+            
+            sz = zeros(1, length(codomain) + length(domain));
+            for i = 1:length(codomain)
+                sz(i) = length(subspaces(codomain(i)));
+            end
+            for i = 1:length(domain)
+                sz(end+1-i) = length(subspaces(domain(i)));
+            end
+            
+            inds = sort(randperm(prod(sz), round(prod(sz) * kwargs.Density)));
+            subs = ind2sub_(sz, inds);
+            for i = length(inds):-1:1
+                for j = length(codomain):-1:1
+                    subcodomain(j) = subspaces(codomain(j), subs(i, j));
+                end
+                for j = length(domain):-1:1
+                    subdomain(j) = subspaces(domain(j), subs(i, end + 1 - j));
+                end
+                vars(i) = Tensor.new(f, subcodomain, subdomain);
+            end
+            t = SparseTensor(subs, vars, sz, codomain, domain);
+        end
+        
+        function t = rand(varargin)
+            t = SparseTensor.new(@rand, varargin{:});
+        end
+    end
+    
+    methods
+        function [codomain, domain] = deduce_spaces(t)
+            spaces = cell(1, ndims(t));
+            for i = 1:length(spaces)
+                for j = flip(1:size(t, i))
+                    idx = find(t.ind(:, i) == j, 1);
+                    if isempty(idx)
+                        error('sparse:argerror', ...
+                            'Cannot deduce %dth space at index %d.', i, j);
+                    end
+                    spaces{i}(j) = space(t.var(idx), i);
+                end
+            end
+            Nout = indout(t.var(1));
+            codomain = SumSpace(spaces{1:Nout});
+            domain = SumSpace(spaces{(Nout+1):end})';
         end
         
         function t = permute(t, p)
@@ -125,23 +210,18 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor < AbstractTensor
             end
         end
         
-        function n = nspaces(A)
-            if nnz(A) == 0
-                n = ndims(A);
-            else
-                n = nspaces(A.var(1));
-            end
+        function n = nspaces(t)
+            n = length(t.domain) + length(t.codomain);
         end
         
         function n = ndims(A)
             n = length(A.sz);
         end
         
-        function r = rank(A)
-            if nnz(A) == 0
-                r = [ndims(A) 0];
-            else
-                r = rank(A.var(1));
+        function r = rank(t, i)
+            r = [length(t.codomain) length(t.domain)];
+            if nargin > 1
+                r = r(i);
             end
         end
         
