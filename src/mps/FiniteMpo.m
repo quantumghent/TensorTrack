@@ -65,7 +65,7 @@ classdef FiniteMpo
         end
         
         function s = domain(mpo)
-            N = prod(cellfun(@(x) size(x, 4), mpo.O));
+            N = prod(cellfun(@(x) size(x, 4), mpo(1).O));
             s = conj(...
                 [rightvspace(mpo(1).L) cellfun(@(x) pspace(x)', mpo(1).O) leftvspace(mpo(1).R)]);
         end

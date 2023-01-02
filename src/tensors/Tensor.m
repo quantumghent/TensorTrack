@@ -420,11 +420,11 @@ classdef Tensor < AbstractTensor
     %% Structure
     methods
         function n = indin(t)
-            n = length(t.domain);
+            n = length(t(1).domain);
         end
         
         function n = indout(t)
-            n = length(t.codomain);
+            n = length(t(1).codomain);
         end
         
         function n = nspaces(t)
@@ -718,14 +718,20 @@ classdef Tensor < AbstractTensor
             
             if isnumeric(A)
                 if issparse(A) && ~all(any(A, 2))
-                    C = SparseTensor.zeros(szA(1), szB(2));
+                    [cod, dom] = deduce_spaces(B);
+                    cod2 = cell(size(cod));
+                    for i = flip(1:length(cod))
+                        tmp = subspaces(cod(i));
+                        cod2{i} = tmp(1);
+                    end
+                    C = SparseTensor.zeros(SumSpace(cod2{:}), dom);
                 else
                     C = Tensor.empty(szA(1), szB(2), 0);
                 end
                 
                 for i = 1:szA(1)
                     for j = 1:szB(2)
-                        C(i, j) = sum(A(i, :).' .* B(:, j));
+                        C(i, j) = sum(A(i, :).' .* B(:, j), 'all');
                     end
                 end
                 return
@@ -733,14 +739,19 @@ classdef Tensor < AbstractTensor
             
             if isnumeric(B)
                 if issparse(B) && ~all(any(B, 1))
-                    C = SparseTensor.zeros(szA(1), szB(2));
-                else
-                    C(szA(1), szB(2)) = Tensor();
+                    [cod, dom] = deduce_spaces(A);
+                    dom2 = cell(size(dom));
+                    for i = 1:length(dom)
+                        tmp = subspaces(dom(i));
+                        dom2{i} = tmp(1);
+                    end
+                    C = SparseTensor.zeros(cod, SumSpace(dom2{:}));
                 end
-                
-                for i = 1:szA(1)
-                    for j = 1:szB(2)
-                        C(i, j) = sum(A(i, :) .* B(:, j).');
+                C(szA(1), szB(2)) = Tensor();
+                for i = flip(1:szA(1))
+                    for j = flip(1:szB(2))
+                        tmp 
+                        C(i, j) = sum(A(i, :) .* B(:, j).', 'all');
                     end
                 end
                 return
@@ -1204,7 +1215,8 @@ classdef Tensor < AbstractTensor
             
             if isnumeric(A)
                 if issparse(A)
-                    C = SparseTensor.zeros(size(A));
+                    [cod, dom] = deduce_spaces(B);
+                    C = SparseTensor.zeros(cod, dom);
                     I = find(A);
                     if isempty(I), return; end
                     C(I) = full(A(I)) .* B(I);
@@ -2327,6 +2339,29 @@ classdef Tensor < AbstractTensor
         
         function type = underlyingType(t)
             type = underlyingType(t(1).var);
+        end
+        
+        function [codomain, domain] = deduce_spaces(t)
+            spaces = cell(1, nspaces(t));
+            subs = repmat({1}, 1, nspaces(t));
+            for i = 1:length(spaces)
+                for j = flip(1:size(t, i))
+                    subs{i} = j;
+                    spaces{i}(j) = space(t(subs{:}), i);
+                end
+                subs{i} = 1;
+            end
+            Nout = indout(t);
+            if Nout > 0
+                codomain = SumSpace(spaces{1:Nout});
+            else
+                codomain = SumSpace([]);
+            end
+            if Nout == length(spaces)
+                domain = SumSpace([]);
+            else
+                domain = SumSpace(spaces{(Nout+1):end})';
+            end
         end
         
         function disp(t, details)

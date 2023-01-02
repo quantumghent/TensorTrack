@@ -1,4 +1,4 @@
-classdef SumSpace < AbstractSpace
+classdef (InferiorClasses = {?GradedSpace, ?CartesianSpace, ?ComplexSpace}) SumSpace < AbstractSpace
     % Direct product structure for a tensor index.
     
     %% Constructors
@@ -10,7 +10,7 @@ classdef SumSpace < AbstractSpace
                 subspaces
             end
             
-            if nargin == 0
+            if nargin == 0 || (nargin == 1 && isempty(subspaces{1}))
                 args = {};
             else
                 dual = cell(size(subspaces));
@@ -22,6 +22,9 @@ classdef SumSpace < AbstractSpace
             end
             
             spaces = spaces@AbstractSpace(args{:});
+            if (nargin == 1 && isempty(subspaces{1}))
+                spaces = spaces.empty(1, 0);
+            end
         end
         
         function space = one(spaces)
@@ -44,6 +47,26 @@ classdef SumSpace < AbstractSpace
                 spaces(i).dimensions = conj(subspaces(spaces(i)));
             end
         end
+        
+        function space = mtimes(space1, space2)
+            % Fuse two spaces to a single space.
+            %
+            % Arguments
+            % ---------
+            % space1, space2 : (1,1) :class:`AbstractSpace`
+            %   input spaces.
+            % 
+            % Returns
+            % -------
+            % space : (1,1) :class:`AbstractSpace`
+            %   fused space.
+            arguments
+                space1 SumSpace
+                space2 SumSpace
+            end
+            
+            space = sum(subspaces(space1)) * sum(subspaces(space2));
+        end
     end
     
     %% Utility
@@ -62,6 +85,13 @@ classdef SumSpace < AbstractSpace
             s = space.dimensions;
             if nargin > 1
                 s = s(i);
+            end
+        end
+        
+        function n = nsubspaces(space)
+            n = zeros(size(space));
+            for i = 1:numel(n)
+                n(i) = numel(space(i).dimensions);
             end
         end
     end

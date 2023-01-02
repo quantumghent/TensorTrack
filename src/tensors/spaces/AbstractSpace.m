@@ -1,7 +1,7 @@
 classdef (Abstract) AbstractSpace
     % Abstract structure of a tensor index.
     
-    properties (Access = protected)
+    properties %(Access = protected)
         dimensions                      % Specification of the internal dimensions
         dual (1,1) logical = false    % Flag to indicate if the space is a dual space
     end
@@ -114,6 +114,9 @@ classdef (Abstract) AbstractSpace
             %   total dimension of each of the input spaces.
             
             error('tensors:AbstractMethod', 'This method should be overloaded.');
+        end
+        
+        function s = subspaces(s)
         end
         
         function trees = fusiontrees(codomain, domain)
@@ -254,6 +257,24 @@ classdef (Abstract) AbstractSpace
             space = spaces(1);
             for i = 2:length(spaces)
                 space = space * spaces(i);
+            end
+        end
+        
+        function space = sum(spaces)
+            % Fuse a list of spaces to the direct sum space.
+            %
+            % Arguments
+            % ---------
+            % spaces : (1, :) :class:`AbstractSpace`
+            %   Array of input spaces.
+            %
+            % Returns
+            % -------
+            % space : (1, 1) :class:`AbstractSpace`
+            %   direct sum space.
+            space = spaces(1);
+            for i = 2:length(spaces)
+                space = space + spaces(i);
             end
         end
         

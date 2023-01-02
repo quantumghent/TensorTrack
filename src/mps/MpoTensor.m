@@ -204,13 +204,22 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) MpoTensor < Ab
                         iB(1:2) = flip(iB(1:2));
                     end
                     
-                    A = reshape(tpermute(A, iA, rA), ...
+                    A_ = reshape(tpermute(A, iA, rA), ...
                         [prod(size(A, uncA)) prod(size(A, dimA))]);
-                    
                     B_ = reshape(permute(B.scalars, iB), ...
                         [prod(size(B, dimB)) prod(size(B, uncB))]);
                     
-                    C = C + reshape(A * sparse(B_), szC);
+                    subs = zeros(size(A_, 1), 2);
+                    subs(:, 1) = (1:size(A_, 1)).';
+                    sz2 = [size(A_, 1) size(B_, 2)];
+                    [Brows, Bcols, Bvals] = find(B_);
+                    
+                    for i = 1:length(Bvals)
+                        Atmp = A_(:, Brows(i)) .* Bvals(i);
+                        subs(:, 2) = Bcols(i);
+                        idx = sub2ind_(sz2, subs);
+                        C(idx) = C(idx) + Atmp;
+                    end
                 end
             end
         end
@@ -333,15 +342,10 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) MpoTensor < Ab
     end
     
     methods (Static)
-        function O = zeros(m, n, o, p)
-            if nargin == 1
-                sz = m;
-            elseif nargin == 4
-                sz = [m n o p];
-            else
-                error('mpotensor:argerror', 'invalid amount of inputs.');
-            end
-            O = MpoTensor(SparseTensor([], [], sz), zeros(sz));
+        function O = zeros(codomain, domain)
+            tensors = SparseTensor.zeros(codomain, domain);
+            scalars = zeros(size(tensors));
+            O = MpoTensor(tensors, scalars);
         end
     end
 end

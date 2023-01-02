@@ -33,10 +33,11 @@ classdef InfJMpo < InfMpo
             
             if isempty(GL) || isempty(GL{1})
                 GL = cell(1, period(mps1));
-                GL{1} = SparseTensor.zeros(1, size(T(1).O{1}, 2), 1);
+                GL{1} = SparseTensor.zeros(domain(T), []);
                 pSpace = space(T(1).O{1}(:,:,:,1), 4);
-                GL{1}(1) = insert_onespace(fixedpoint(mps1, 'l_LL'), ...
+                fp1 = insert_onespace(fixedpoint(mps1, 'l_LL'), ...
                     2, ~isdual(pSpace(1)));
+                GL{1}(1) = repartition(fp1, [nspaces(fp1) 0]);
             end
             
             for i = 2:size(GL{1}, 2)
@@ -45,8 +46,8 @@ classdef InfJMpo < InfMpo
                 if iszero(Tdiag)
                     GL{1}(i) = rhs;
                 elseif iseye(T, i)
-                    fp_left  = insert_onespace(fixedpoint(mps1, 'l_LL'), ...
-                        2, isdual(space(rhs, 2)));
+                    fp_left  = repartition(insert_onespace(fixedpoint(mps1, 'l_LL'), ...
+                        2, isdual(space(rhs, 2))), rank(rhs));
                     fp_right = insert_onespace(fixedpoint(mps1, 'r_LL'), ...
                         2, ~isdual(space(rhs, 2)));
                     lambda = contract(rhs, 1:3, fp_right, 3:-1:1);
@@ -91,10 +92,11 @@ classdef InfJMpo < InfMpo
             
             if isempty(GR) || isempty(GR{1})
                 GR = cell(1, period(mps1));
-                GR{1} = SparseTensor.zeros(1, N, 1);
+                GR{1} = SparseTensor.zeros(domain(T), []);
                 pSpace = space(T(1).O{1}(:, end, :, :), 2);
-                GR{1}(1, N, 1) = insert_onespace(fixedpoint(mps1, 'r_RR'), ...
+                fp1 = insert_onespace(fixedpoint(mps1, 'r_RR'), ...
                     2, isdual(pSpace(end)));
+                GR{1}(1, N, 1) = repartition(fp1, [nspaces(fp1) 0]);
             end
             
             for i = N-1:-1:1
@@ -105,8 +107,8 @@ classdef InfJMpo < InfMpo
                 elseif iseye(T, i)
                     fp_left  = insert_onespace(fixedpoint(mps1, 'l_RR'), ...
                         2, ~isdual(space(rhs, 2)));
-                    fp_right = insert_onespace(fixedpoint(mps1, 'r_RR'), ...
-                        2, isdual(space(rhs, 2)));
+                    fp_right = repartition(insert_onespace(fixedpoint(mps1, 'r_RR'), ...
+                        2, isdual(space(rhs, 2))), rank(rhs));
                     lambda = contract(rhs, 1:3, fp_left, 3:-1:1);
                     
                     rhs = rhs - lambda * fp_right;
@@ -196,11 +198,14 @@ classdef InfJMpo < InfMpo
             
             if strcmp(kwargs.Symmetry, 'Z1')
                 pSpace = CartesianSpace.new(2);
-                S = Tensor([one(pSpace) pSpace], [pSpace one(pSpace)]);
+                vSpace = one(pSpace);
+                S = Tensor([vSpace pSpace], [pSpace vSpace]);
                 Sx = fill_matrix(S, sigma_x);
                 Sz = fill_matrix(S, sigma_z);
                 
-                O = MpoTensor.zeros(3, 1, 3, 1);
+                cod = SumSpace([vSpace vSpace vSpace], pSpace);
+                dom = SumSpace(pSpace, [vSpace vSpace vSpace]);
+                O = MpoTensor.zeros(cod, dom);
                 O(1, 1, 1, 1) = 1;
                 O(3, 1, 3, 1) = 1;
                 O(1, 1, 2, 1) = -J * Sx;
@@ -216,7 +221,9 @@ classdef InfJMpo < InfMpo
                 Sx_r = fill_matrix(Tensor([vSpace pSpace], [pSpace trivSpace]), {1 1});
                 Sz = fill_matrix(Tensor([trivSpace pSpace], [pSpace trivSpace]), {1 -1});
                 
-                O = MpoTensor.zeros(3, 1, 3, 1);
+                cod = SumSpace([one(vSpace) vSpace one(vSpace)], pSpace);
+                dom = SumSpace(pSpace, [one(vSpace), vSpace, one(vSpace)]);
+                O = MpoTensor.zeros(cod, dom);
                 O(1, 1, 1, 1) = 1;
                 O(3, 1, 3, 1) = 1;
                 O(1, 1, 2, 1) = -J * Sx_l;
@@ -242,16 +249,17 @@ classdef InfJMpo < InfMpo
                     assert(h == 0, 'Magnetic field not invariant under SU2');
                     
                     pSpace = GradedSpace.new(kwargs.Spin, 1, false);
-                    aSpace = GradedSpace.new(SU2(3), 1, false);
-                    tSpace = one(aSpace);
+                    vSpace = GradedSpace.new(SU2(3), 1, false);
+                    tSpace = one(vSpace);
                     
                     s = spin(kwargs.Spin);
-                    L = Tensor.ones([tSpace pSpace], [pSpace aSpace]);
+                    L = Tensor.ones([tSpace pSpace], [pSpace vSpace]);
                     L = L * (-J(1) * (s^2 + s));
-                    R = Tensor.ones([aSpace pSpace], [pSpace tSpace]);
+                    R = Tensor.ones([vSpace pSpace], [pSpace tSpace]);
                     
-                    
-                    O = MpoTensor.zeros(3, 1, 3, 1);
+                    cod = SumSpace([one(vSpace) vSpace one(vSpace)], pSpace);
+                    dom = SumSpace(pSpace, [one(vSpace), vSpace, one(vSpace)]);
+                    O = MpoTensor.zeros(cod, dom);
                     O(1, 1, 1, 1) = 1;
                     O(3, 1, 3, 1) = 1;
                     O(1, 1, 2, 1) = L;

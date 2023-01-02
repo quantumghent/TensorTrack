@@ -84,7 +84,7 @@ classdef InfMpo
                 vspaces
             end
             
-            pspaces = arrayfun(@(x) pspace(mpo, x), 1:period(mpo), 'UniformOutput', false);
+            pspaces = arrayfun(@(x) subspaces(pspace(mpo, x)), 1:period(mpo), 'UniformOutput', false);
             args = [pspaces; vspaces];
             mps = UniformMps.randnc(args{:});
         end

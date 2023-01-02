@@ -244,6 +244,15 @@ classdef CartesianSpace < AbstractSpace
             
             space = CartesianSpace(prod(dims(spaces)), []);
         end
+        
+        function space = plus(space, space2)
+            space.dimensions = space.dimensions + space2.dimensions;
+        end
+        
+        function space = sum(spaces)
+            
+            space = CartesianSpace(sum(dims(spaces)), []);
+        end
     end
         
         

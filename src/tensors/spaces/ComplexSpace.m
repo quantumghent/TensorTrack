@@ -218,6 +218,19 @@ classdef ComplexSpace < AbstractSpace
             assert(isdual(space1) == isdual(space2));
             space1.dimensions = min(dims(space1), dims(space2));
         end
+        
+        function space = plus(space, space2)
+            
+            assert(isdual(space) == isdual(space2), ...
+                'direct sum only defined when isdual is equal.');
+            space.dimensions = space.dimensions + space2.dimensions;
+        end
+        
+        function space = sum(spaces)
+            assert(all(isdual(spaces) == isdual(spaces(1))), ...
+                'direct sum only defined when isdual is equal.');
+            space = ComplexSpace(sum(dims(spaces)), isdual(spaces(1)));
+        end
     end
     
     

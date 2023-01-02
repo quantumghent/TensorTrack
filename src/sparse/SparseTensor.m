@@ -89,6 +89,7 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor < AbstractTensor
                     t.var = var;
                 else
                     sz = reshape(varargin{3}, 1, []);
+                    ind = double.empty(0, size(sz, 2));
                 end
                 t.ind = ind;
                 t.sz = sz;
@@ -106,17 +107,11 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor < AbstractTensor
                 domain SumSpace
                 kwargs.Density = 1
             end
-            
-            sz = zeros(1, length(codomain) + length(domain));
-            for i = 1:length(codomain)
-                sz(i) = length(subspaces(codomain(i)));
-            end
-            for i = 1:length(domain)
-                sz(end+1-i) = length(subspaces(domain(i)));
-            end
+            sz = [nsubspaces(codomain) flip(nsubspaces(domain))];
             
             inds = sort(randperm(prod(sz), round(prod(sz) * kwargs.Density)));
             subs = ind2sub_(sz, inds);
+            vars = Tensor.empty(0, 1);
             for i = length(inds):-1:1
                 for j = length(codomain):-1:1
                     subcodomain(j) = subspaces(codomain(j), subs(i, j));
@@ -131,6 +126,15 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor < AbstractTensor
         
         function t = rand(varargin)
             t = SparseTensor.new(@rand, varargin{:});
+        end
+        
+        function t = zeros(codomain, domain, kwargs)
+            arguments
+                codomain
+                domain
+                kwargs.Density = 0
+            end
+            t = SparseTensor.new(@zeros, codomain, domain, 'Density', kwargs.Density);
         end
     end
     
@@ -186,8 +190,8 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor < AbstractTensor
             [lia, locb] = ismember(inds, A.ind, 'rows');
             B(lia) = A.var(locb(lia));
             if ~all(lia)
-                s = arrayfun(@(i) space(A, i), 1:ndims(A), 'UniformOutput', false);
-                r = rank(A.var(1));
+                s = arrayfun(@(i) subspaces(space(A, i)), 1:ndims(A), 'UniformOutput', false);
+                r = rank(A);
                 for i = find(~lia).'
                     allspace = arrayfun(@(j) s{j}(inds(i, j)), 1:length(s));
                     B(i) = Tensor.zeros(allspace(1:r(1)), allspace(r(1)+1:end)');
@@ -200,13 +204,10 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor < AbstractTensor
         function A = sparse(A)
         end
         
-        function s = space(t, i)
-            assert(isscalar(i), 'sparse:argerror', ...
-                'Can only obtain spaces for single index.');
-            for j = size(t, i):-1:1
-                el = t.var(find(t.ind(:, i) == j, 1));
-                assert(~isempty(el), 'sparse:argerror', 'cannot deduce space');
-                s(j) = space(t.var(find(t.ind(:, i) == j, 1)), i);
+        function sp = space(t, inds)
+            sp = [t.codomain t.domain'];
+            if nargin > 1
+                sp = sp(inds);
             end
         end
         
@@ -333,6 +334,8 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor < AbstractTensor
             if ~isempty(a.var)
                 a.var = conj(a.var);
             end
+            a.codomain = conj(a.codomain);
+            a.domain = conj(a.domain);
         end
         
         function a = ctranspose(a)
@@ -341,6 +344,7 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor < AbstractTensor
             end
             a.ind = fliplr(a.ind);
             a.sz = fliplr(a.sz);
+            [a.codomain, a.domain] = swapvars(a.codomain, a.domain);
         end
         
         function d = dot(a, b)
@@ -485,8 +489,13 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor < AbstractTensor
             
             if strcmp(dim, 'all')
                 if nnz(A) == 0
-                    B = A;
-                    B.sz = [1 1];
+                    for i = flip(1:length(A.codomain))
+                        cod(i) = SumSpace(subspaces(A.codomain(i), 1));
+                    end
+                    for i = flip(1:length(A.domain))
+                        dom(i) = SumSpace(subspaces(A.domain(i), 1));
+                    end
+                    B = SparseTensor.zeros(cod, dom);
                     return
                 end
                 
@@ -619,7 +628,11 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor < AbstractTensor
                     end
                 end
                 
-                C = reshape(SparseTensor(Cind, Cvar, [size(A,1) size(B,2)]), szC);
+                Ccod = space(A, uncA);
+                Cdom = space(B, uncB);
+                
+                C = SparseTensor(Cind, Cvar, [size(A, 1) size(B, 2)], Ccod, Cdom);
+                C = reshape(C, szC);
                 if size(Cind, 1) == prod(szC), C = full(C); end
             end
         end
@@ -675,6 +688,9 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor < AbstractTensor
                 t.var(i) = tpermute(t.var(i), p, r);
             end
             t = permute(t, p);
+            sp = space(t, p);
+            t.codomain = sp(1:r(1));
+            t.domain = sp(r(1) + (1:r(2)))';
         end
         
         function t = repartition(t, r)
@@ -685,6 +701,9 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor < AbstractTensor
                     t.var = arrayfun(@(x) repartition(x, r), t.var);
                 end
             end
+            sp = space(t, p);
+            t.codomain = sp(1:r(1));
+            t.domain = sp(r(1) + (1:r(2)))';
         end
         
         function t = twist(t, i, inv)
@@ -742,47 +761,53 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor < AbstractTensor
         end
         
         function t = subsref(t, s)
-            assert(strcmp(s(1).type, '()'), 'sparse:index', 'only () indexing allowed');
             
-            n = size(s(1).subs, 2);
-            if n == 1 % linear indexing
-                I = ind2sub_(t.sz, s(1).subs{1});
-                s(1).subs = arrayfun(@(x) I(:,x), 1:width(I), 'UniformOutput',false);
-            else
-                assert(n == size(t.sz, 2), 'sparse:index', ...
-                    'number of indexing indices must match tensor size.');
-            end
-            f = true(size(t.ind, 1), 1);
-            newsz = zeros(1, size(s(1).subs, 2));
-            
-            for i = 1:size(s(1).subs, 2)
-                A = s(1).subs{i};
-                if strcmp(A, ':')
-                    newsz(i) = t.size(i);
-                    continue;
-                end
-                nA = length(A);
-                if nA ~= length(unique(A))
-                    error("Repeated index in position %i",i);
-                end
-                if ~isempty(t.ind)
-                    B = t.ind(:, i);
-                    P = false(max(max(A), max(B)) + 1, 1);
-                    P(A + 1) = true;
-                    f = and(f, P(B + 1));
-                    [~, ~, temp] = unique([A(:); t.ind(f, i)], 'stable');
-                    t.ind(f, i) = temp(nA+1:end);
-                end
-                newsz(i) = nA;
-            end
-            t.sz = newsz;
-            if ~isempty(t.ind)
-                t.ind = t.ind(f, :);
-                t.var = t.var(f);
-            end
-            if length(s) > 1
-                assert(isscalar(t))
-                t = subsref(t.var, s(2:end));
+            switch s(1).type
+                case '()'
+                    n = size(s(1).subs, 2);
+                    if n == 1 % linear indexing
+                        I = ind2sub_(t.sz, s(1).subs{1});
+                        s(1).subs = arrayfun(@(x) I(:,x), 1:width(I), 'UniformOutput',false);
+                    else
+                        assert(n == size(t.sz, 2), 'sparse:index', ...
+                            'number of indexing indices must match tensor size.');
+                    end
+                    f = true(size(t.ind, 1), 1);
+                    newsz = zeros(1, size(s(1).subs, 2));
+                    
+                    for i = 1:size(s(1).subs, 2)
+                        A = s(1).subs{i};
+                        if strcmp(A, ':')
+                            newsz(i) = t.size(i);
+                            continue;
+                        end
+                        nA = length(A);
+                        if nA ~= length(unique(A))
+                            error("Repeated index in position %i",i);
+                        end
+                        if ~isempty(t.ind)
+                            B = t.ind(:, i);
+                            P = false(max(max(A), max(B)) + 1, 1);
+                            P(A + 1) = true;
+                            f = and(f, P(B + 1));
+                            [~, ~, temp] = unique([A(:); t.ind(f, i)], 'stable');
+                            t.ind(f, i) = temp(nA+1:end);
+                        end
+                        newsz(i) = nA;
+                    end
+                    t.sz = newsz;
+                    if ~isempty(t.ind)
+                        t.ind = t.ind(f, :);
+                        t.var = t.var(f);
+                    end
+                    if length(s) > 1
+                        assert(isscalar(t))
+                        t = subsref(t.var, s(2:end));
+                    end
+                case '.'
+                    t = builtin('subsref', t, s);
+                otherwise
+                    error('sparse:index', '{} indexing not defined');
             end
         end
         
@@ -806,7 +831,7 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor < AbstractTensor
                 subsize(i) = length(s(1).subs{i});
             end
             if nnz(v) == 0, return; end
-            if isscalar(v), v = repmat(v, subsize); end
+            if isscalar(v) && prod(subsize) > 1, v = repmat(v, subsize); end
             subs = combvec(s(1).subs{:}).';
             
             if isempty(t.ind)
@@ -897,11 +922,7 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor < AbstractTensor
         end
     end
     
-    methods (Static)
-        function t = zeros(varargin)
-            sz = [varargin{:}];
-            t = SparseTensor([], [], sz);
-        end
-    end
+    
+    
 end
 
