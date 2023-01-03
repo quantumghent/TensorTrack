@@ -750,7 +750,6 @@ classdef Tensor < AbstractTensor
                 C(szA(1), szB(2)) = Tensor();
                 for i = flip(1:szA(1))
                     for j = flip(1:szB(2))
-                        tmp 
                         C(i, j) = sum(A(i, :) .* B(:, j).', 'all');
                     end
                 end
