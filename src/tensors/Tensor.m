@@ -966,7 +966,14 @@ classdef Tensor < AbstractTensor
             % t : :class:`Tensor`
             %   output tensor.
             
-            t.var = rdivide(t.var, a);
+            if isscalar(a)
+                for i = 1:numel(t)
+                    t(i).var = rdivide(t(i).var, a);
+                end
+                return
+            end
+            
+            error('undefined');
         end
         
         function C = sum(A, dim)

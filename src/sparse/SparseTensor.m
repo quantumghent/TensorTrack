@@ -474,6 +474,13 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor < AbstractTensor
             a.ind = [a.ind; b.ind(~lia, :)];
         end
         
+        function t = rdivide(t, a)
+            assert(isnumeric(a), 'method not implemented.');
+            if nnz(t) > 0
+                t.var = rdivide(t.var, a);
+            end
+        end
+        
         function B = sum(A, dim)
             arguments
                 A
@@ -694,14 +701,16 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor < AbstractTensor
         end
         
         function t = repartition(t, r)
-            if nnz(t) > 0
-                if nargin == 1
-                    t.var = arrayfun(@repartition, t.var);
-                else
-                    t.var = arrayfun(@(x) repartition(x, r), t.var);
-                end
+            arguments
+                t
+                r (1,2) = [nspaces(t) 0]
             end
-            sp = space(t, p);
+            
+            if nnz(t) > 0
+                t.var = arrayfun(@(x) repartition(x, r), t.var);
+            end
+            
+            sp = space(t);
             t.codomain = sp(1:r(1));
             t.domain = sp(r(1) + (1:r(2)))';
         end
