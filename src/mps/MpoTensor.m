@@ -209,17 +209,19 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) MpoTensor < Ab
                     B_ = reshape(permute(B.scalars, iB), ...
                         [prod(size(B, dimB)) prod(size(B, uncB))]);
                     
+                    
                     subs = zeros(size(A_, 1), 2);
                     subs(:, 1) = (1:size(A_, 1)).';
                     sz2 = [size(A_, 1) size(B_, 2)];
                     [Brows, Bcols, Bvals] = find(B_);
-                    
+                    C = reshape(C, sz2);
                     for i = 1:length(Bvals)
                         Atmp = A_(:, Brows(i)) .* Bvals(i);
                         subs(:, 2) = Bcols(i);
                         idx = sub2ind_(sz2, subs);
                         C(idx) = C(idx) + Atmp;
                     end
+                    C = reshape(C, szC);
                 end
             end
         end
