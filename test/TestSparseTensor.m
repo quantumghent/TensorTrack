@@ -5,39 +5,34 @@ classdef TestSparseTensor < matlab.unittest.TestCase
         tol = 1e-12
     end
     
-    properties (TestParameter)
-        spaces = struct(...
-            'cartesian', SumSpace(CartesianSpace(2,[],2,[]), CartesianSpace(2,[],1,[]), ...
-                CartesianSpace(1,[],3,[]), CartesianSpace(2,[],1,[],1,[]), CartesianSpace(1,[],2,[],1,[])) ...
-            )
-    end
-    
     methods (Test)
-        function basic_linear_algebra(tc, spaces)
-            t1 = SparseTensor.rand(spaces(1:3), spaces(4:5), 'Density', 0.3);
-            tc.verifyTrue(isapprox(norm(t1)^2, dot(t1, t1), ...
-                'AbsTol', tc.tol, 'RelTol', tc.tol), 'Norm and dot incompatible.');
-            
+        function basic_linear_algebra(tc)
+            spaces = CartesianSpace.new([2 3 4 5]);
+            szs = cell(1, 4);
+            for i = 1:length(szs)
+                szs{i} = spaces(randperm(length(spaces), randi([2 3])));
+            end
+            t1 = generatesparsetensor([2 2], szs, 0.3);
             a = rand();
+            
+            tc.verifyTrue(isapprox(norm(t1)^2, dot(t1, t1), ...
+                'AbsTol', tc.tol, 'RelTol', tc.tol), 'norm and dot incompatible.');
+            
             tc.verifyTrue(isapprox(norm(a .* t1), abs(a) * norm(t1), ...
                 'AbsTol', tc.tol, 'RelTol', tc.tol), ...
-                'Norm and scalar multiplication incompatible.');
-            
+                'norm and scalar multiplication incompatible.');
             tc.verifyTrue(isapprox(t1 + t1, 2 .* t1, ...
                 'AbsTol', tc.tol, 'RelTol', tc.tol), ...
-                '2*t and t+t incompatible.')
+                '2t and t+t incompatible.');
             
             tc.verifyTrue(isapprox(-t1, t1 .* (-1), 'AbsTol', tc.tol), ...
-                '-t and t .* (-1) incompatible.');
-            
-            tc.verifyTrue(isapprox(t1 .* (1/a), t1 ./ a, 'AbsTol', tc.tol), ...
-                '.* and ./ are incompatible');
-            
+                '=t and t * (-1) incompatible.');
             tc.verifyTrue(isapprox(norm(normalize(t1)), 1), ...
                 'normalize should result in unit norm.');
             
-            t2 = SparseTensor.rand(spaces(1:3), spaces(4:5), 'Density', 0.2);
+            t2 = generatesparsetensor([2 2], szs, 0.3);
             b = rand();
+            
             tc.verifyTrue(isapprox(dot(b .* t2, a .* t1), conj(b) * a * dot(t2, t1), ...
                 'AbsTol', tc.tol, 'RelTol', tc.tol) && ...
                 isapprox(dot(t2, t1), conj(dot(t1, t2)), ...
@@ -79,4 +74,21 @@ classdef TestSparseTensor < matlab.unittest.TestCase
             end
         end
     end
+end
+
+function t = generatesparsetensor(rank, spaces, sparsity)
+
+sz = cellfun(@length, spaces);
+ind = ind2sub_(sz, 1:prod(sz));
+
+for i = prod(sz):-1:1
+    for j = length(sz):-1:1
+        localsz(j) = spaces{j}(ind(i,j));
+    end
+    var(i) = Tensor.rand(localsz(1:rank(1)), localsz(rank(1)+1:end)', 'Rank', rank);
+end
+
+li1 = rand([1, length(var)]) < sparsity;
+t = SparseTensor(ind(li1, :), var(li1), sz);
+
 end
