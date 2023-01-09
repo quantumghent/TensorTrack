@@ -34,6 +34,9 @@ classdef (Abstract) AbstractBlock
                 return
             end
             
+            assert(~isa(codomain, 'SumSpace') && ~isa(domain, 'SumSpace'), ...
+                'tensors:argerror', 'Cannot construct tensor with SumSpaces.');
+            
             global cache
             if isempty(cache), cache = LRU; end
             

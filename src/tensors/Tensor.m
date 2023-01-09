@@ -60,7 +60,7 @@ classdef Tensor < AbstractTensor
                     varargin);
                 return;
             end
-                
+            
             % t = Tensor(codomain, domain)
             if nargin == 2
                 codomain = varargin{1};
@@ -68,10 +68,28 @@ classdef Tensor < AbstractTensor
                 
                 assert(~isempty(codomain) || ~isempty(domain), ...
                     'Cannot create (0,0) tensors.');
-                t.domain    = domain;
-                t.codomain  = codomain;
                 
-                t.var = AbstractBlock.new(codomain, domain);
+                if isa(codomain, 'SumSpace') || isa(domain, 'SumSpace')
+                    if isempty(codomain)
+                        sz = flip(nsubspaces(domain));
+                    elseif isempty(domain)
+                        sz = nsubspaces(codomain);
+                    else
+                        sz = [nsubspaces(codomain) flip(nsubspaces(domain))];
+                    end
+                    subs = ind2sub_(sz, 1:prod(sz));
+                    for i = size(subs, 1):-1:1
+                        [cod, dom] = slice(codomain, domain, subs(i,:));
+                        t(i).codomain = cod;
+                        t(i).domain = dom;
+                        t(i).var = AbstractBlock.new(cod, dom);
+                    end
+                else
+                    t.domain    = domain;
+                    t.codomain  = codomain;
+                    t.var = AbstractBlock.new(codomain, domain);
+                end
+                
                 return
             end
             
@@ -84,7 +102,7 @@ classdef Tensor < AbstractTensor
             % Usage
             % -----
             % :code:`t = fill_matrix(t, matrices, charges)`
-            % 
+            %
             % :code:`t = fill_matrix(t, fun, charges)`
             %
             % Arguments
@@ -97,7 +115,7 @@ classdef Tensor < AbstractTensor
             %
             % fun : :class:`function_handle`
             %   function of signature :code:`fun(dims, charge)` to fill with.
-            % 
+            %
             % charges : :class:`AbstractCharge`
             %   optional list of charges to identify the matrix blocks.
             %
@@ -135,7 +153,7 @@ classdef Tensor < AbstractTensor
             % Usage
             % -----
             % :code:`t = fill_tensor(t, tensors)`
-            % 
+            %
             % :code:`t = fill_tensor(t, fun)`
             %
             % Arguments
@@ -216,7 +234,7 @@ classdef Tensor < AbstractTensor
             %
             % Examples
             % --------
-            % :code:`t = similar([], mpsbar, 1, mpo, 4, mps, 1, 'Conj', true)` creates a 
+            % :code:`t = similar([], mpsbar, 1, mpo, 4, mps, 1, 'Conj', true)` creates a
             % left mps environment tensor.
             
             arguments
@@ -379,7 +397,7 @@ classdef Tensor < AbstractTensor
                 end
             end
         end
-
+        
         function t = zeros(varargin)
             t = Tensor.new(@zeros, varargin{:});
         end
@@ -477,7 +495,7 @@ classdef Tensor < AbstractTensor
         end
         
         function tdst = insert_onespace(tsrc, i, dual)
-            % insert a trivial space at position i. 
+            % insert a trivial space at position i.
             arguments
                 tsrc
                 i = nspaces(tsrc) + 1
@@ -522,7 +540,7 @@ classdef Tensor < AbstractTensor
     methods
         
     end
-        
+    
     
     %% Linear algebra
     methods
@@ -574,7 +592,7 @@ classdef Tensor < AbstractTensor
         end
         
         function d = dot(t1, t2)
-            % Compute the scalar dot product of two tensors. This is defined as the overlap 
+            % Compute the scalar dot product of two tensors. This is defined as the overlap
             % of the two tensors, which therefore must have equal domain and codomain. This
             % function is sesquilinear in its arguments.
             %
@@ -662,7 +680,7 @@ classdef Tensor < AbstractTensor
             
             t = inv(t1) * t2;
         end
-            
+        
         function t = mrdivide(t1, t2)
             % Right division of tensors.
             %
@@ -985,7 +1003,7 @@ classdef Tensor < AbstractTensor
             if isscalar(A), C = A; return; end
             
             if isempty(dim), dim = find(size(A) ~= 1, 1); end
-                
+            
             if strcmp(dim, 'all')
                 C = A(1);
                 for i = 2:numel(A)
@@ -1002,7 +1020,7 @@ classdef Tensor < AbstractTensor
                     end
                     return
                 end
-
+                
                 if dim == 2
                     C = A(:, 1);
                     for i = 2:size(A, 2)
@@ -1144,7 +1162,7 @@ classdef Tensor < AbstractTensor
                             join(string(A_.domain), '    '), ...
                             join(string(B_.codomain), '    '));
                     end
-                    if ~isempty(A_.codomain) || ~isempty(B_.domain) 
+                    if ~isempty(A_.codomain) || ~isempty(B_.domain)
                         med.C = Tensor.zeros(A_.codomain, B_.domain);
                     else
                         med.C = [];
@@ -1169,7 +1187,7 @@ classdef Tensor < AbstractTensor
             for i = rA(1) + (1:rA(2))
                 if ~isdual(space(A, i)), A = twist(A, i); end
             end
-%             A = twist(A, [false(1, length(A.codomain)) ~isdual(A.domain')]);
+            %             A = twist(A, [false(1, length(A.codomain)) ~isdual(A.domain')]);
             B = tpermute(B, iB, rB);
             
             assert(isequal(A.domain, B.codomain), 'tensors:SpaceMismatch', ...
@@ -1201,7 +1219,7 @@ classdef Tensor < AbstractTensor
             % ---------
             % t : :class:`Tensor`
             %   input tensor.
-            % 
+            %
             % a : numeric
             %   input scalar.
             %
@@ -1341,7 +1359,7 @@ classdef Tensor < AbstractTensor
                 inv = false
             end
             
-            if isempty(i) || ~any(i) || istwistless(braidingstyle(t(1))) 
+            if isempty(i) || ~any(i) || istwistless(braidingstyle(t(1)))
                 return
             end
             
@@ -1507,7 +1525,7 @@ classdef Tensor < AbstractTensor
             %
             % alg : char or string
             %   selection of algorithms for the decomposition:
-            %   
+            %
             %   - 'qr' produces an upper triangular remainder R
             %   - 'qrpos' corrects the diagonal elements of R to be positive.
             %   - 'ql' produces a lower triangular remainder R
@@ -1587,7 +1605,7 @@ classdef Tensor < AbstractTensor
             %
             % alg : char or string
             %   selection of algorithms for the decomposition:
-            %   
+            %
             %   - 'rq' produces an upper triangular remainder R
             %   - 'rqpos' corrects the diagonal elements of R to be positive.
             %   - 'lq' produces a lower triangular remainder R
@@ -1610,7 +1628,7 @@ classdef Tensor < AbstractTensor
                 alg {mustBeMember(alg, {'rq', 'rqpos', 'lq', 'lqpos', 'polar', 'svd'})} ...
                     = 'rqpos'
             end
-
+            
             if isempty(p1), p1 = 1:rank(t, 1); end
             if isempty(p2), p2 = rank(t, 1) + (1:rank(t,2)); end
             
@@ -1705,7 +1723,7 @@ classdef Tensor < AbstractTensor
         end
         
         function N = rightnull(t, p1, p2, alg, atol)
-             % Compute the right nullspace of a tensor, such that
+            % Compute the right nullspace of a tensor, such that
             % :code:`tpermute(t, [p1 p2], [length(p1) length(p2)]) * N = 0`.
             %
             % Arguments
@@ -1789,7 +1807,7 @@ classdef Tensor < AbstractTensor
             %   charge.
             %
             % TruncTotalDim : int
-            %   truncate such that the total dim of S is not larger than this value. 
+            %   truncate such that the total dim of S is not larger than this value.
             %
             % TruncBelow : numeric
             %   truncate such that there are no singular values below this value.
@@ -1986,7 +2004,7 @@ classdef Tensor < AbstractTensor
             %   Output tensor.
             
             % tensor to a scalar power
-            if isnumeric(Y) && isscalar(Y)  
+            if isnumeric(Y) && isscalar(Y)
                 assert(isequal(X.codomain, X.domain), 'tensors:ArgumentError', ...
                     'Input tensor should be square.');
                 mblocks = matrixblocks(X);
@@ -2054,7 +2072,7 @@ classdef Tensor < AbstractTensor
     end
     
     
-    %% 
+    %%
     methods
         function bool = isposdef(t)
             % Test if a tensor is a positive-definite map. Generally, a Hermitian matrix `M`
@@ -2121,7 +2139,7 @@ classdef Tensor < AbstractTensor
                     'RelTol', tol.RelTol, 'AbsTol', tol.AbsTol), t);
                 return
             end
-
+            
             mblocks = matrixblocks(t);
             for i = 1:length(mblocks)
                 if ~isisometry(mblocks{i}, side, 'RelTol', tol.RelTol, 'AbsTol', tol.AbsTol)
@@ -2374,11 +2392,12 @@ classdef Tensor < AbstractTensor
             if nargin == 1 || isempty(details), details = false; end
             if isscalar(t)
                 r = t.rank;
-                fprintf('Rank (%d, %d) %s:\n\n', r(1), r(2), class(t));
+                fprintf('Rank (%d, %d) %s:\n', r(1), r(2), class(t));
                 s = space(t);
                 for i = 1:length(s)
-                    fprintf('%d.\t', i);
+                    fprintf('\t%d.\t', i);
                     disp(s(i));
+                    fprintf('\b');
                 end
                 fprintf('\n');
                 if details

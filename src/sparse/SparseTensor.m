@@ -136,6 +136,22 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor < AbstractTensor
             end
             t = SparseTensor.new(@zeros, codomain, domain, 'Density', kwargs.Density);
         end
+        
+        function t = eye(codomain, domain)
+            t = SparseTensor.zeros(codomain, domain);
+            
+            sz1 = size(t, 1:length(codomain));
+            sz2 = size(t, length(codomain) + (1:length(domain)));
+            n = prod(sz1);
+            assert(n == prod(sz2));
+            
+            inds = sub2ind_([n n], [1:n; 1:n].');
+            for i = flip(1:n)
+                t.ind(i,:) = ind2sub_(t.sz, inds(i));
+                [cod, dom] = slice(codomain, domain, t.ind(i,:));
+                t.var(i) = Tensor.eye(cod, dom);
+            end
+        end
     end
     
     
@@ -157,8 +173,6 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor < AbstractTensor
             codomain = SumSpace(spaces{1:Nout});
             domain = SumSpace(spaces{(Nout+1):end})';
         end
-        
-        
         
         function B = full(A)
             inds = ind2sub_(A.sz, 1:prod(A.sz));
@@ -222,7 +236,21 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor < AbstractTensor
         end
         
         function disp(t)
+            r = t.rank;
             nz = nnz(t);
+            if nz == 0
+                fprintf('all-zero rank (%d, %d) %s:\n', r(1), r(2), class(t));
+            else
+                fprintf('rank (%d, %d) %s with %d nonzeros:\n', r(1), r(2), class(t), nz);
+            end
+            s = space(t);
+            for i = 1:length(s)
+                fprintf('\t%d.\t', i);
+                disp(s(i));
+                fprintf('\b');
+            end
+            fprintf('\n');
+            
             if nz == 0
                 fprintf('all-zero %s of size %s\n', class(t), ...
                     dim2str(t.sz));
