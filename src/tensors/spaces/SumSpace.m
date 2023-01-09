@@ -55,7 +55,7 @@ classdef (InferiorClasses = {?GradedSpace, ?CartesianSpace, ?ComplexSpace}) SumS
             % ---------
             % space1, space2 : (1,1) :class:`AbstractSpace`
             %   input spaces.
-            % 
+            %
             % Returns
             % -------
             % space : (1,1) :class:`AbstractSpace`
@@ -93,6 +93,71 @@ classdef (InferiorClasses = {?GradedSpace, ?CartesianSpace, ?ComplexSpace}) SumS
             for i = 1:numel(n)
                 n(i) = numel(space(i).dimensions);
             end
+        end
+        
+        function [cod, dom] = slice(sumcod, sumdom, I)
+            assert(length(I) == length(sumcod) + length(sumdom));
+            if isempty(sumcod)
+                cod = [];
+            else
+                for i = flip(1:length(sumcod))
+                    cod(i) = subspaces(sumcod(i), I(i));
+                end
+            end
+            if isempty(sumdom)
+                dom = [];
+            else
+                for i = flip(1:length(sumdom))
+                    dom(i) = subspaces(sumdom(i), I(end+1-i));
+                end
+                
+            end
+        end
+        
+        function disp(spaces)
+            s = settings;
+            shortformat = strcmp('short', s.matlab.commandwindow.NumericFormat.ActiveValue);
+            
+            if isscalar(spaces)
+                subsp = subspaces(spaces);
+                dimstr = num2str(sum(dims(subsp)));
+                if isdual(spaces), dimstr = dimstr + "*"; end
+                sz = size(subsp);
+                szstr = sprintf('%dx%d', sz(1), sz(2));
+                fprintf('\t%s %s: %s\n', szstr, name(spaces), dimstr);
+                if ~shortformat
+                    for i = 1:length(subsp)
+                        fprintf('\t\t%d.\t%s\n', i, string(subsp(i), 'IncludeType', false));
+                    end
+                end
+                fprintf('\n');
+                return
+            end
+            
+            sz = size(spaces);
+            assert(length(sz) == 2);
+            dim_str = sprintf('%dx%d', sz(1), sz(2));
+            fprintf('\t%s Product %s:\n', dim_str, name(spaces));
+            for i = 1:length(spaces)
+                subsp = subspaces(spaces(i));
+                dimstr = num2str(sum(dims(subsp)));
+                if isdual(spaces(i)), dimstr = dimstr + "*"; end
+                sz = size(subsp);
+                szstr = sprintf('%dx%d', sz(1), sz(2));
+                fprintf('\t\t%d.\t%s: %s\n', i, szstr, dimstr);
+                
+                if ~shortformat
+                    for j = 1:length(subsp)
+                        fprintf('\t\t\t%d.\t%s\n', j, ...
+                            string(subsp(j), 'IncludeType', false));
+                    end
+                end
+            end
+            fprintf('\n');
+        end
+        
+        function s = name(spaces)
+            s = sprintf("Sum%s", name(subspaces(spaces(1))));
         end
     end
 end

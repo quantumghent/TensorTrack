@@ -366,5 +366,28 @@ classdef (Abstract) AbstractSpace
             
             hashable = {spaces.dimensions, spaces.dual};
         end
+        
+        function disp(spaces)
+            % Custom display of spaces.
+            
+            s = settings;
+            shortformat = strcmp('short', s.matlab.commandwindow.NumericFormat.ActiveValue);
+                    
+            if isscalar(spaces)
+                fprintf('\t%s\n\n', string(spaces, 'IncludeDetails', ~shortformat));
+                return
+            end
+            
+            sz = size(spaces);
+            assert(length(sz) == 2);
+            dim_str = sprintf('%dx%d', sz(1), sz(2));
+            fprintf('\t%s Product %s:\n', dim_str, name(spaces));
+            for i = 1:length(spaces)
+                subspacestring = string(spaces(i), ...
+                    'IncludeType', false, 'IncludeDetails', ~shortformat);
+                fprintf('\t\t%d.\t%s\n', i, subspacestring);
+            end
+            fprintf('\n');
+        end
     end
 end

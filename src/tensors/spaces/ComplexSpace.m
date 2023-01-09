@@ -279,34 +279,32 @@ classdef ComplexSpace < AbstractSpace
             hashable = [spaces.dimensions spaces.isdual];
         end
         
-        function disp(spaces)
-            if isscalar(spaces)
-                fprintf('%s\n', string(spaces));
+        function s = string(spaces, kwargs)
+            arguments
+                spaces
+                kwargs.IncludeType = true
+                kwargs.IncludeDetails = true
+            end
+            
+            if numel(spaces) > 1
+                kwargs = namedargs2cell(kwargs);
+                s = arrayfun(@(x) string(x, kwargs{:}), spaces);
                 return
             end
             
-            sz = size(spaces);
-            dim_str = sprintf('%dx%d', sz(1), sz(2));
-            fprintf('%s ProductSpace with elements:\n\n', dim_str);
-            for i = 1:length(spaces)
-                fprintf('%d.\t', i);
-                disp(spaces(i));
-                fprintf('\n');
+            dimstring = sprintf("%d", dims(spaces));
+            if isdual(spaces), dimstring = dimstring + "*"; end
+            
+            if kwargs.IncludeType
+                typestring = name(spaces);
+                s = sprintf("%s: %s", typestring, dimstring);
+            else
+                s = sprintf("%s", dimstring);
             end
         end
         
-        function s = string(spaces)
-            if numel(spaces) > 1
-                s = arrayfun(@string, spaces);
-                return
-            end
-            
-            if spaces.dual
-                s = sprintf("Space (%d)*", dims(spaces));
-            else
-                s = sprintf("Space (%d)", dims(spaces));
-            end
+        function s = name(~)
+            s = "ComplexSpace";
         end
     end
-
 end

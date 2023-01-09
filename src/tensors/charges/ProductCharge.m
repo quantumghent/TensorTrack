@@ -48,17 +48,6 @@ classdef ProductCharge < AbstractCharge
                 catcharges = cellfun(@(x) x.charges{i}, varargin(~mask), 'UniformOutput', false);
                 a.charges{i} = cat(dim, a.charges{i}, catcharges{:});
             end
-%             
-%             for i = 1:length(varargin)
-%                 if isempty(varargin{i}), continue; end
-%                 if isempty(a)
-%                     a = varargin{i};
-%                     continue;
-%                 end
-%                 for j = 1:length(a.charges)
-%                     a.charges{j} = cat(dim, a.charges{j}, varargin{i}.charges{j});
-%                 end
-%             end
         end
         
         function a = horzcat(a, varargin)
@@ -363,11 +352,6 @@ classdef ProductCharge < AbstractCharge
             end
         end
         
-        %function c = intersect(a, b)
-         %   c = subsref(a, substruct('()', ...
-         %       {mod(find(reshape(a, [], 1) == reshape(b, 1, [])) - 1, length(a)) + 1}));
-        %end
-        
         function [c, ia, ib] = intersect(a, b)
             c = subsref(a, substruct('()', ...
                         {mod(find(reshape(a, [], 1) == reshape(b, 1, [])) - 1, length(a)) + 1}));
@@ -375,7 +359,6 @@ classdef ProductCharge < AbstractCharge
             [~,ib]    = ismember(c, b);
         end
 
-        
         function F = Fsymbol(a, b, c, d, e, f)
             if hasmultiplicity(fusionstyle(a))
                 error('Not implemented yet.');
@@ -453,10 +436,8 @@ classdef ProductCharge < AbstractCharge
         
         function disp(a)
             s = string(a);
-            
-            
             fprintf('\t%s (%s) Array:\n', ...
-                dim2str(size(a)), join(cellfun(@(x)string(class(x)), a.charges), 'x'));
+                dim2str(size(a)), name(a));
             for i = 1:size(a, 1)
                 fprintf('\t\t%s\n', join(s(i, :), '    '));
             end
@@ -492,6 +473,10 @@ classdef ProductCharge < AbstractCharge
                 ctr = ctr * n;
             end
             c = ProductCharge(charges{:});
+        end
+        
+        function s = name(a)
+            s = join(cellfun(@(x)string(class(x)), a.charges), 'x');
         end
         
         function bool = ne(a, b)

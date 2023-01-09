@@ -745,5 +745,9 @@ classdef (Abstract) AbstractCharge
                 locb = reshape(locb, size(a));
             end
         end
+        
+        function s = name(a)
+            s = class(a);
+        end
     end
 end

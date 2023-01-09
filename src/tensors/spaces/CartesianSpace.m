@@ -305,31 +305,31 @@ classdef CartesianSpace < AbstractSpace
             hashable = [spaces.dimensions];
         end
         
-        function disp(spaces)
-            if isscalar(spaces)
-                fprintf('CartesianSpace of dimension %d\n', spaces.dimensions);
+        function s = string(spaces, kwargs)
+            arguments
+                spaces
+                kwargs.IncludeType = true
+                kwargs.IncludeDetails = true
+            end
+            
+            if numel(spaces) > 1
+                kwargs = namedargs2cell(kwargs);
+                s = arrayfun(@(x) string(x, kwargs{:}), spaces);
                 return
             end
             
-            fprintf('%dx%d Product space with elements:\n\n', ...
-                size(spaces, 1), size(spaces, 2));
-            for i = 1:length(spaces)
-                fprintf('%d.\t', i);
-                disp(spaces(i));
-                fprintf('\n');
+            dimstring = sprintf("%d", dims(spaces));
+            
+            if kwargs.IncludeType
+                typestring = name(spaces);
+                s = sprintf("%s: %s", typestring, dimstring);
+            else
+                s = sprintf("%s", dimstring);
             end
         end
         
-        function s = string(spaces)
-            if numel(spaces) > 1
-                s = strings(size(spaces));
-                for i = 1:numel(spaces)
-                    s(i) = string(spaces(i));
-                end
-                return
-            end
-            
-            s = sprintf('CartesianSpace of dimension %d', spaces.dimensions);
+        function s = name(~)
+            s = "CartesianSpace";
         end
     end    
 end

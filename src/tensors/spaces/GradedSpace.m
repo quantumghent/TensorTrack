@@ -381,56 +381,40 @@ classdef GradedSpace < AbstractSpace
     end
 
     methods
-        function disp(spaces)
-            % Custom display of spaces.
-            if isscalar(spaces)
-                fprintf('%s\n', string(spaces));
-%                 fprintf('%s GradedSpace of dimension %d:\n', ...
-%                     class(spaces.dimensions.charges), dims(spaces));
-%                 title_str = strjust(pad(["dual", "charges", "degeneracies"]), 'right');
-%                 charge_str = strjust(pad([string(spaces.dimensions.charges)
-%                     string(spaces.dimensions.degeneracies)]), 'center');
-%                 fprintf('\t%s:\t%s\n', title_str(1), string(spaces.dual));
-%                 fprintf('\t%s:\t%s\n', title_str(2), join(charge_str(1, :), char(9)));
-%                 fprintf('\t%s:\t%s\n', title_str(3), join(charge_str(2, :), char(9)));
-                return
+        function s = string(spaces, kwargs)
+            arguments
+                spaces
+                kwargs.IncludeType = true
+                kwargs.IncludeDetails = true
             end
             
-            sz = size(spaces);
-            assert(length(sz) == 2);
-            dim_str = sprintf('%dx%d', sz(1), sz(2));
-            fprintf('%s ProductSpace with elements:\n\n', dim_str);
-            for i = 1:length(spaces)
-                fprintf('%d.\t', i);
-                disp(spaces(i));
-                fprintf('\n');
-            end
-        end
-        
-        function s = string(spaces)
-%             title_str = strjust(pad(["dual", "charges", "degeneracies"]), 'right');
-%             charge_str = strjust(pad([string(spaces.dimensions.charges)
-%                 string(spaces.dimensions.degeneracies)]), 'center');
-%             s = sprintf(...
-%                 '%s GradedSpace of dimension %d:\n\t%s:\t%s\n\t%s:\t%s\n\t%s:\t%s\n', ...
-%                 class(spaces.dimensions.charges), dims(spaces), ...
-%                 title_str(1), string(spaces.dual), ...
-%                 title_str(2), join(charge_str(1, :), char(9)), ...
-%                 title_str(3), join(charge_str(2, :), char(9)));
             if numel(spaces) > 1
-                s = arrayfun(@string, spaces);
+                kwargs = namedargs2cell(kwargs);
+                s = arrayfun(@(x) string(x, kwargs{:}), spaces);
                 return
             end
             
-            chargestring = join(compose("%s => %d", string(spaces.dimensions.charges).', ...
-                spaces.dimensions.degeneracies.'), ', ');
-
-            if spaces.dual
-                s = sprintf("%s Space (%d)*: %s", class(spaces.dimensions.charges), ...
-                    dims(spaces), chargestring);
+            dimstring = sprintf("%d", dims(spaces));
+            if isdual(spaces), dimstring = dimstring + "*"; end
+            
+            if kwargs.IncludeType
+                typestring = name(spaces);
+            end
+            
+            if kwargs.IncludeDetails
+                chargestring = "(" + join(compose("%s => %d", ...
+                    string(spaces.dimensions.charges).', ...
+                    spaces.dimensions.degeneracies.'), ', ') + ")";
+            end
+            
+            if kwargs.IncludeType && kwargs.IncludeDetails
+                s = sprintf("%s: %s %s", typestring, dimstring, chargestring);
+            elseif kwargs.IncludeType
+                s = sprintf("%s: %s", typestring, dimstring);
+            elseif kwargs.IncludeDetails
+                s = sprintf("%s %s", dimstring, chargestring);
             else
-                s = sprintf("%s Space (%d): %s", class(spaces.dimensions.charges), ...
-                    dims(spaces), chargestring);
+                s = dimstring;
             end
         end
         
@@ -444,6 +428,10 @@ classdef GradedSpace < AbstractSpace
         function cartesianspaces = CartesianSpace(gradedspaces)
             d = num2cell(dims(gradedspaces));
             cartesianspaces = CartesianSpace(d{:});
+        end
+        
+        function s = name(spaces)
+            s = sprintf("%sSpace", name(spaces(1).dimensions.charges));
         end
     end
     
