@@ -34,7 +34,7 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) MpoTensor < Ab
                     t.scalars = varargin{1}.scalars;
                     t.tensors = varargin{1}.tensors;
                 elseif isa(varargin{1}, 'Tensor') || isa(varargin{1}, 'SparseTensor')
-                    t.tensors = varargin{1};
+                    t.tensors = sparse(varargin{1});
                     t.scalars = zeros(size(t.tensors));
                 end
                 return
