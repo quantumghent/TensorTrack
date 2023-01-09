@@ -138,6 +138,8 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor < AbstractTensor
         end
     end
     
+    
+    %% Utility
     methods
         function [codomain, domain] = deduce_spaces(t)
             spaces = cell(1, ndims(t));
@@ -156,34 +158,7 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor < AbstractTensor
             domain = SumSpace(spaces{(Nout+1):end})';
         end
         
-        function t = permute(t, p)
-            if ~isempty(t.ind)
-                t.ind = t.ind(:, p);
-            end
-            t.sz = t.sz(p);
-        end
         
-        function t = reshape(t, varargin)
-            if nargin == 1
-                sz = varargin{1};
-            else
-                hasempty = find(cellfun(@isempty, varargin));
-                if isempty(hasempty)
-                    sz = [varargin{:}];
-                elseif isscalar(hasempty)
-                    varargin{hasempty} = 1;
-                    sz = [varargin{:}];
-                    sz(hasempty) = round(numel(t) / prod(sz));
-                else
-                    error('Can only accept a single empty size index.');
-                end
-            end
-            assert(prod(sz) == prod(t.sz), ...
-                'sparse:argerror', 'To reshape the number of elements must not change.');
-            idx = sub2ind_(t.sz, t.ind);
-            t.ind = ind2sub_(sz, idx);
-            t.sz  = sz;
-        end
         
         function B = full(A)
             inds = ind2sub_(A.sz, 1:prod(A.sz));
@@ -733,7 +708,7 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor < AbstractTensor
                 inv = false
             end
             if nnz(t) > 0
-                t.var = twist(t.var, i, inv);
+                t.var = twistdual(t.var, i, inv);
             end
         end
         
@@ -759,6 +734,22 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor < AbstractTensor
     
     %% Indexing
     methods
+        function t = cat(dim, t, varargin)
+            for i = 1:length(varargin)
+                t2 = sparse(varargin{i});
+                N = max(ndims(t), ndims(t2));
+                dimcheck = 1:N;
+                dimcheck(dim) = [];
+                assert(isequal(size(t, dimcheck), size(t2, dimcheck)), ...
+                    'sparse:dimagree', 'incompatible sizes for concatenation.');
+                newinds = t2.ind;
+                newinds(:, dim) = newinds(:, dim) + size(t, dim);
+                t.var = vertcat(t.var, t2.var);
+                t.ind = vertcat(t.ind, newinds);
+                t.sz(dim) = t.sz(dim) + size(t2, dim);
+            end
+        end
+        
         function i = end(t, k, n)
             if n == 1
                 i = prod(t.sz);
@@ -767,6 +758,96 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor < AbstractTensor
             
             assert(n == length(t.sz), 'sparse:index', 'invalid amount of indices.')
             i = t.sz(k);
+        end
+        
+        function [I, J, V] = find(t, k, which)
+            arguments
+                t
+                k = []
+                which = 'first'
+            end
+            
+            if isempty(t.ind)
+                I = [];
+                J = [];
+                V = [];
+                return
+            end
+            
+            [inds, p] = sortrows(t.ind, width(t.ind):-1:1);
+            
+            if ~isempty(k)
+                if strcmp(which, 'first')
+                    inds = inds(1:k, :);
+                    p = p(1:k);
+                else
+                    inds = inds(end:-1:end-k+1, :);
+                    p = p(end:-1:end-k+1);
+                end
+            end
+            
+            if nargout < 2
+                I = sub2ind_(t.sz, inds);
+                return
+            end
+            
+            subs = sub2sub([t.sz(1) prod(t.sz(2:end))], t.sz, t.ind);
+            I = subs(:,1);
+            J = subs(:,2);
+            
+            if nargout > 2
+                V = t.var(p);
+            end
+        end
+        
+        function t = horzcat(varargin)
+            t = cat(2, varargin{:});
+        end
+        
+        function t = permute(t, p)
+            if ~isempty(t.ind)
+                t.ind = t.ind(:, p);
+            end
+            t.sz = t.sz(p);
+        end
+        
+        function t = reshape(t, varargin)
+            if nargin == 1
+                sz = varargin{1};
+            else
+                hasempty = find(cellfun(@isempty, varargin));
+                if isempty(hasempty)
+                    sz = [varargin{:}];
+                elseif isscalar(hasempty)
+                    varargin{hasempty} = 1;
+                    sz = [varargin{:}];
+                    sz(hasempty) = round(numel(t) / prod(sz));
+                else
+                    error('Can only accept a single empty size index.');
+                end
+            end
+            assert(prod(sz) == prod(t.sz), ...
+                'sparse:argerror', 'To reshape the number of elements must not change.');
+            idx = sub2ind_(t.sz, t.ind);
+            t.ind = ind2sub_(sz, idx);
+            t.sz  = sz;
+        end
+        
+        function t = sortinds(t)
+            % Sort the non-zero entries by their index.
+            %
+            % Arguments
+            % ---------
+            % t : :class:`SparseTensor`
+            %
+            % Returns
+            % -------
+            % t : :class:`SparseTensor`
+            %   tensor with sorted elements.
+            
+            if isempty(t), return; end
+            [t.ind, p] = sortrows(t.ind, width(t.ind):-1:1);
+            t.var = t.var(p);
         end
         
         function t = subsref(t, s)
@@ -863,74 +944,8 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor < AbstractTensor
             t.sz = max(t.sz, cellfun(@max, s(1).subs));
         end
         
-        function [I, J, V] = find(t, k, which)
-            arguments
-                t
-                k = []
-                which = 'first'
-            end
-            
-            if isempty(t.ind)
-                I = [];
-                J = [];
-                V = [];
-                return
-            end
-            
-            [inds, p] = sortrows(t.ind, width(t.ind):-1:1);
-            
-            if ~isempty(k)
-                if strcmp(which, 'first')
-                    inds = inds(1:k, :);
-                    p = p(1:k);
-                else
-                    inds = inds(end:-1:end-k+1, :);
-                    p = p(end:-1:end-k+1);
-                end
-            end
-            
-            if nargout < 2
-                I = sub2ind_(t.sz, inds);
-                return
-            end
-            
-            subs = sub2sub([t.sz(1) prod(t.sz(2:end))], t.sz, t.ind);
-            I = subs(:,1);
-            J = subs(:,2);
-            
-            if nargout > 2
-                V = t.var(p);
-            end
-        end
-        
-        function t = sortinds(t)
-            if isempty(t), return; end
-            [t.ind, p] = sortrows(t.ind, width(t.ind):-1:1);
-            t.var = t.var(p);
-        end
-        
-        function t = horzcat(varargin)
-            t = cat(2, varargin{:});
-        end
-        
         function t = vertcat(varargin)
             t = cat(1, varargin{:});
-        end
-        
-        function t = cat(dim, t, varargin)
-            for i = 1:length(varargin)
-                t2 = sparse(varargin{i});
-                N = max(ndims(t), ndims(t2));
-                dimcheck = 1:N;
-                dimcheck(dim) = [];
-                assert(isequal(size(t, dimcheck), size(t2, dimcheck)), ...
-                    'sparse:dimagree', 'incompatible sizes for concatenation.');
-                newinds = t2.ind;
-                newinds(:, dim) = newinds(:, dim) + size(t, dim);
-                t.var = vertcat(t.var, t2.var);
-                t.ind = vertcat(t.ind, newinds);
-                t.sz(dim) = t.sz(dim) + size(t2, dim);
-            end
         end
     end
     
