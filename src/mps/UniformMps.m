@@ -135,9 +135,9 @@ classdef UniformMps
             L = length(pspaces);
             
             for w = length(pspaces):-1:1
-                rankdefficient = vspaces{w} * pspaces{w} < vspaces{next(w, L)} || ...
-                        vspaces{w} > pspaces{w} * vspaces{next(w, L)};
-                if rankdefficient
+                rankdeficient = vspaces{w} * pspaces{w} < vspaces{next(w, L)} || ...
+                        vspaces{w} > pspaces{w}' * vspaces{next(w, L)};
+                if rankdeficient
                     error('mps:rank', ...
                         'Cannot create a full rank mps with given spaces.');
                 end
