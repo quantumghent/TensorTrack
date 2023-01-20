@@ -304,19 +304,29 @@ classdef AbstractTensor
                 kwargs.Debug = false
             end
             assert(length(kwargs.Conj) == length(tensors));
+            
             for i = 1:length(tensors)
-                if length(indices{i}) > 1
-                    assert(length(unique(indices{i})) == length(indices{i}), ...
-                        'Tensors:TBA', 'Traces not implemented.');
-                end
+                [i1, i2] = traceinds(indices{i});
+                tensors{i} = tensortrace(tensors{i}, i1, i2);
+                indices{i}([i1 i2]) = [];
             end
             
             debug = kwargs.Debug;
             
             % Special case for single input tensor
             if nargin == 2
-                [~, order] = sort(indices{1}, 'descend');
                 C = tensors{1};
+                
+                if isempty(indices{1})
+                    assert(isnumeric(C));
+                    if kwargs.Conj
+                        C = C';
+                    end
+                    return
+                end
+                
+                [~, order] = sort(indices{1}, 'descend');
+                
                 if kwargs.Conj
                     C = tpermute(C', order(length(order):-1:1), kwargs.Rank);
                 else
@@ -420,6 +430,16 @@ classdef AbstractTensor
                 
                 local_operators{N} = insert_onespace(repartition(v, [2 1]), 3);
             end
+        end
+        
+        function B = tensortrace(A, i1, i2)
+            if isempty(i1) && isempty(i2), B = A; return; end
+            assert(length(i1) == length(i2), 'invalid indices');
+            
+            E = A.eye(conj(space(A, i1)), space(A, i2));
+            iA = [i1 i2];
+            iE = [1:length(i1) length(i1) + (length(i2):-1:1)];
+            B = tensorprod(A, E, iA, iE);
         end
     end
 end

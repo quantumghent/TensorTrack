@@ -46,20 +46,23 @@ end
 assert(length(kwargs.Conj) == length(tensors));
 
 for i = 1:length(tensors)
-    if length(indices{i}) > 1
-        assert(length(unique(indices{i})) == length(indices{i}), ...
-            'Tensors:TBA', 'Traces not implemented.');
-    end
+    [i1, i2] = traceinds(indices{i});
+    tensors{i} = tensortrace(tensors{i}, i1, i2);
+    indices{i}([i1 i2]) = [];
 end
 
 debug = kwargs.Debug;
 
 % Special case for single input tensor
 if nargin == 2
-    [~, order] = sort(indices{1}, 'descend');
     C = tensors{1};
-    C = permute(C, order);
     if kwargs.Conj, C = conj(C); end
+    
+    if ~isempty(indices{1})
+        [~, order] = sort(indices{1}, 'descend');
+        C = permute(C, order);
+    end
+    
     return
 end
 

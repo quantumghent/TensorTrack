@@ -197,6 +197,22 @@ classdef TestTensor < matlab.unittest.TestCase
             tc.assertTrue(isapprox(double(AC), contract(double(A), [-1 -2 1], double(C), [1 -3])));
         end
         
+        function tensortrace(tc, spaces)
+            t1 = Tensor.randnc(spaces(1:3), spaces(1:3));
+            t2 = contract(t1, [-1 -2 1 1 -3 -4], 'Rank', [2 2]);
+            t3 = contract(t2, [-1 1 1 -2], 'Rank', [1 1]);
+            t4 = contract(t1, [-1 1 2 2 1 -2], 'Rank', [1 1]);
+            tc.assertTrue(isapprox(t3, t4, 'AbsTol', tc.tol, 'RelTol', tc.tol));
+            
+            t5 = contract(t1, [1 2 3 3 2 1]);
+            t6 = contract(t4, [1 1]);
+            tc.assertTrue(isapprox(t5, t6, 'AbsTol', tc.tol, 'RelTol', tc.tol));
+            if istwistless(braidingstyle(spaces))
+                t7 = contract(double(t1), [1 2 3  3 2 1]);
+                tc.assertTrue(isapprox(t6, t7, 'AbsTol', tc.tol, 'RelTol', tc.tol));
+            end
+        end
+        
         function contract_order(tc, spaces)
             A = Tensor.randnc(spaces(1:2), spaces(1)');
             r = Tensor.randnc(spaces(1)', spaces(1)');
