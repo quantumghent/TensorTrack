@@ -41,6 +41,13 @@ classdef MatrixBlock < AbstractBlock
             splits = split(trees);
             fuses = fuse(trees);
             
+            b.rank = rank;
+            b.charge = reshape(c, 1, []);
+            b.var       = cell(size(b.charge));
+            b.rowsizes  = cell(size(b.charge));
+            b.colsizes  = cell(size(b.charge));
+            b.tdims     = cell(size(b.charge));
+            
             for i = length(c):-1:1
                 ids = ic == i;
                 
@@ -52,12 +59,10 @@ classdef MatrixBlock < AbstractBlock
                 coldims = mdims(ids, 2);
                 colsizes = [0 cumsum(coldims(ia)).'];
                 
-                b(i).charge = c(i);
-                b(i).var = uninit([rowsizes(end) colsizes(end)]);
-                b(i).rowsizes = rowsizes;
-                b(i).colsizes = colsizes;
-                b(i).tdims = tdims(ids, :);
-                b(i).rank = rank;
+                b.var{i} = uninit([rowsizes(end) colsizes(end)]);
+                b.rowsizes{i} = rowsizes;
+                b.colsizes{i} = colsizes;
+                b.tdims{i} = tdims(ids, :);
             end
         end
         
@@ -100,8 +105,8 @@ classdef MatrixBlock < AbstractBlock
             
             
             %% Special case 2: addition without permutation
-            rx = X(1).rank;
-            ry = Y(1).rank;
+            rx = X.rank;
+            ry = Y.rank;
             
             if nargin == 4 || (isempty(p) && isempty(map)) || ...
                     (all(p == 1:length(p)) && isequal(rx, ry) && ...
@@ -117,25 +122,25 @@ classdef MatrixBlock < AbstractBlock
                 if a == 1 && b == -1,   Y = X - Y;  return; end
                 if a == -1 && b == 1,   Y = Y - X;  return; end
                 
+                Yvar = Y.var;
+                Xvar = X.var;
+                
                 % general addition + scalar multiplication cases
-                if a == 1   % b ~= 1
-                    for i = 1:length(Y)
-                        Y(i).var = Y(i).var .* b + X(i).var;
+                if a == 1       % b ~= 1
+                    for i = 1:length(Yvar)
+                        Yvar{i} = Yvar{i} .* b + Xvar{i};
                     end
-                    return
+                elseif b == 1   % a ~= 1
+                    for i = 1:length(Yvar)
+                        Yvar{i} = Yvar{i} + Xvar{i} .* a;
+                    end
+                else            % a ~= [0 1], b ~= [0 1]
+                    for i = 1:length(Yvar)
+                        Yvar{i} = Yvar{i} .* b + Xvar{i} .* a;
+                    end
                 end
                 
-                if b == 1   % a ~= 1
-                    for i = 1:length(Y)
-                        Y(i).var = Y(i).var + X(i).var .* a;
-                    end
-                    return
-                end
-                
-                % a ~= [0 1], b ~= [0 1]
-                for i = 1:length(Y)
-                    Y(i).var = Y(i).var .* b + X(i).var .* a;
-                end
+                Y.var = Yvar;
                 return
             end
             
@@ -153,11 +158,11 @@ classdef MatrixBlock < AbstractBlock
             vars_in = cell(size(map, 1), 1);
             offset = 0;
             
-            Xrowsizes = {X.rowsizes};
-            Xcolsizes = {X.colsizes};
-            Xtdims = {X.tdims};
-            Xvar = {X.var};
-            for i = 1:length(X)
+            Xrowsizes = X.rowsizes;
+            Xcolsizes = X.colsizes;
+            Xtdims = X.tdims;
+            Xvar = X.var;
+            for i = 1:length(Xvar)
                 rowsz = Xrowsizes{i};
                 colsz = Xcolsizes{i};
                 
@@ -192,11 +197,12 @@ classdef MatrixBlock < AbstractBlock
             end
             
             % inject small tensor blocks
-            Yrowsizes = {Y.rowsizes};
-            Ycolsizes = {Y.colsizes};
+            Yrowsizes = Y.rowsizes;
+            Ycolsizes = Y.colsizes;
+            Yvar = Y.var;
             if b == 0
                 offset = 0;
-                for i = 1:length(Y)
+                for i = 1:length(Yvar)
                     rows = length(Yrowsizes{i}) - 1;
                     cols = length(Ycolsizes{i}) - 1;
                     if rows < cols
@@ -204,22 +210,23 @@ classdef MatrixBlock < AbstractBlock
                         for n = 1:rows
                             m{n} = cat(2, vars_out{offset + n + ((1:cols)-1) * rows});
                         end
-                        Y(i).var = cat(1, m{:});
+                        Yvar{i} = cat(1, m{:});
                     else
                         m = cell(cols, 1);
                         for n = 1:cols
                             m{n} = cat(1, vars_out{offset + (n-1) * rows + (1:rows)});
                         end
-                        Y(i).var = cat(2, m{:});
+                        Yvar{i} = cat(2, m{:});
                     end
                     offset = offset + rows * cols;
                 end
+                Y.var = Yvar;
                 return
             end
             
             if b == 1
                 offset = 0;
-                for i = 1:length(Y)
+                for i = 1:length(Yvar)
                     rows = length(Yrowsizes{i}) - 1;
                     cols = length(Ycolsizes{i}) - 1;
                     if rows < cols
@@ -227,13 +234,13 @@ classdef MatrixBlock < AbstractBlock
                         for n = 1:rows
                             m{n} = cat(2, vars_out{offset + n + ((1:cols)-1) * rows});
                         end
-                        Y(i).var = Y(i).var + cat(1, m{:});
+                        Yvar{i} = Yvar{i} + cat(1, m{:});
                     else
                         m = cell(cols, 1);
                         for n = 1:cols
                             m{n} = cat(1, vars_out{offset + (n-1) * rows + (1:rows)});
                         end
-                        Y(i).var = Y(i).var + cat(2, m{:});
+                        Yvar{i} = Yvar{i} + cat(2, m{:});
                     end
                     offset = offset + rows * cols;
                 end
@@ -241,7 +248,7 @@ classdef MatrixBlock < AbstractBlock
             end
             
             offset = 0;
-            for i = 1:length(Y)
+            for i = 1:length(Yvar)
                 rows = length(Yrowsizes{i}) - 1;
                     cols = length(Ycolsizes{i}) - 1;
                 if rows < cols
@@ -249,13 +256,13 @@ classdef MatrixBlock < AbstractBlock
                     for n = 1:rows
                         m{n} = cat(2, vars_out{offset + n + ((1:cols)-1) * rows});
                     end
-                    Y(i).var = b .* Y(i).var + cat(1, m{:});
+                    Yvar{i} = b .* Yvar{i} + cat(1, m{:});
                 else
                     m = cell(cols, 1);
                     for n = 1:cols
                         m{n} = cat(1, vars_out{offset + (n-1) * rows + (1:rows)});
                     end
-                    Y(i).var = b .* Y(i).var + cat(2, m{:});
+                    Yvar{i} = b .* Yvar{i} + cat(2, m{:});
                 end
                 offset = offset + rows * cols;
             end
@@ -286,48 +293,56 @@ classdef MatrixBlock < AbstractBlock
             % C : MatrixBlock
             %   Result of computing C = (A .* a) * (B .* b)
             
-            Acharge = [A.charge];
-            Bcharge = [B.charge];
-            Ccharge = [C.charge];
+            Acharge = A.charge;
+            Bcharge = B.charge;
+            Ccharge = C.charge;
             
             if isequal(Acharge, Ccharge)
-                indA = true(size(A));
-                locA = 1:length(A);
+                indA = true(size(Acharge));
+                locA = 1:length(Acharge);
             else
                 [indA, locA] = ismember_sorted(Ccharge, Acharge);
             end
             if isequal(Bcharge, Ccharge)
-                indB = true(size(B));
-                locB = 1:length(B);
+                indB = true(size(Bcharge));
+                locB = 1:length(Bcharge);
             else
                 [indB, locB] = ismember_sorted(Ccharge, Bcharge);
             end
             
+            Avar = A.var;
+            Bvar = B.var;
+            Cvar = C.var;
+            
             if nargin == 3 || (a == 1 && b == 1)
                 for i = find(indA & indB)
-                    C(i).var = A(locA(i)).var * B(locB(i)).var;
+                    Cvar{i} = Avar{locA(i)} * Bvar{locB(i)};
                 end
+                C.var = Cvar;
                 return
             end
             
             if a == 1 % b ~= 1
                 for i = find(indA & indB)
-                    C(i).var = (A(locA(i)).var .* a) * B(locB(i)).var;
+                    Cvar{i} = (Avar{locA(i)} .* a) * Bvar{locB(i)};
                 end
+                C.var = Cvar;
                 return
             end
             
             if b == 1 % a ~= 1
                 for i = find(indA & indB)
-                    C(i).var = A(locA(i)).var * (B(locB(i)).var .* b);
+                    Cvar{i} = Avar{locA(i)} * (Bvar{locB(i)} .* b);
                 end
+                C.var = Cvar;
                 return
             end
             
             % a ~= 1 && b ~= 1
             for i = find(indA & indB)
-                C(i).var = (A(locA(i)).var .* a) * (B(locB(i)).var .* b);
+                Cvar{i} = (Avar{locA(i)} .* a) * (Bvar{locB(i)} .* b);
             end
+            C.var = Cvar;
         end
         
         function tblocks = tensorblocks(b)
@@ -344,22 +359,22 @@ classdef MatrixBlock < AbstractBlock
             %   list of non-zero small tensor blocks, in column-major order.
             
             nblocks = 0;
-            for i = 1:length(b)
-                nblocks = nblocks + size(b(i).tdims, 1);
+            for i = 1:length(b.var)
+                nblocks = nblocks + size(b.tdims{i}, 1);
             end
             tblocks = cell(nblocks, 1);
             
             offset = 0;
-            p = rankrange(b(1).rank);
-            for i = 1:length(b)
-                rowsz = b(i).rowsizes;
-                colsz = b(i).colsizes;
+            p = rankrange(b.rank);
+            for i = 1:length(b.var)
+                rowsz = b.rowsizes{i};
+                colsz = b.colsizes{i};
                 for k = 1:length(colsz) - 1
                     for j = 1:length(rowsz) - 1
                         offset = offset + 1;
                         tblocks{offset} = permute(reshape(...
-                            b(i).var(rowsz(j)+1:rowsz(j+1), colsz(k)+1:colsz(k+1)), ...
-                            b(i).tdims(j + (k-1) * (length(rowsz)-1), p)), ...
+                            b.var{i}(rowsz(j)+1:rowsz(j+1), colsz(k)+1:colsz(k+1)), ...
+                            b.tdims{i}(j + (k-1) * (length(rowsz)-1), p)), ...
                             p);
                     end
                 end
@@ -382,52 +397,50 @@ classdef MatrixBlock < AbstractBlock
             % mcharges : AbstractCharge
             %   list of coupled charges.
             
-            mblocks = {b.var};
+            mblocks = b.var;
             if nargout > 1
-                mcharges = [b.charge];
+                mcharges = b.charge;
             end
         end
         
         function b = fill_matrix_data(b, vars, charges)
             if nargin < 3 || isempty(charges)
-                assert(length(vars) == length(b), ...
+                assert(length(vars) == length(b.var), ...
                     'Invalid number of blocks');
-                for i = 1:length(b)
-                    b(i).var = vars{i};
+                for i = 1:length(b.var)
+                    b.var{i} = vars{i};
                 end
                 return
             end
-            [lia, locb] = ismember(charges, [b.charge]);
+            [lia, locb] = ismember(charges, b.charge);
             assert(all(lia));
-            for i = 1:length(vars)
-                b(locb(i)).var = vars{i};
-            end
+            b.var(locb) = vars;
         end
         
         function b = fill_matrix_fun(b, fun, charges)
             if nargin < 3 || isempty(charges)
-                for i = 1:length(b)
-                    b(i).var = fun(size(b(i).var));
+                for i = 1:length(b.var)
+                    b.var{i} = fun(size(b.var{i}));
                 end
             else
-                [lia, locb] = ismember(charges, [b.charge]);
+                [lia, locb] = ismember(charges, b.charge);
                 for i = locb(lia)
-                    b(i).var = fun(size(b(i).var), b(i).charge);
+                    b.var{i} = fun(size(b.var{i}), b.charge(i));
                 end
             end
         end
         
         function b = fill_tensor_data(b, data)
             ctr = 0;
-            p = rankrange(b(1).rank);
+            p = rankrange(b.rank);
             
-            for i = 1:length(b)
-                rowsz = b(i).rowsizes;
-                colsz = b(i).colsizes;
+            for i = 1:length(b.var)
+                rowsz = b.rowsizes{i};
+                colsz = b.colsizes{i};
                 for k = 1:length(colsz) - 1
                     for j = 1:length(rowsz) - 1
                         ctr = ctr + 1;
-                        b(i).var(rowsz(j)+1:rowsz(j+1), colsz(k)+1:colsz(k+1)) = ...
+                        b.var{i}(rowsz(j)+1:rowsz(j+1), colsz(k)+1:colsz(k+1)) = ...
                             reshape(permute(data{ctr}, p), ...
                             rowsz(j+1)-rowsz(j), colsz(k+1)-colsz(k));
                     end
@@ -460,8 +473,8 @@ classdef MatrixBlock < AbstractBlock
             % Y : MatrixBlock
             %   list of output matrices.
             
-            for i = 1:length(Y)
-                Y(i).var = X(i).var - Y(i).var;
+            for i = 1:length(Y.var)
+                Y.var{i} = X.var{i} - Y.var{i};
             end
         end
         
@@ -486,8 +499,8 @@ classdef MatrixBlock < AbstractBlock
             % Y : MatrixBlock
             %   list of output matrices.
             
-            for i = 1:length(Y)
-                Y(i).var = Y(i).var + X(i).var;
+            for i = 1:length(Y.var)
+                Y.var{i} = X.var{i} + Y.var{i};
             end
         end
         
@@ -515,8 +528,8 @@ classdef MatrixBlock < AbstractBlock
             if a == 1, return; end
             if a == -1, Y = -Y; return; end
             
-            for i = 1:length(Y)
-                Y(i).var = Y(i).var .* a;
+            for i = 1:length(Y.var)
+                Y.var{i} = Y.var{i} .* a;
             end
         end
         
@@ -544,8 +557,8 @@ classdef MatrixBlock < AbstractBlock
             if a == 1, return; end
             if a == -1, Y = -Y; return; end
             
-            for i = 1:length(Y)
-                Y(i).var = Y(i).var ./ a;
+            for i = 1:length(Y.var)
+                Y.var{i} = Y.var{i} ./ a;
             end
         end
         
@@ -587,13 +600,13 @@ classdef MatrixBlock < AbstractBlock
             % A : MatrixBlock
             %   list of output matrices.
             
-            for i = 1:length(Y)
-                Y(i).var = -Y(i).var;
+            for i = 1:length(Y.var)
+                Y.var{i} = -Y.var{i};
             end
         end
         
         function t = underlyingType(X)
-            t = underlyingType(X(1).var);
+            t = underlyingType(X.var{1});
         end
         
         function X = ctranspose(X)
@@ -614,52 +627,53 @@ classdef MatrixBlock < AbstractBlock
             % X : :class:`MatrixBlock`
             %   list of adjoint output matrices.
             
-            for i = 1:length(X)
-                X(i).var = X(i).var';
-                [X(i).rowsizes, X(i).colsizes] = swapvars(X(i).rowsizes, X(i).colsizes);
-                X(i).tdims = fliplr(X(i).tdims);
-                X(i).rank = fliplr(X(i).rank);
+            [X.rowsizes, X.colsizes] = swapvars(X.rowsizes, X.colsizes);
+            X.rank = fliplr(X.rank);
+            for i = 1:length(X.var)
+                X.var{i} = X.var{i}';
+                X.tdims{i} = fliplr(X.tdims{i});
             end
         end
         
         function v = vectorize(X, type)
+            qdims = sqrt(qdim(X.charge));
             switch type
                 case 'complex'
-                    blocks = cell(size(X));
-                    for i = 1:length(X)
-                        blocks{i} = reshape(X(i).var .* sqrt(qdim(X(i).charge)), [], 1);
+                    blocks = cell(size(X.var));
+                    for i = 1:length(X.var)
+                        blocks{i} = reshape(X.var{i} .* qdims(i), [], 1);
                     end
                     v = vertcat(blocks{:});
                     
                 case 'real'
-                    blocks = cell(size(X));
-                    for i = 1:length(X)
-                        X(i).var = X(i).var .* sqrt(qdim(X(i).charge));
-                        blocks{i} = [reshape(real(X(i).var), [], 1)
-                            reshape(imag(X(i).var), [], 1)];
+                    blocks = cell(size(X.var));
+                    for i = 1:length(X.var)
+                        tmp = X.var{i} .* qdims(i);
+                        blocks{i} = [reshape(real(tmp), [], 1)
+                            reshape(imag(tmp), [], 1)];
                     end
                     v = vertcat(blocks{:});
             end
         end
         
         function X = devectorize(v, X, type)
+            qdims = sqrt(qdim(X.charge));
             switch type
                 case 'complex'
                     ctr = 0;
-                    for i = 1:length(X)
-                        n = numel(X(i).var);
-                        X(i).var = reshape(v(ctr + (1:n)), size(X(i).var)) ./ ...
-                            sqrt(qdim(X(i).charge));
+                    for i = 1:length(X.var)
+                        n = numel(X.var{i});
+                        X.var{i} = reshape(v(ctr + (1:n)), size(X.var{i})) ./ qdims(i);
                         ctr = ctr + n;
                     end
                     
                 case 'real'
                     ctr = 0;
-                    for i = 1:length(X)
-                        n = numel(X(i).var);
-                        sz = size(X(i).var);
-                        X(i).var = complex(reshape(v(ctr + (1:n)), sz), ...
-                            reshape(v(ctr + (n + 1:2 * n)), sz)) ./ sqrt(qdim(X(i).charge));
+                    for i = 1:length(X.var)
+                        n = numel(X.var{i});
+                        sz = size(X.var{i});
+                        X.var{i} = complex(reshape(v(ctr + (1:n)), sz), ...
+                            reshape(v(ctr + (n + 1:2 * n)), sz)) ./ qdims(i);
                         ctr = ctr + 2 * n;
                     end
             end
@@ -668,17 +682,17 @@ classdef MatrixBlock < AbstractBlock
     
     methods
         function assertBlocksizes(X)
-            for i = 1:numel(X)
-                assert(isequal(size(X(i).var), [X(i).rowsizes(end) X(i).colsizes(end)]), ...
+            for i = 1:numel(X.var)
+                assert(isequal(size(X.var{i}), [X.rowsizes{i}(end) X.colsizes{i}(end)]), ...
                     'kernel:dimerror', 'Wrong size of block');
-                rows = length(X(i).rowsizes) - 1;
-                cols = length(X(i).colsizes) - 1;
-                matdims = [prod(X(i).tdims(:, 1:X(i).rank(1)), 2) ...
-                    prod(X(i).tdims(:, X(i).rank(1)+1:end), 2)];
+                rows = length(X.rowsizes{i}) - 1;
+                cols = length(X.colsizes{i}) - 1;
+                matdims = [prod(X.tdims{i}(:, 1:X.rank(1)), 2) ...
+                    prod(X(i).tdims(:, X.rank(1)+1:end), 2)];
                 for k = 1:cols
                     for j = 1:rows
-                        assert(matdims(j + (k-1) * rows, 1) == X(i).rowsizes(j+1) - X(i).rowsizes(j));
-                        assert(matdims(j + (k-1) * rows, 2) == X(i).colsizes(k+1) - X(i).colsizes(k));
+                        assert(matdims(j + (k-1) * rows, 1) == X.rowsizes{i}(j+1) - X.rowsizes{i}(j));
+                        assert(matdims(j + (k-1) * rows, 2) == X.colsizes{i}(k+1) - X.colsizes{i}(k));
                     end
                 end
             end

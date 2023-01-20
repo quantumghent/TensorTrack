@@ -10,7 +10,7 @@ classdef AbelianBlock < MatrixBlock
             if a == 0 || ...
                     nargin == 4 || ...
                     (isempty(p) && isempty(map)) || ...
-                    (all(p == 1:length(p)) && all(X(1).rank == Y(1).rank))
+                    (all(p == 1:length(p)) && all(X.rank == Y.rank))
                 
                 Y = axpby@MatrixBlock(a, X, b, Y);
                 return;
@@ -19,8 +19,8 @@ classdef AbelianBlock < MatrixBlock
             
             %% General case: addition with permutation
             % tensor indexing to matrix indexing
-            rx = X(1).rank;
-            ry = Y(1).rank;
+            rx = X.rank;
+            ry = Y.rank;
             rrx = rankrange(rx);
             rry = rankrange(ry);
             p_eff(rry) = rrx(p);
@@ -32,11 +32,11 @@ classdef AbelianBlock < MatrixBlock
             vars_in = cell(size(map, 1), 1);
             offset = 0;
             
-            Xrowsizes = {X.rowsizes};
-            Xcolsizes = {X.colsizes};
-            Xtdims = {X.tdims};
-            Xvar = {X.var};
-            for i = 1:length(X)
+            Xrowsizes = X.rowsizes;
+            Xcolsizes = X.colsizes;
+            Xtdims = X.tdims;
+            Xvar = X.var;
+            for i = 1:length(Xvar)
                 rowsz = Xrowsizes{i};
                 colsz = Xcolsizes{i};
                 
@@ -69,21 +69,21 @@ classdef AbelianBlock < MatrixBlock
             % inject small tensor blocks
             if b == 0
                 offset = 0;
-                for i = 1:length(Y)
-                    rows = length(Y(i).rowsizes) - 1;
-                    cols = length(Y(i).colsizes) - 1;
+                for i = 1:length(Y.var)
+                    rows = length(Y.rowsizes{i}) - 1;
+                    cols = length(Y.colsizes{i}) - 1;
                     if rows < cols
                         m = cell(rows, 1);
                         for n = 1:rows
                             m{n} = cat(2, vars_out{offset + n + ((1:cols)-1) * rows});
                         end
-                        Y(i).var = cat(1, m{:});
+                        Y.var{i} = cat(1, m{:});
                     else
                         m = cell(cols, 1);
                         for n = 1:cols
                             m{n} = cat(1, vars_out{offset + (n-1) * rows + (1:rows)});
                         end
-                        Y(i).var = cat(2, m{:});
+                        Y.var{i} = cat(2, m{:});
                     end
                     offset = offset + rows * cols;
                 end
@@ -92,7 +92,7 @@ classdef AbelianBlock < MatrixBlock
             
             if b == 1
                 offset = 0;
-                for i = 1:length(Y)
+                for i = 1:length(Y.var)
                     rows = length(Y(i).rowsizes) - 1;
                     cols = length(Y(i).colsizes) - 1;
                     if rows < cols
@@ -100,13 +100,13 @@ classdef AbelianBlock < MatrixBlock
                         for n = 1:rows
                             m{n} = cat(2, vars_out{offset + n + ((1:cols)-1) * rows});
                         end
-                        Y(i).var = Y(i).var + cat(1, m{:});
+                        Y.var{i} = Y.var{i} + cat(1, m{:});
                     else
                         m = cell(cols, 1);
                         for n = 1:cols
                             m{n} = cat(1, vars_out{offset + (n-1) * rows + (1:rows)});
                         end
-                        Y(i).var = Y(i).var + cat(2, m{:});
+                        Y.var{i} = Y.var{i} + cat(2, m{:});
                     end
                     offset = offset + rows * cols;
                 end
@@ -114,28 +114,28 @@ classdef AbelianBlock < MatrixBlock
             end
             
             offset = 0;
-            for i = 1:length(Y)
-                rows = length(Y(i).rowsizes) - 1;
-                cols = length(Y(i).colsizes) - 1;
+            for i = 1:length(Y.var)
+                rows = length(Y.rowsizes{i}) - 1;
+                cols = length(Y.colsizes{i}) - 1;
                 if rows < cols
                     m = cell(rows, 1);
                     for n = 1:rows
                         m{n} = cat(2, vars_out{offset + n + ((1:cols)-1) * rows});
                     end
-                    Y(i).var = b .* Y(i).var + cat(1, m{:});
+                    Y.var{i} = b .* Y.var{i} + cat(1, m{:});
                 else
                     m = cell(cols, 1);
                     for n = 1:cols
                         m{n} = cat(1, vars_out{offset + (n-1) * rows + (1:rows)});
                     end
-                    Y(i).var = b .* Y(i).var + cat(2, m{:});
+                    Y.var{i} = b .* Y.var{i} + cat(2, m{:});
                 end
                 offset = offset + rows * cols;
             end
         end
 
         function typename = underlyingType(b)
-            typename = underlyingType(b(1).var);
+            typename = underlyingType(b.var{1});
         end
     end
 end
