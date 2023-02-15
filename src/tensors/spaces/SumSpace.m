@@ -65,7 +65,7 @@ classdef (InferiorClasses = {?GradedSpace, ?CartesianSpace, ?ComplexSpace}) SumS
                 space2 SumSpace
             end
             
-            space = sum(subspaces(space1)) * sum(subspaces(space2));
+            space = SumSpace(sum(subspaces(space1)) * sum(subspaces(space2)));
         end
     end
     

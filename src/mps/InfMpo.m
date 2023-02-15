@@ -198,13 +198,8 @@ classdef InfMpo
             else
                 A2 = mps2.AR(sites);
             end
-            O = cellfun(@rot90, mpo.O(sites), 'UniformOutput', false);
-            
-            for i = 1:numel(A2)
-                T(i, 1) = FiniteMpo(...
-                    twist(A2(i)', 1 + find(isdual(space(A1(i), 2:nspaces(A1(i))-1)))), ...
-                    O(i), A1(i));
-            end
+            O = mpo.O(sites);                                                               %#ok<PROPLC>
+            T = FiniteMpo.mps_channel_operator(A1, O, A2);                                  %#ok<PROPLC>
         end
         
         function H = AC_hamiltonian(mpo, mps, GL, GR, sites)

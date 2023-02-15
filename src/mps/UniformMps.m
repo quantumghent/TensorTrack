@@ -564,10 +564,31 @@ classdef UniformMps
                 E = prod(E);
                 
             elseif isa(O, 'AbstractTensor')
-                error('TBA');
+                E = local_expectation_value(mps1, O);
             else
                 error('Unknown operator type (%s)', class(O));
             end
+        end
+        
+        function E = local_expectation_value(mps, O, offset)
+            arguments
+                mps
+                O
+                offset = 0   % site offset
+            end
+            
+            local_ops = MpoTensor.decompose_local_operator(O);
+            N = length(local_ops);
+            
+            A = [mps.AC(1 + offset) mps.AR(2:(N - 1) + offset)];
+            
+            T = FiniteMpo.mps_channel_operator(A, local_ops, A);
+            rhoL = insert_onespace(fixedpoint(mps, 'l_LL', offset+ 1), 2, ...
+                ~isdual(space(T(1).O{1}, 4)));
+            rhoR = insert_onespace(fixedpoint(mps, 'r_RR', offset + N), 2, ...
+                ~isdual(space(T(1).O{1}, 2)));
+            E1 = apply(T, rhoL);
+            E = contract(E1, 1:3, rhoR, flip(1:3));
         end
         
         function [svals, charges] = schmidt_values(mps, w)

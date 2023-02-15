@@ -204,6 +204,26 @@ classdef FiniteMpo
             R = MpsTensor(Tensor.randnc([pspaces(end)' vspaces(end)], pspaces(end)'));
             mpo = FiniteMpo(L, O, R);
         end
+        
+        function T = mps_channel_operator(Atop, O, Abot)
+            arguments
+                Atop    % top mps tensors
+                O       % cell of mpotensors (unrotated)
+                Abot    % bottom mps tensors (unconjugated)
+            end
+            
+            for i = numel(Atop):-1:1
+                atop = Atop(i);
+                o = rot90(O{i});
+                twistinds = 1 + find(isdual(space(Atop(i), 2:nspaces(Atop(i)) - 1)));
+                abot = twist(Abot(i)', twistinds);
+                
+                assert(isequal(space(abot, 2), space(o, 1)'));
+                assert(isequal(space(o, 3), space(atop, 2)'));
+                
+                T(i, 1) = FiniteMpo(abot, {o}, atop);
+            end
+        end
     end
 end
 
