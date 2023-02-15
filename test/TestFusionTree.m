@@ -235,7 +235,7 @@ classdef TestFusionTree < matlab.unittest.TestCase
                             if f.uncoupled(k, j) ~= conj(f.uncoupled(k, j+1))
                                 assertEqual(tc, norm(c1(k, :)), 0);
                             else
-                                a1 = tensortrace(a1_cell{k}, [1:j-1 j j j+2:f.legs+1]);
+                                a1 = tensortrace(a1_cell{k}, j, j+1);
                                 a2 = zeros(size(a1));
                                 [~, col, val] = find(c1(k, :));
                                 for l = 1:length(val)
