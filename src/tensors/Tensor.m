@@ -2357,6 +2357,43 @@ classdef Tensor < AbstractTensor
     
     %% Utility
     methods
+        function [I, J, V] = find(t, k, which)
+            arguments
+                t
+                k = []
+                which = 'first'
+            end
+            assert(strcmp(which, 'first'), 'not implemented yet')
+            if ~isempty(k)
+                assert(k <= numel(t));
+            else
+                k = numel(t);
+            end
+            
+            if isempty(t)
+                I = [];
+                J = [];
+                V = [];
+                return
+            end
+            
+            if ~isempty(k)
+                if strcmp(which, 'first')
+                    I = 1:k;
+                else
+                    I = numel(t):-1:numel(t)+1-k;
+                end
+            end
+            I = reshape(I, [], 1);
+            if nargout < 2, return; end
+            
+            sz = size(t);
+            subs = ind2sub_([sz(1) prod(sz(2:end))], I);
+            I = subs(:, 1);
+            J = subs(:, 2);
+            V = reshape(t, [], 1);
+        end
+        
         function s = GetMD5_helper(t)
             s = {t.codomain t.domain};
         end

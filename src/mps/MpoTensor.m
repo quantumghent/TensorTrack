@@ -175,16 +175,22 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) MpoTensor < Ab
                         iB(1:2) = flip(iB(1:2));
                     end
                     
-                    A_ = reshape(permute(A.scalars, iA), ...
-                        [prod(size(A, uncA)) prod(size(A, dimA))]);
-                    B = reshape(tpermute(B, iB, rB), ...
-                        [prod(size(B, dimB)) prod(size(B, uncB))]);
+                    [Ia, Ja, Va] = find(reshape(permute(A.scalars, iA), ...
+                        [prod(size(A, uncA)) prod(size(A, dimA))]));
+                    [Ib, Jb, Vb] = find(reshape(tpermute(B, iB, rB), ...
+                        [prod(size(B, dimB)) prod(size(B, uncB))]));
+                    sz2 = [prod(size(A, uncA)) prod(size(B, uncB))];
                     
-                    C = C + reshape(sparse(A_) * B, size(C));
+                    for i = 1:length(Jb)
+                        mask = find(Ja == Ib(i));
+                        if isempty(mask), continue; end
+                        subs = [Ia(mask) repmat(Jb(i), length(mask), 1)];
+                        idx = sb2ind_(sz2, subs);
+                        C(idx) = C(idx) + Va(mask) .* Vb(i);
+                    end
                 end
             else
                 C = tensorprod(A, B.tensors, dimA, dimB, ca, cb);
-                szC = size(C);
                 if nnz(B.scalars) > 0
                     assert(sum(dimB == 1 | dimB == 3, 'all') == 1, ...
                         'Cannot deduce output space unless leg 1 xor leg 3 is connected.');
@@ -204,24 +210,19 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) MpoTensor < Ab
                         iB(1:2) = flip(iB(1:2));
                     end
                     
-                    A_ = reshape(tpermute(A, iA, rA), ...
-                        [prod(size(A, uncA)) prod(size(A, dimA))]);
-                    B_ = reshape(permute(B.scalars, iB), ...
-                        [prod(size(B, dimB)) prod(size(B, uncB))]);
+                    [Ia, Ja, Va] = find(reshape(tpermute(A, iA, rA), ...
+                        [prod(size(A, uncA)) prod(size(A, dimA))]));
+                    [Ib, Jb, Vb] = find(reshape(permute(B.scalars, iB), ...
+                        [prod(size(B, dimB)) prod(size(B, uncB))]));
+                    sz2 = [prod(size(A, uncA)) prod(size(B, uncB))];
                     
-                    
-                    subs = zeros(size(A_, 1), 2);
-                    subs(:, 1) = (1:size(A_, 1)).';
-                    sz2 = [size(A_, 1) size(B_, 2)];
-                    [Brows, Bcols, Bvals] = find(B_);
-                    C = reshape(C, sz2);
-                    for i = 1:length(Bvals)
-                        Atmp = A_(:, Brows(i)) .* Bvals(i);
-                        subs(:, 2) = Bcols(i);
+                    for i = 1:length(Ia)
+                        mask = find(Ja(i) == Ib);
+                        if isempty(mask), continue; end
+                        subs = [repmat(Ia(i), length(mask), 1) Jb(mask)];
                         idx = sub2ind_(sz2, subs);
-                        C(idx) = C(idx) + Atmp;
+                        C(idx) = C(idx) + Va(i) .* Vb(mask);
                     end
-                    C = reshape(C, szC);
                 end
             end
         end
