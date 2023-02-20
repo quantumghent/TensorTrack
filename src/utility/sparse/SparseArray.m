@@ -33,12 +33,12 @@ classdef SparseArray
             %   Empty constructor.
             %
             % :code:`a = SparseArray(b)`
-            %   Copies/converts :code:`b` if it is a :class:`SparseArray`, a dense array or a sparse
-            %   matrix.
+            %   Copies/converts :code:`b` if it is a :class:`SparseArray`, a dense array or
+            %   a sparse matrix.
             %
             % :code:`a = SparseArray(b, sz)`
-            %   Copies/converts :code:`b` if it is a :class:`SparseArray`, a dense array or a sparse
-            %   matrix, and sets the size of :code:`a` to :code:`sz`
+            %   Copies/converts :code:`b` if it is a :class:`SparseArray`, a dense array or
+            %   a sparse matrix, and sets the size of :code:`a` to :code:`sz`
             % 
             % Example
             % -------
@@ -293,8 +293,10 @@ classdef SparseArray
             % -------
             % subs : (:, :) :class:`int`
             %   subscripts of nonzero array entries.
+            %
             % idx : (:, 1) :class:`int`
             %   linear indices of nonzero array entries.
+            %
             % var : (:, 1) :class:`double`
             %   values of nonzero array entries.
             [idx, ~, vals] = find(a.var);
@@ -409,7 +411,6 @@ classdef SparseArray
             % Returns
             % -------
             % bool : :class:`logical`
-            %   defaults to :code:`false` for :class:`SparseArray`.
             bool = ismatrix(a) && size(a, 1) == 1;
         end
         
@@ -464,26 +465,24 @@ classdef SparseArray
             %   >> a - 5 %<-- dense
             %   >> a - 0 %<-- dense
             %   >> a - full(a) %<-- dense
-            if (isa(a, 'double') && ~issparse(a)) || (isa(b, 'double') && ~issparse(b))
-                c = full(a) - full(b);
-                return;
-            end
-            c = SparseArray(a); b = SparseArray(b);
-            c.var = c.var - b.var;
+            c = plus(a, -b);
         end
         
         function c = mrdivide(a, b)
             % Matrix right division for sparse arrays.
             %
-            % :code:`mrdivide(a, b)` is called for the syntax :code:`a / b` when :code:`a`
-            % is sparse and :code:`b` is a scalar.
+            % Usage
+            % -----
+            % :code:`mrdivide(a, b)`
+            %
+            % :code:`a / b`
             %
             % Arguments
             % ---------
             % a : :class:`SparseArray`
             %   intput array.
             % b : :class:`double`
-            %   scalar to divide by
+            %   scalar to divide by.
             %
             % Returns
             % -------
@@ -597,9 +596,24 @@ classdef SparseArray
         function c = plus(a, b)
             % Elementwise addition for sparse arrays. 
             %
-            % :code:`plus(a, b)` is called for the syntax :code:`a + b` when :code:`a` or
-            % :code:`b` is a sparse array. :code:`a` and :code:`b` must have the same size,
+            % Usage
+            % -----
+            % 
+            % :code:`plus(a, b)`
+            %
+            % :code:`a + b`
+            %
+            % :code:`a` and :code:`b` must have the same size,
             % unless one is a scalar. A scalar can be added to a sparse array of any size.   
+            %
+            % Arguments
+            % ---------
+            % a, b : :class:`SparseArray` or :class:`double`
+            %   input arrays.
+            %
+            % Returns
+            % -------
+            % 
             %
             % Example
             % -------
@@ -618,11 +632,10 @@ classdef SparseArray
             c.var = c.var + b.var;
         end
         
-        function c = power(a, b)
+        function a = power(a, b)
             % Elementwise power for sparse array.
             assert(isscalar(b), 'sparse:NonScalarPower', 'SparseArray only supports power with a scalar.')
-            c = a;
-            c.var = c.var.^b;
+            a.var = a.var.^b;
         end
         
         function varargout = qr(a, varargin)
@@ -688,7 +701,7 @@ classdef SparseArray
             end
         end
         
-        function b = real(a)
+        function a = real(a)
             % Complex real part of sparse array.
             %
             % Arguments
@@ -701,8 +714,7 @@ classdef SparseArray
             % b : :class:`SparseArray`
             %   output array with real entries corresponding to the real part of the
             %   entries of :code:`a`.
-            b = a;
-            b.var = real(b.var);
+            a.var = real(a.var);
         end
         
         function a = reshape(a, varargin)
@@ -763,7 +775,7 @@ classdef SparseArray
             b = sparse(a);
         end
         
-        function b = squeeze(a)
+        function a = squeeze(a)
             % Remove singleton dimensions from a sparse array.
             %
             % Usage
@@ -779,13 +791,12 @@ classdef SparseArray
             %   >> squeeze(SparseArray.random([2, 1, 3], 0.5)) %<-- returns a 2 x 3 SparseArray
             %   >> squeeze(SparseArray([1, 1, 1], 1, [1, 1, 1])) %<-- returns a scalar
             if sum(a.sz > 1) == 0
-                b = full(a.var);
+                a = full(a.var);
                 return
             end
             % always give n x 1 SparseArray in case of only 1 non-singleton dimension,
             % consistent with class constructor
-            b = a;
-            b.sz = [a.size(a.size>1), ones(1, 2-sum(a.size>1))];
+            a.sz = [a.size(a.size>1), ones(1, 2-sum(a.size>1))];
         end
         
         function a = subsasgn(a, s, rhs)
@@ -1008,6 +1019,7 @@ classdef SparseArray
             % -------
             % b : :class:`SparseArray`
             %   output array.
+            assert(ismatrix(a), 'sparse:RankError', 'ctranspose is only defined for 2D sparse arrays.');
             a = permute(a, [2, 1]);
         end
 
@@ -1052,6 +1064,7 @@ classdef SparseArray
             %   output array.
             return;
         end
+        
     end
     
     methods (Static)
