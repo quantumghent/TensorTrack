@@ -60,18 +60,18 @@ classdef InfMpo
             s = pspace(mpo.O{x});
         end
         
-        function mpo = horzcat(varargin)
+        function mpo = horzcat(mpo, varargin)
             Os = cellfun(@(x) x.O, varargin, 'UniformOutput', false);
-            mpo = InfMpo([Os{:}]);
+            mpo.O = horzcat(mpo.O, Os{:});
         end
         
-        function mpo = vertcat(varargin)
+        function mpo = vertcat(mpo, varargin)
             Os = cellfun(@(x) x.O, varargin, 'UniformOutput', false);
-            mpo = InfMpo(vertcat(Os{:}));
+            mpo.O = vertcat(mpo.O, Os{:});
         end
         
-        function out = slice(mpo, d)
-            out = InfMpo(mpo.O(d, :));
+        function mpo = slice(mpo, d)
+            mpo.O = mpo.O(d, :);
         end
         
         function mps = initialize_mps(mpo, vspaces)

@@ -155,11 +155,6 @@ classdef InfJMpo < InfMpo
             end
         end
         
-        function mpo = horzcat(varargin)
-            Os = cellfun(@(x) x.O, varargin, 'UniformOutput', false);
-            mpo = InfJMpo([Os{:}]);
-        end
-        
         function mpo = plus(a, b)
             if isa(a, 'InfJMpo') && isnumeric(b)
                 if period(a) > 1 && isscalar(b)
