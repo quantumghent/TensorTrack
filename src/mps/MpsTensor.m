@@ -115,19 +115,41 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
         function A = plus(varargin)
             for i = 1:2
                 if isa(varargin{i}, 'MpsTensor')
+                    alegs = varargin{i}.alegs;
                     varargin{i} = varargin{i}.var;
                 end
             end
-            A = plus(varargin{:});
+            A = MpsTensor(plus(varargin{:}), alegs);
         end
         
         function A = minus(varargin)
             for i = 1:2
                 if isa(varargin{i}, 'MpsTensor')
+                    alegs = varargin{i}.alegs;
                     varargin{i} = varargin{i}.var;
                 end
             end
-            A = minus(varargin{:});
+            A = MpsTensor(minus(varargin{:}), alegs);
+        end
+        
+        function A = rdivide(varargin)
+            for i = 1:2
+                if isa(varargin{i}, 'MpsTensor')
+                    alegs = varargin{i}.alegs;
+                    varargin{i} = varargin{i}.var;
+                end
+            end
+            A = MpsTensor(rdivide(varargin{:}), alegs);
+        end
+        
+        function A = ldivide(varargin)
+            for i = 1:2
+                if isa(varargin{i}, 'MpsTensor')
+                    alegs = varargin{i}.alegs;
+                    varargin{i} = varargin{i}.var;
+                end
+            end
+            A = MpsTensor(ldivide(varargin{:}), alegs);
         end
         
         function n = norm(A)
@@ -339,7 +361,12 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
             arguments
                 L MpsTensor
                 R MpsTensor
-                v
+                v = []
+            end
+            
+            if isempty(v)
+                v = tracetransfer(L, R);
+                return
             end
             
             auxlegs_v = nspaces(v) - 2;
@@ -351,6 +378,24 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
                 L, [-1 2 1 (-(1:auxlegs_l) - 2)], ...
                 R, [3 2 -2 (-(1:auxlegs_r) - 3 - auxlegs_l - auxlegs_v)], ...
                 'Rank', newrank);
+        end
+        
+        function v = tracetransfer(L, R)
+            arguments
+                L MpsTensor
+                R MpsTensor
+            end
+            
+            auxlegs_l = L.alegs;
+            auxlegs_r = R.alegs;
+            assert(R.plegs == L.plegs);
+            plegs = L.plegs; %#ok<PROPLC>
+            newrank = [2 auxlegs_l + auxlegs_r];
+            
+            v = contract(...
+                L, [-1 1:(plegs + 1) (-(1:auxlegs_l) - 2)], ...
+                R, [flip(1:(plegs + 1)) -2 (-(1:auxlegs_r) - 3 - auxlegs_l)], ...
+                'Rank', newrank); %#ok<PROPLC>
         end
         
         function rho = applyleft(T, B, rho)

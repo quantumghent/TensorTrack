@@ -441,6 +441,10 @@ classdef AbstractTensor
             iE = [1:length(i1) length(i1) + (length(i2):-1:1)];
             B = tensorprod(A, E, iA, iE);
         end
+        
+        function o = overlap(t1, t2)
+            o = contract(t1, 1:nspaces(t1), t2, flip(1:nspaces(t1)));
+        end
     end
 end
 

@@ -835,9 +835,11 @@ classdef Tensor < AbstractTensor
             end
         end
         
-        function t = normalize(t)
+        function [t, n] = normalize(t)
+            n = zeros(size(t));
             for i = 1:numel(t)
-                t(i) = t(i) .* (1 / norm(t(i)));
+                n(i) = norm(t(i));
+                t(i) = t(i) .* (1 / n(i));
             end
         end
         
