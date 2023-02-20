@@ -950,7 +950,7 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor < AbstractTensor
             assert(length(s(1).subs) == size(t.sz, 2), 'sparse:index', ...
                 'number of indexing indices must match tensor size.');
             assert(all(t.sz >= cellfun(@max, s(1).subs)), 'sparse:bounds', ...
-                'attempting to assign out of bounds');
+                'out of bounds assignment disallowed');
             
             subsize = zeros(1, size(s(1).subs, 2));
             for i = 1:length(subsize)

@@ -13,7 +13,7 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) MpoTensor < Ab
 
     properties
         tensors = []
-        scalars = []
+        scalars SparseArray = []
     end
     
     methods
@@ -34,8 +34,8 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) MpoTensor < Ab
                     t.scalars = varargin{1}.scalars;
                     t.tensors = varargin{1}.tensors;
                 elseif isa(varargin{1}, 'Tensor') || isa(varargin{1}, 'SparseTensor')
-                    t.tensors = sparse(varargin{1});
-                    t.scalars = zeros(size(t.tensors));
+                    t.tensors = varargin{1};
+                    t.scalars = SparseArray.zeros(size(t.tensors, 1:4));
                 end
                 return
             end
@@ -175,8 +175,8 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) MpoTensor < Ab
                         iB(1:2) = flip(iB(1:2));
                     end
                     
-                    [Ia, Ja, Va] = find(reshape(permute(A.scalars, iA), ...
-                        [prod(size(A, uncA)) prod(size(A, dimA))]));
+                    [Ia, Ja, Va] = find(spmatrix(reshape(permute(A.scalars, iA), ...
+                        [prod(size(A, uncA)) prod(size(A, dimA))])));
                     [Ib, Jb, Vb] = find(reshape(tpermute(B, iB, rB), ...
                         [prod(size(B, dimB)) prod(size(B, uncB))]));
                     sz2 = [prod(size(A, uncA)) prod(size(B, uncB))];
@@ -212,8 +212,8 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) MpoTensor < Ab
                     
                     [Ia, Ja, Va] = find(reshape(tpermute(A, iA, rA), ...
                         [prod(size(A, uncA)) prod(size(A, dimA))]));
-                    [Ib, Jb, Vb] = find(reshape(permute(B.scalars, iB), ...
-                        [prod(size(B, dimB)) prod(size(B, uncB))]));
+                    [Ib, Jb, Vb] = find(spmatrix(reshape(permute(B.scalars, iB), ...
+                        [prod(size(B, dimB)) prod(size(B, uncB))])));
                     sz2 = [prod(size(A, uncA)) prod(size(B, uncB))];
                     
                     for i = 1:length(Ia)
@@ -272,7 +272,12 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) MpoTensor < Ab
         end
         
         function bool = iseye(O)
-            bool = nnz(O.tensors) == 0 && isequal(O.scalars, eye(size(O.scalars)));
+            bool = nnz(O.tensors) == 0;
+            if ~bool, return; end
+            
+            scal_mat = reshape(O.scalars, ...
+                prod(size(O.scalars, 1:2)), prod(size(O.scalars, 3:4)));
+            bool = isequal(spmatrix(scal_mat), speye(size(scal_mat)));
         end
         
         function n = nnz(O)
@@ -347,7 +352,7 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) MpoTensor < Ab
     methods (Static)
         function O = zeros(codomain, domain)
             tensors = SparseTensor.zeros(codomain, domain);
-            scalars = zeros(size(tensors));
+            scalars = SparseArray.zeros(size(tensors));
             O = MpoTensor(tensors, scalars);
         end
         

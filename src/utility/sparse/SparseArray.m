@@ -418,6 +418,10 @@ classdef SparseArray
             bool = false;
         end
         
+        function bool = istriu(a)
+            bool = istriu(spmatrix(a));
+        end
+        
         function c = ldivide(a, b)
             % Elementwise left division for sparse arrays.
             %
@@ -741,22 +745,19 @@ classdef SparseArray
             a.var = sign(a.var);
         end
 
-        
-        function d = size(a, dim)
-            % Sparse array dimensions.
-            % 
-            % Usage
-            % -----
-            % :code:`d = size(a)`
-            %   returns the size of the array.
-            %
-            % :code:`d = size(a, dim)`
-            %   returns the sizes of the dimensions specified by :code:`dim`, which is
-            %   either a scalar or a vector of dimensions.
-            if nargin > 1
-                d = a.sz(dim);
+        function varargout = size(a, i)
+            if nargin == 1
+                sz = a.sz;
             else
-                d = a.sz;
+                sz = ones(1, max(i));
+                sz(1:length(a.sz)) = a.sz;
+                sz = sz(i);
+            end
+            
+            if nargout <= 1
+                varargout = {sz};
+            else
+                varargout = num2cell(sz);
             end
         end
         
@@ -801,7 +802,25 @@ classdef SparseArray
         
         function a = subsasgn(a, s, rhs)
             % Subscripted assignment for sparse array.
-            error('Not implemented.')
+            assert(strcmp(s(1).type, '()'), 'sparse:index', 'only () indexing allowed');
+            
+            if length(s(1).subs) > 1 % non-linear indexing
+                assert(length(s(1).subs) == size(a.sz, 2), 'sparse:index', ...
+                    'number of indexing indices must match tensor size.');
+                assert(all(a.sz >= cellfun(@max, s(1).subs)), 'sparse:bounds', ...
+                    'out of bounds assignment disallowed');
+                s(1).subs = {sub2ind(a.sz, s(1).subs{:})};
+            end
+            
+            [I, ~, V] = find(a.var);
+            [lia, locb] = ismember(s(1).subs{1}, I);
+            newI = vertcat(I, s(1).subs{1}(~lia));
+            newJ = ones(size(newI));
+            V(locb(lia)) = rhs(lia);
+            newV = vertcat(V, rhs(~lia));
+            
+            a.var = sparse(newI, newJ, newV, ...
+                size(a.var, 1), size(a.var, 2));
         end
         
         function a_sub = subsref(a, s)
@@ -1086,7 +1105,9 @@ classdef SparseArray
             a = SparseArray(repmat(1:inddim, numinds, 1)', 1, repmat(inddim, 1, numinds));
         end
         
-        
+        function a = zeros(sz)
+            a = SparseArray([], [], sz);
+        end
         
         function a = random(sz, density)
             % Create a random complex sparse array.
