@@ -71,7 +71,13 @@ classdef TestInfMpo < matlab.unittest.TestCase
             mpo = [mpo mpo];
             
             [mps2, lambda] = fixedpoint(alg, mpo, mps);
-            tc.assertEqual(-log(sqrt(lambda)) / beta, freeEnergyExact, 'RelTol', 1e-5);
+            tc.assertEqual(-log(lambda) / 2 / beta, freeEnergyExact, 'RelTol', 1e-5);
+            
+            mps = [mps; mps];
+            mpo = [mpo; mpo];
+            
+            [mps2, lambda] = fixedpoint(alg, mpo, mps);
+            tc.assertEqual(-log(lambda)/ 4 / beta, freeEnergyExact, 'RelTol', 1e-5);
         end
         
         function test2dfDimer(tc)
