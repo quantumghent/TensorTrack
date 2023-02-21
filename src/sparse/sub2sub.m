@@ -7,8 +7,8 @@ if isempty(sub1) || isequal(sz1, sz2)
     return;
 end
 sub2 = zeros(size(sub1, 1), numel(sz2)); % preallocate new subs
-nto1 = sum(cumsum(flip(sz1-1), 2) == 0, 2), length(sz1); % extract number of trailing ones in both sizes
-nto2 = sum(cumsum(flip(sz2-1), 2) == 0, 2), length(sz2);
+nto1 = sum(cumsum(flip(sz1-1), 2) == 0, 2); % extract number of trailing ones in both sizes
+nto2 = sum(cumsum(flip(sz2-1), 2) == 0, 2);
 pos1_prev = 0;  pos2_prev = 0;
 flag = true;
 while flag
