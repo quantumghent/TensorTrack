@@ -284,6 +284,12 @@ classdef SparseArray
         function [subs, idx, vals] = find(a)
             % Find subscripts of nonzero elements in a sparse array.
             %
+            % Usage
+            % -----
+            % :code:`idx = find(a)`
+            %
+            % :code:`[subs, idx, vals] = find(a)`
+            %
             % Arguments
             % ---------
             % a : :class:`SparseArray`
@@ -300,6 +306,10 @@ classdef SparseArray
             % var : (:, 1) :class:`double`
             %   values of nonzero array entries.
             [idx, ~, vals] = find(a.var);
+            if nargout == 1
+                subs = idx;
+                return
+            end
             subs = ind2sub_(a.sz, idx);
         end
         
