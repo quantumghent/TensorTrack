@@ -20,6 +20,10 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) MpoTensor < Ab
         function n = nspaces(~)
             n = 4;
         end
+        
+        function r = rank(t)
+            r = rank(t.tensors);
+        end
     end
     
     methods
@@ -239,6 +243,9 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) MpoTensor < Ab
     
     methods
         function s = space(O, i)
+            if nargin == 1
+                i = 1:nspaces(O);
+            end
             s = space(O.tensors, i);
         end
         
@@ -314,7 +321,7 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) MpoTensor < Ab
                 i = prod(size(t));
                 return
             end
-            if n > ndims(t)
+            if k > ndims(t)
                 i = 1;
             else
                 i = size(t, k);
@@ -340,6 +347,14 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) MpoTensor < Ab
             else
                 [varargout{1:nargout}] = size(t.scalars);
             end
+        end
+        
+        function n = ndims(t)
+            n = ndims(t.scalars);
+        end
+        
+        function disp(O)
+            builtin('disp', O);
         end
     end
     

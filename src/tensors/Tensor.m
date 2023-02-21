@@ -75,6 +75,8 @@ classdef Tensor < AbstractTensor
                     elseif isempty(domain)
                         sz = nsubspaces(codomain);
                     else
+                        if ~isa(codomain, 'SumSpace'), codomain = SumSpace(codomain); end
+                        if ~isa(domain, 'SumSpace'), domain = SumSpace(domain); end
                         sz = [nsubspaces(codomain) flip(nsubspaces(domain))];
                     end
                     subs = ind2sub_(sz, 1:prod(sz));

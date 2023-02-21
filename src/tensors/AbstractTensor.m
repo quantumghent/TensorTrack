@@ -363,6 +363,48 @@ classdef AbstractTensor
             end
         end
         
+        function disp(t, details)
+            if nargin == 1 || isempty(details), details = false; end
+            if isscalar(t)
+                r = t.rank;
+                fprintf('Rank (%d, %d) %s:\n', r(1), r(2), class(t));
+                s = space(t);
+                for i = 1:length(s)
+                    fprintf('\t%d.\t', i);
+                    disp(s(i));
+                    fprintf('\b');
+                end
+                fprintf('\n');
+                if details
+                    [blocks, charges] = matrixblocks(t);
+                    for i = 1:length(blocks)
+                        if ~isempty(blocks)
+                            fprintf('charge %s:\n', string(charges(i)));
+                        end
+                        disp(blocks{i});
+                    end
+                end
+            else
+                fprintf('%s of size %s:\n', class(t), ...
+                    regexprep(mat2str(size(t)), {'\[', '\]', '\s+'}, {'', '', 'x'}));
+                subs = ind2sub_(size(t), 1:numel(t));
+                spc = floor(log10(max(double(subs), [], 1))) + 1;
+                if numel(spc) == 1
+                    fmt = strcat("\t(%", num2str(spc(1)), "u)");
+                else
+                    fmt = strcat("\t(%", num2str(spc(1)), "u,");
+                    for i = 2:numel(spc) - 1
+                        fmt = strcat(fmt, "%", num2str(spc(i)), "u,");
+                    end
+                    fmt = strcat(fmt, "%", num2str(spc(end)), "u)");
+                end
+                for i = 1:numel(t)
+                    fprintf('%s\t\t', compose(fmt, subs(i, :)));
+                    disp(t(i), details);
+                end
+            end
+        end
+        
         function d = distance(A, B)
             % Compute the Euclidean distance between two tensors.
             %

@@ -25,7 +25,6 @@ classdef Vumps < handle
         saveIterations = 1
         saveMethod = 'full'
         name = 'VUMPS'
-
     end
     
     properties (Access = private)
