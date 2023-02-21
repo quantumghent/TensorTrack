@@ -19,7 +19,10 @@ while flag
         error('Cannot map subscripts to new size as intermediate index exceeds MAXSIZE')
     end
     sub2(:, pos2_prev+1:pos2) = ind2sub_(sz2(pos2_prev+1:pos2), sub2ind_(sz1(pos1_prev+1:pos1), sub1(:, pos1_prev+1:pos1)));
-    if pos2 == numel(sz2) - nto2 || pos1 == numel(sz1) - nto1
+    if      (isempty(pos2) && numel(sz2) - nto2 == 0) || ...
+            (isempty(pos1) && numel(sz1) - nto1 == 0) || ...
+            pos2 == numel(sz2) - nto2 || ...
+            pos1 == numel(sz1) - nto1
         flag = false;
     else
         pos1_prev = pos1;
