@@ -139,6 +139,11 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) MpoTensor < Ab
             O.scalars = permute(O.scalars, [2 3 4 1]);
         end
         
+        function O = rot270(O)
+            O.tensors = tpermute(O.tensors, [4 1 2 3], [2 2]);
+            O.scalars = permute(O.scalars, [4 1 2 3]);
+        end
+        
         function C = tensorprod(A, B, dimA, dimB, ca, cb, options)
             arguments
                 A
@@ -244,6 +249,14 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) MpoTensor < Ab
         end
         
         function s = pspace(O)
+            s = domainspace(O)';
+        end
+        
+        function s = domainspace(O)
+            s = space(O.tensors, 4);
+        end
+        
+        function s = codomainspace(O)
             s = space(O.tensors, 2);
         end
         

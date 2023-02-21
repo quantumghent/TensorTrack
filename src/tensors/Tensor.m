@@ -353,7 +353,8 @@ classdef Tensor < AbstractTensor
                     spaces = CartesianSpace.new(varargin{1});
                 elseif isnumeric(varargin{2}) || islogical(varargin{2})
                     assert(length(varargin{1}) == length(varargin{2}))
-                    spaces = ComplexSpace.new(varargin{1}, varargin{2});
+                    args = [num2cell(varargin{1}); num2cell(varargin{2})];
+                    spaces = ComplexSpace.new(args{:});
                 end
                 
                 if ~isfield(kwargs, 'Rank')

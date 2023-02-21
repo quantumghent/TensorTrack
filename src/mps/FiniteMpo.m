@@ -65,13 +65,13 @@ classdef FiniteMpo
         end
         
         function s = domain(mpo)
-            N = prod(cellfun(@(x) size(x, 4), mpo(1).O));
-            s = conj(...
-                [rightvspace(mpo(1).L) cellfun(@(x) pspace(x)', mpo(1).O) leftvspace(mpo(1).R)]);
+            sO = flip(cellfun(@(x) domainspace(x), mpo(1).O, 'UniformOutput', false));
+            s = [leftvspace(mpo(1).R) [sO{:}] rightvspace(mpo(1).L)]';
         end
         
         function s = codomain(mpo)
-            s = [leftvspace(mpo(end).L) cellfun(@pspace, mpo(end).O) rightvspace(mpo(end).R)];
+            sO = cellfun(@(x) codomainspace(x), mpo(1).O, 'UniformOutput', false);
+            s = [leftvspace(mpo(end).L) [sO{:}] rightvspace(mpo(end).R)];
         end
         
         function d = depth(mpo)
@@ -218,8 +218,8 @@ classdef FiniteMpo
                 twistinds = 1 + find(isdual(space(Atop(i), 2:nspaces(Atop(i)) - 1)));
                 abot = twist(Abot(i)', twistinds);
                 
-                assert(isequal(space(abot, 2), space(o, 1)'));
-                assert(isequal(space(o, 3), space(atop, 2)'));
+                assert(isequal(pspace(abot)', leftvspace(o)));
+                assert(isequal(rightvspace(o)', pspace(atop)));
                 
                 T(i, 1) = FiniteMpo(abot, {o}, atop);
             end

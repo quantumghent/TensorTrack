@@ -135,8 +135,8 @@ classdef UniformMps
             L = length(pspaces);
             
             for w = length(pspaces):-1:1
-                rankdeficient = vspaces{w} * pspaces{w} < vspaces{next(w, L)} || ...
-                        vspaces{w} > pspaces{w}' * vspaces{next(w, L)};
+                rankdeficient = vspaces{w} * prod(pspaces{w}) < vspaces{next(w, L)} || ...
+                        vspaces{w} > prod(pspaces{w})' * vspaces{next(w, L)};
                 if rankdeficient
                     error('mps:rank', ...
                         'Cannot create a full rank mps with given spaces.');
@@ -269,7 +269,7 @@ classdef UniformMps
                 kwargs.Order {mustBeMember(kwargs.Order, {'lr', 'rl'})} = 'lr'
             end
             
-            for i = 1:length(mps)
+            for i = 1:depth(mps)
                 if strcmp(kwargs.Order, 'rl')
                     [mps(i).AR, ~, ~, eta1]             = uniform_rightorth(...
                         mps(i).AR, [], ...
@@ -296,7 +296,7 @@ classdef UniformMps
             end
             
             if kwargs.ComputeAC
-                for i = 1:height(mps)
+                for i = 1:depth(mps)
                     for w = period(mps(i)):-1:1
                         mps(i).AC(w) = multiplyright(mps(i).AL(w), ...
                             mps(i).C(w));
@@ -308,7 +308,7 @@ classdef UniformMps
         function mps = diagonalizeC(mps)
             % gauge transform an mps such that C is diagonal.
             
-            for i = 1:height(mps)
+            for i = 1:depth(mps)
                 for w = 1:period(mps(i))
                     C_iw = mps(i).C(w);
                     [U, S, V] = tsvd(C_iw, 1, 2);

@@ -57,7 +57,7 @@ classdef TestInfMpo < matlab.unittest.TestCase
             D = 16;
             alg = Vumps('MaxIter', 10);
             mpo = InfMpo.Ising(beta);
-            mps = UniformMps.randnc(CartesianSpace.new(2), CartesianSpace.new(D));
+            mps = mpo.initialize_mps(CartesianSpace.new(D));
             [mps2, lambda] = fixedpoint(alg, mpo, mps);
             tc.assertEqual(-log(lambda) / beta, freeEnergyExact, 'RelTol', 1e-5);
             
