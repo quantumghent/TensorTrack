@@ -56,14 +56,14 @@ classdef TestInfMpo < matlab.unittest.TestCase
             
             D = 16;
             alg = Vumps('MaxIter', 10);
-            mpo = InfMpo.Ising(beta);
+            mpo = statmech2DIsing('beta', beta, 'Symmetry', 'Z1');
             mps = UniformMps.randnc(CartesianSpace.new(2), CartesianSpace.new(D));
             [mps2, lambda] = fixedpoint(alg, mpo, mps);
             tc.assertEqual(-log(lambda) / beta, freeEnergyExact, 'RelTol', 1e-5);
             
             mps = UniformMps.randnc(GradedSpace.new(Z2(0, 1), [1 1], false), ...
                 GradedSpace.new(Z2(0, 1), [D D] ./ 2, false));
-            mpo = InfMpo.Ising(beta, 'Symmetry', 'Z2');
+            mpo = statmech2DIsing('beta', beta, 'Symmetry', 'Z2');
             [mps2, lambda] = fixedpoint(alg, mpo, mps);
             tc.assertEqual(-log(lambda) / beta, freeEnergyExact, 'RelTol', 1e-5);
             

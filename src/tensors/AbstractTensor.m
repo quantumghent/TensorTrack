@@ -255,7 +255,8 @@ classdef AbstractTensor
             
             x0_vec = vectorize(x0);
             sz = size(x0_vec);
-            
+            assert(sz(1) >= howmany);
+
             if isa(A, 'function_handle')
                 A_fun = @(x) vectorize(A(devectorize(x, x0)));
             else
@@ -264,11 +265,19 @@ classdef AbstractTensor
             
             options.KrylovDim = min(sz(1), options.KrylovDim);
             
-            [V, D, flag] = eigs(A_fun, sz(1), howmany, sigma, ...
-                'Tolerance', options.Tol, 'MaxIterations', options.MaxIter, ...
-                'SubspaceDimension', options.KrylovDim, 'IsFunctionSymmetric', ...
-                options.IsSymmetric, 'StartVector', x0_vec, ...
-                'Display', options.Verbosity >= 3);
+            if howmany > sz(1) - 2
+                [V, D, flag] = eigs(A_fun, sz(1), howmany, sigma, ...
+                    'Tolerance', options.Tol, 'MaxIterations', options.MaxIter, ...
+                    'IsFunctionSymmetric', ...
+                    options.IsSymmetric, 'StartVector', x0_vec, ...
+                    'Display', options.Verbosity >= 3);
+            else
+                [V, D, flag] = eigs(A_fun, sz(1), howmany, sigma, ...
+                    'Tolerance', options.Tol, 'MaxIterations', options.MaxIter, ...
+                    'SubspaceDimension', options.KrylovDim, 'IsFunctionSymmetric', ...
+                    options.IsSymmetric, 'StartVector', x0_vec, ...
+                    'Display', options.Verbosity >= 3);
+            end
             
             if nargout <= 1
                 varargout = {D};
@@ -363,6 +372,48 @@ classdef AbstractTensor
             end
         end
         
+        function disp(t, details)
+            if nargin == 1 || isempty(details), details = false; end
+            if isscalar(t)
+                r = t.rank;
+                fprintf('Rank (%d, %d) %s:\n', r(1), r(2), class(t));
+                s = space(t);
+                for i = 1:length(s)
+                    fprintf('\t%d.\t', i);
+                    disp(s(i));
+                    fprintf('\b');
+                end
+                fprintf('\n');
+                if details
+                    [blocks, charges] = matrixblocks(t);
+                    for i = 1:length(blocks)
+                        if ~isempty(blocks)
+                            fprintf('charge %s:\n', string(charges(i)));
+                        end
+                        disp(blocks{i});
+                    end
+                end
+            else
+                fprintf('%s of size %s:\n', class(t), ...
+                    regexprep(mat2str(size(t)), {'\[', '\]', '\s+'}, {'', '', 'x'}));
+                subs = ind2sub_(size(t), 1:numel(t));
+                spc = floor(log10(max(double(subs), [], 1))) + 1;
+                if numel(spc) == 1
+                    fmt = strcat("\t(%", num2str(spc(1)), "u)");
+                else
+                    fmt = strcat("\t(%", num2str(spc(1)), "u,");
+                    for i = 2:numel(spc) - 1
+                        fmt = strcat(fmt, "%", num2str(spc(i)), "u,");
+                    end
+                    fmt = strcat(fmt, "%", num2str(spc(end)), "u)");
+                end
+                for i = 1:numel(t)
+                    fprintf('%s\t\t', compose(fmt, subs(i, :)));
+                    disp(t(i), details);
+                end
+            end
+        end
+        
         function d = distance(A, B)
             % Compute the Euclidean distance between two tensors.
             %
@@ -441,6 +492,38 @@ classdef AbstractTensor
             iE = [1:length(i1) length(i1) + (length(i2):-1:1)];
             B = tensorprod(A, E, iA, iE);
         end
+        
+        function o = overlap(t1, t2)
+            o = contract(t1, 1:nspaces(t1), t2, flip(1:nspaces(t1)));
+        end
+    end
+    
+    
+    %% Contractions
+    methods
+        function v = applytransfer(L, R, v)
+            arguments
+                L
+                R
+                v = []
+            end
+            
+            if isempty(v)
+                v = tracetransfer(L, R);
+                return
+            end
+            
+            auxlegs_v = nspaces(v) - 2;
+            auxlegs_l = 0;
+            auxlegs_r = 0;
+            newrank = rank(v); newrank(2) = newrank(2) + auxlegs_l + auxlegs_r;
+            
+            v = contract(v, [1 3 (-(1:auxlegs_v) - 2 - auxlegs_l)], ...
+                L, [-1 2 1 (-(1:auxlegs_l) - 2)], ...
+                R, [3 2 -2 (-(1:auxlegs_r) - 3 - auxlegs_l - auxlegs_v)], ...
+                'Rank', newrank);
+        end
+        
     end
 end
 
