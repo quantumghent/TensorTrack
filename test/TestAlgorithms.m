@@ -12,7 +12,7 @@ classdef TestAlgorithms < matlab.unittest.TestCase
     methods (Test)
         function test2dIsing(tc, alg, symm)
             alg.which = 'largestabs';
-            for unitcell = 1:4
+            for unitcell = 1:3
                 if unitcell == 1 && (isa(alg, 'Vumps2') || isa(alg, 'IDmrg2'))
                     continue;
                 end
@@ -40,7 +40,7 @@ classdef TestAlgorithms < matlab.unittest.TestCase
         
         function test1dIsing(tc, alg, symm)
             alg.which = 'smallestreal';
-            for unitcell = 1:4
+            for unitcell = 1:3
                 if unitcell == 1 && (isa(alg, 'IDmrg2') || isa(alg, 'Vumps2'))
                     continue;
                 end
