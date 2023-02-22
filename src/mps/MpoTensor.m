@@ -20,6 +20,14 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) MpoTensor < Ab
         function n = nspaces(~)
             n = 4;
         end
+        
+        function dom = domain(t)
+            dom = t.tensors.domain;
+        end
+        
+        function cod = codomain(t)
+            cod = t.tensors.codomain;
+        end
     end
     
     methods
@@ -102,7 +110,7 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) MpoTensor < Ab
                 L, [-1 2 1 (-(1:auxlegs_l) - 3)], ...
                 O, [2 -2 4 3], ...
                 R, [5 4 -3 (-(1:auxlegs_r) - 3 - auxlegs_l - auxlegs_v)], ...
-                'Rank', newrank);
+                'Rank', newrank, 'CheckOptimal', true);
         end
         
         function v = applympo(varargin)
