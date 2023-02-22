@@ -9,7 +9,6 @@ classdef FiniteMps
     %% Constructors
     methods
         function mps = FiniteMps(varargin)
-            
             if nargin == 0, return; end
             if nargin == 1
                 mps.A = varargin{1};
