@@ -14,10 +14,17 @@ classdef Dmrg
         tol_max                 = 1e-10
         eigs_tolfactor          = 1e-6
         
+        sweepstyle {mustBeMember(sweepstyle, {'f2f', 'b2b', 'm2m'})} = 'f2f'
+        
         doSave = false
         saveIterations = 1
         saveMethod = 'full'
         name = 'DMRG'
+    end
+    
+    properties (Access = private)
+        alg_eigs = struct('MaxIter', 100, 'KrylovDim', 20);
+        progressfig
     end
     
     methods
@@ -31,6 +38,11 @@ classdef Dmrg
                 for field = fields.'
                     alg.(field{1}) = kwargs.(field{1});
                 end
+            end
+            
+            if ~isfield('alg_eigs', kwargs)
+                alg.alg_eigs.Tol = sqrt(alg.tol_min * alg.tol_max);
+                alg.alg_eigs.Verbosity = alg.verbosity - 2;
             end
         end
         
@@ -53,49 +65,48 @@ classdef Dmrg
             
             for iter = 1:alg.maxiter
                 t_iter = tic;
+                
                 order = sweeporder(alg, length(mps));
-                eta = zeros(size(order));
-                lambda = zeros(size(order));
+                eta     = zeros(size(order));
+                lambda  = zeros(size(order));
+                
                 for i = 1:length(order)
-                    pos = order(i);
-                    [mps, envs, lambda(i), eta(i)] = localupdate(alg, mps, mpo, envs, pos);
+                    [mps, envs, lambda(i), eta(i)] = ...
+                        localupdate(alg, mps, mpo, envs, order(i));
                 end
+                
                 eta = norm(eta, Inf);
-                if iter > alg.miniter && norm(eta, Inf) < alg.tol
-                    disp_conv(alg, iter, sum(lambda), eta, toc(t_total));
+                lambda = sum(lambda);
+                
+                if iter > alg.miniter && eta < alg.tol
+                    disp_conv(alg, iter, lambda, eta, toc(t_total));
                     return
                 end
                 
                 alg = updatetols(alg, iter, eta);
                 
-                plot(alg, iter, mps, norm(eta, Inf));
-                disp_iter(alg, iter, sum(lambda), eta, toc(t_iter));
+                plot(alg, iter, mps, eta);
+                disp_iter(alg, iter, lambda, eta, toc(t_iter));
             end
             
-            disp_maxiter(alg, iter, sum(lambda), eta, toc(t_total));
-        end
-        
-        function order = sweeporder(alg, L)
-            order = [2:L, L-1:-1:1];
-%             order = circshift(order, -floor(L / 2));
-            order = 2:L-1;
-        end
-        
-        function envs = environments(alg, mpo, mps)
-            
+            disp_maxiter(alg, iter, lambda, eta, toc(t_total));
         end
         
         function [mps, envs, lambda, eta] = localupdate(alg, mps, mpo, envs, pos)
+            % update orthogonality center
             mps = movegaugecenter(mps, pos);
             envs = movegaugecenter(envs, mpo, mps, mps, pos);
+            
+            % compute update
             H_AC = AC_hamiltonian(mpo, mps, envs, pos);
             AC = mps.A(pos);
             [AC.var, lambda] = eigsolve(H_AC, AC.var, 1, alg.which);
             
+            % determine error
             phase = dot(AC.var, mps.A(pos));
-            
             eta = distance(AC.var ./ sign(phase), mps.A(pos));
             
+            % take step
             mps.A(pos) = AC;
             envs = invalidate(envs, pos);
         end
@@ -107,18 +118,26 @@ classdef Dmrg
             if alg.dynamical_tols
                 alg.alg_eigs.Tol = between(alg.tol_min, eta * alg.eigs_tolfactor / iter, ...
                     alg.tol_max);
-                alg.alg_canonical.Tol = between(alg.tol_min, ...
-                    eta * alg.canonical_tolfactor / iter, alg.tol_max);
-                alg.alg_environments.Tol = between(alg.tol_min, ...
-                    eta * alg.environments_tolfactor / iter, alg.tol_max);
-                
                 if alg.verbosity > Verbosity.iter
-                    fprintf('Updated subalgorithm tolerances: (%e,\t%e,\t%e)\n', ...
-                        alg.alg_eigs.Tol, alg.alg_canonical.Tol, alg.alg_environments.Tol);
+                    fprintf('Updated eigsolver tolerances: (%e)\n', alg.alg_eigs.Tol);
                 end
             end
         end
+        
+        function order = sweeporder(alg, L)
+            switch alg.sweepstyle
+                case 'f2f'
+                    order = [1:L L-1:-1:2];
+                case 'b2b'
+                    order = [L:-1:1 2:L];
+                case 'm2m'
+                    order = circshift([2:L, L-1:-1:1], -floor(L / 2));
+                otherwise
+                    error('unknown sweepstyle %s', alg.sweepstyle);
+            end
+        end
     end
+    
     
     %% Display
     methods (Access = private)
@@ -159,7 +178,7 @@ classdef Dmrg
         
         function disp_init(alg)
             if alg.verbosity < Verbosity.conv, return; end
-            fprintf('---- VUMPS ----\n');
+            fprintf('---- %s ----\n', alg.name);
         end
         
         function disp_iter(alg, iter, lambda, eta, t)
@@ -169,21 +188,21 @@ classdef Dmrg
             if abs(imag(lambda)) < eps(lambda)^(3/4) * abs(lambda)
                 switch s.matlab.commandwindow.NumericFormat.ActiveValue
                     case 'short'
-                        fprintf('Vumps %2d:\tE = %-0.4f\terror = %0.1e\t(%s)\n', ...
-                            iter, real(lambda), eta, time2str(t));
+                        fprintf('%s %2d:\tE = %-0.4f\terror = %0.1e\t(%s)\n', ...
+                            alg.name, iter, real(lambda), eta, time2str(t));
                     otherwise
-                        fprintf('Vumps %4d:\tE = %-0.15f\terror = %0.4e\t(%s)\n', ...
-                            iter, real(lambda), eta, time2str(t, 's'));
+                        fprintf('%s %4d:\tE = %-0.15f\terror = %0.4e\t(%s)\n', ...
+                            alg.name, iter, real(lambda), eta, time2str(t, 's'));
                         
                 end
             else
                 switch s.matlab.commandwindow.NumericFormat.ActiveValue
                     case 'short'
-                        fprintf('Vumps %2d:\tE = %-0.4f %+0.4fi\terror = %0.1e\t(%s)\n', ...
-                            iter, real(lambda), imag(lambda), eta, time2str(t));
+                        fprintf('%s %2d:\tE = %-0.4f %+0.4fi\terror = %0.1e\t(%s)\n', ...
+                            alg.name, iter, real(lambda), imag(lambda), eta, time2str(t));
                     otherwise
-                        fprintf('Vumps %4d:\tE = %-0.15f %+0.15fi\terror = %0.4e\t(%s)\n', ...
-                            iter, real(lambda), imag(lambda), eta, time2str(t));
+                        fprintf('%s %4d:\tE = %-0.15f %+0.15fi\terror = %0.4e\t(%s)\n', ...
+                            alg.name, iter, real(lambda), imag(lambda), eta, time2str(t));
                         
                 end
             end
@@ -194,11 +213,11 @@ classdef Dmrg
             s = settings;
             switch s.matlab.commandwindow.NumericFormat.ActiveValue
                 case 'short'
-                    fprintf('Vumps converged %2d:\tE = %-0.4f %+0.4fi\terror = %0.1e\t(%s)\n', ...
-                        iter, real(lambda), imag(lambda), eta, time2str(t));
+                    fprintf('%s converged %2d:\tE = %-0.4f %+0.4fi\terror = %0.1e\t(%s)\n', ...
+                        alg.name, iter, real(lambda), imag(lambda), eta, time2str(t));
                 otherwise
-                    fprintf('Vumps converged %4d:\tE = %-0.15f %+0.15fi\terror = %0.4e\t(%s)\n', ...
-                        iter, real(lambda), imag(lambda), eta, time2str(t));
+                    fprintf('%s converged %4d:\tE = %-0.15f %+0.15fi\terror = %0.4e\t(%s)\n', ...
+                        alg.name, iter, real(lambda), imag(lambda), eta, time2str(t));
                     
             end
             fprintf('---------------\n');
@@ -209,11 +228,11 @@ classdef Dmrg
             s = settings;
             switch s.matlab.commandwindow.NumericFormat.ActiveValue
                 case 'short'
-                    fprintf('Vumps max iterations %2d:\tE = %-0.4f %+0.4fi\terror = %0.1e\t(%s)\n', ...
-                        iter, real(lambda), imag(lambda), eta, time2str(t));
+                    fprintf('%s max iterations %2d:\tE = %-0.4f %+0.4fi\terror = %0.1e\t(%s)\n', ...
+                        alg.name, iter, real(lambda), imag(lambda), eta, time2str(t));
                 otherwise
-                    fprintf('Vumps max iterations %4d:\tE = %-0.15f %+0.15fi\terror = %0.4e\t(%s)\n', ...
-                        iter, real(lambda), imag(lambda), eta, time2str(t));
+                    fprintf('%s max iterations %4d:\tE = %-0.15f %+0.15fi\terror = %0.4e\t(%s)\n', ...
+                        alg.name, iter, real(lambda), imag(lambda), eta, time2str(t));
                     
             end
             fprintf('---------------\n');
