@@ -37,7 +37,6 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) PepsSandwich
         end
         
         function T = transpose(T)
-            % TODO: test if this is correct when inserted into FiniteMpo
             top = T.top;
             bot = T.bot;
             T.top = tpermute(bot, [1, 4, 5, 2, 3], rank(bot));
@@ -46,8 +45,8 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) PepsSandwich
         
         function T = ctranspose(T)
             % TODO: test if this is correct when inserted into FiniteMpo
-            T.top = conj(tpermute(T.top, [1, 4, 5, 2, 3], rank(T.top)));
-            T.bot = conj(tpermute(T.bot, [1, 4, 5, 2, 3], rank(T.bot)));
+            T.top = tpermute(conj(T.top), [1, 2, 5, 4, 3], rank(T.top));
+            T.bot = tpermute(conj(T.bot), [1, 2, 5, 4, 3], rank(T.bot));
         end
         
         function s = pspace(T)
@@ -91,6 +90,66 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) PepsSandwich
                 T.bot.var, [6, 2, -3, 9, 3], ...
                 R, [7, 8, 9, -4, (-(1:auxlegs_r) - 4 - auxlegs_l - auxlegs_v)], ...
                 'Rank', newrank);
+        end
+        
+        function v = applympo(varargin)
+            % lolz
+            assert(nargin >= 3)
+            v = varargin{end};
+            R = varargin{end-1};
+            L = varargin{end-2};
+            O = varargin(1:end-3);
+            W = length(O);
+            
+            auxlegs_v = nspaces(v) - (2*W+2);
+            if isa(L, 'MpsTensor')
+                auxlegs_l = L.alegs;
+            else
+                auxlegs_l = 0;
+            end
+            if isa(R, 'MpsTensor')
+                auxlegs_r = R.alegs;
+            else
+                auxlegs_r = 0;
+            end
+            auxlegs = auxlegs_v + auxlegs_l + auxlegs_r;
+            
+            inds_top = arrayfun(@(x) [  5 + 5*(x-1), ...
+                                        2 + 5*(x-1), ...
+                                        -(2 + 2*(x-1)), ...
+                                        2 + 5*x, ...
+                                        3 + 5*(x-1)], ...
+                                        1:W,  'UniformOutput', false);
+            inds_bot = arrayfun(@(x) [  5 + 5*(x-1), ...
+                                        4 + 5*(x-1), ...
+                                        -(3 + 2*(x-1)), ...
+                                        4 + 5*x, ...
+                                        6 + 5*(x-1)], ...
+                                        1:W,  'UniformOutput', false);
+            tops = cellfun(@(x) x.top.var, O, 'UniformOutput', false);
+            bots = cellfun(@(x) x.bot.var, O, 'UniformOutput', false);
+            Oargs = [tops; inds_top; bots; inds_bot];
+            v = contract(v, [1, reshape([3, 6]' + 5*(0:W-1), 1, []), 3 + 5*W, (-(1:auxlegs_v) - (2*W+2) - auxlegs_l)], ...
+                L, [-1, 4, 2, 1, (-(1:auxlegs_l) - (2*W+2))], ...
+                Oargs{:}, ...
+                R, [3 + 5*W, 2 + 5*W, 4 + 5*W, -(2*W + 2), (-(1:auxlegs_r) - (2*W+2) - auxlegs_l - auxlegs_v)], ...
+                'Rank', rank(v) + [0 auxlegs]);
+        end
+        
+        function t = MpoTensor(T)
+            fuse_east = Tensor.eye(prod(leftvspace(T)), leftvspace(T));
+            fuse_south = Tensor.eye(prod(codomainspace(T)), codomainspace(T));
+            fuse_west = Tensor.eye(prod(rightvspace(T))', rightvspace(T));
+            fuse_north = Tensor.eye(prod(domainspace(T))', domainspace(T));
+            t = MpoTensor(contract(...
+                T.top.var, [1, 2, 4, 6, 8], ...
+                T.bot.var, [1, 3, 5, 7, 9], ...
+                fuse_east, [-1, 3, 2], ...
+                fuse_south, [-2, 5, 4], ...
+                fuse_west, [-3, 6, 7], ...
+                fuse_north, [-4, 8, 9], ...
+                'Rank', [2, 2]));
+             % TODO: test properly
         end
     end
 end

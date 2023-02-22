@@ -92,10 +92,12 @@ classdef FiniteMpo
             end
             
             for d = 1:depth(mpo)
-                mpo(d).L = mpo(d).L';
+                mpo(d).L = tpermute(mpo(d).L', ...
+                    [1, flip(2:nspaces(mpo(d).L)-1), nspaces(mpo(d).L)]);
                 mpo(d).O = cellfun(@ctranspose, mpo(d).O, ...
                     'UniformOutput', false);
-                mpo(d).R = mpo(d).R';
+                mpo(d).R = tpermute(mpo(d).R', ...
+                    [1, flip(2:nspaces(mpo(d).R)-1), nspaces(mpo(d).R)]);
             end
         end
         
@@ -183,7 +185,7 @@ classdef FiniteMpo
         function t = Tensor(mpo)
             assert(depth(mpo) == 1, 'not implemented for 1 < depth');
             N = length(mpo);
-            inds = arrayfun(@(x) [x -(x+1) (x+1) -(N+x+3)], 1:N, ...
+            inds = arrayfun(@(x) [x -(x+1) (x+1) -(2*N+4-x)], 1:N, ...
                 'UniformOutput', false);
             args = [mpo.O; inds];
             t = contract(mpo.L, [-1 1 -(2*N+4)], args{:}, mpo.R, [-(N+3) N+1 -(N+2)], ...

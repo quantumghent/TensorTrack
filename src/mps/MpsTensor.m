@@ -189,6 +189,10 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
             t = permute(t, ndims(t):-1:1);
         end
         
+        function A = tpermute(A, varargin)
+            A.var = tpermute(A.var, varargin{:});
+        end
+        
         function C = tensorprod(varargin)
             for i = 1:2
                 if isa(varargin{i}, 'MpsTensor')
