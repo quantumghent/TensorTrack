@@ -302,8 +302,26 @@ classdef AbstractTensor
                 kwargs.Conj (1, :) logical = false(size(tensors))
                 kwargs.Rank = []
                 kwargs.Debug = false
+                kwargs.CheckOptimal = false
             end
+            
             assert(length(kwargs.Conj) == length(tensors));
+            
+            if kwargs.CheckOptimal
+                legcosts = zeros(2, 0);
+                for i = 1:length(indices)
+                    legcosts = [legcosts [indices{i}; dims(tensors{i})]];
+                end
+                legcosts = unique(legcosts.', 'rows');
+                
+                currentcost = contractcost(indices, legcosts);
+                [sequence, cost] = netcon(indices, 1, 1, currentcost, 1, legcosts);
+                
+                if cost < currentcost
+                    warning('suboptimal contraction order.\n optimal: %s', ...
+                        num2str(sequence));
+                end
+            end
             
             for i = 1:length(tensors)
                 [i1, i2] = traceinds(indices{i});
@@ -440,6 +458,13 @@ classdef AbstractTensor
             iA = [i1 i2];
             iE = [1:length(i1) length(i1) + (length(i2):-1:1)];
             B = tensorprod(A, E, iA, iE);
+        end
+        
+        function sz = dims(t, inds)
+            sz = dims([t.codomain, t.domain']);
+            if nargin > 1
+                sz = sz(inds);
+            end
         end
     end
 end

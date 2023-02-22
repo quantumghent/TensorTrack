@@ -41,9 +41,26 @@ arguments
     kwargs.Conj (1, :) logical = false(size(tensors))
     kwargs.Rank = []
     kwargs.Debug = false
+    kwargs.CheckOptimal = false
 end
 
 assert(length(kwargs.Conj) == length(tensors));
+
+if kwargs.CheckOptimal
+    legcosts = zeros(2, 0);
+    for i = 1:length(indices)
+        legcosts = [legcosts [indices{i}; size(tensors{i}, 1:length(indices{i}))]];
+    end
+    legcosts = unique(legcosts.', 'rows');
+    
+    currentcost = contractcost(indices, legcosts);
+    [sequence, cost] = netcon(indices, 1, 1, currentcost, 1, legcosts);
+    
+    if cost < currentcost
+        warning('suboptimal contraction order.\n optimal: %s', ...
+            num2str(sequence));
+    end
+end
 
 for i = 1:length(tensors)
     [i1, i2] = traceinds(indices{i});
