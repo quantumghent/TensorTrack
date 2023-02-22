@@ -568,5 +568,43 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
             t = sparse(t);
         end
     end
+    
+    
+    %%
+    methods (Static)
+        function local_tensors = decompose_local_state(psi, kwargs)
+            % convert a tensor into a product of local operators.
+            %
+            % Usage
+            % -----
+            % :code:`local_operators = MpoTensor.decompose_local_operator(H, kwargs)`.
+            %
+            % Arguments
+            % ---------
+            % H : :class:`AbstractTensor`
+            %   tensor representing a local operator on N sites.
+            %
+            % Keyword Arguments
+            % -----------------
+            % 'Trunc' : cell
+            %   optional truncation method for the decomposition. See also
+            %   :method:`Tensor.tsvd`
+            arguments
+                psi
+                kwargs.Trunc = {'TruncBelow', 1e-14}
+            end
+            
+            L = nspaces(psi);
+            assert(L >= 3, 'argerror', ...
+                sprintf('state must have at least 3 legs. (%d)', L));
+            
+            local_tensors = cell(1, L - 2);
+            for i = 1:length(local_tensors)-1
+                [u, s, psi] = tsvd(psi, [1 2], [3:nspaces(psi)], kwargs.Trunc{:});
+                local_tensors{i} = multiplyright(MpsTensor(u), s);
+            end
+            local_tensors{end} = MpsTensor(repartition(psi, [2 1]));
+        end
+    end
 end
 

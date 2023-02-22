@@ -2356,6 +2356,11 @@ classdef Tensor < AbstractTensor
                 if ~isempty(tsrc.codomain), tdst.codomain = ComplexSpace(tsrc.codomain); end
             end
         end
+        
+        function mps = FiniteMps(t, varargin)
+            A = MpsTensor.decompose_local_state(t, varargin{:});
+            mps = FiniteMps(A);
+        end
     end
     
     
