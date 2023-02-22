@@ -458,12 +458,7 @@ classdef Tensor < AbstractTensor
             end
         end
         
-        function sz = dims(t, inds)
-            sz = dims([t.codomain, t.domain']);
-            if nargin > 1
-                sz = sz(inds);
-            end
-        end
+        
         
         function sp = space(t, inds)
             sp = [t.codomain t.domain'];
