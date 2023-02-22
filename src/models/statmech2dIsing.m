@@ -1,4 +1,4 @@
-function O = statmech2DIsing(kwargs)
+function O = statmech2dIsing(kwargs)
 
 arguments
     kwargs.beta = log(1 + sqrt(2)) / 2;

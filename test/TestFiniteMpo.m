@@ -43,26 +43,26 @@ classdef TestFiniteMpo < matlab.unittest.TestCase
         end
         
         function test2dIsing(tc)
-            L = 10;
-            D = 20;
+            L = 8;
+            D = 64;
             alg = Dmrg('maxiter', 10, 'which', 'largestabs');
             
-            mpo = statmech2DIsing('beta', 2, 'L', L);
+            mpo = statmech2dIsing('beta', 2, 'L', L);
             vspace_max = CartesianSpace.new(D);
             mps = initialize_mps(mpo, 'MaxVspace', vspace_max);
             
             [mps, envs, eta] = fixedpoint(alg, mpo, mps);
             
-            mpo = statmech2DIsing('beta', 2, 'L', L, 'Symmetry', 'Z2');
+            mpo = statmech2dIsing('beta', 2, 'L', L, 'Symmetry', 'Z2');
             vspace_max = GradedSpace.new(Z2(0, 1), D ./ [2 2], false);
             mps = initialize_mps(mpo, 'MaxVspace', vspace_max);
             [mps, envs, eta] = fixedpoint(alg, mpo, mps);
         end
         
         function test1dIsing(tc)
-            L = 20;
-            D = 40;
-            alg = Dmrg('maxiter', 10, 'which', 'smallestreal');
+            L = 8;
+            D = 64;
+            alg = Dmrg('miniter', 2, 'maxiter', 5, 'which', 'smallestreal');
             
             mpo = quantum1dIsing('L', L);
             vspace_max = CartesianSpace.new(D);

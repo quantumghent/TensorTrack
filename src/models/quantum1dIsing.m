@@ -49,18 +49,10 @@ else
     O(1, 1, 3, 1) = (-J * h) * Sz;
 end
 
+mpo = InfJMpo(O);
+
 if isfinite(kwargs.L)
-    r = Tensor.eye([trivSpace trivSpace], trivSpace);
-    l = r';
-    Os = cell(1, kwargs.L);
-    Os{1} = O(1,:,:,:);
-    for i = 2:length(Os)-1
-        Os{i} = O;
-    end
-    Os{end} = O(:,:,end,:);
-    mpo = FiniteMpo(MpsTensor(l), Os, MpsTensor(r));
-else
-    mpo = InfJMpo(O);
+    mpo = open_boundary_conditions(InfJMpo(O), kwargs.L);
 end
 
 end

@@ -62,8 +62,16 @@ classdef InfMpo
             mpo.O = O_;
         end
 
-        function s = pspace(mpo, x)
-            s = pspace(mpo.O{x});
+        function s = pspace(mpo, w)
+            s = pspace(mpo.O{w});
+        end
+        
+        function s = leftvspace(mpo, w)
+            s = leftvspace(mpo.O{w});
+        end
+        
+        function s = rightvspace(mpo, w)
+            s = rightvspace(mpo.O{w});
         end
         
         function mpo = horzcat(varargin)
@@ -269,34 +277,6 @@ classdef InfMpo
     end
     
     methods (Static)
-        function mpo = Ising(beta, kwargs)
-            arguments
-                beta = log(1 + sqrt(2)) / 2;
-                kwargs.Symmetry {mustBeMember(kwargs.Symmetry, {'Z1', 'Z2'})} = 'Z1'
-            end
-            
-            if strcmp(kwargs.Symmetry, 'Z1')
-                t = [exp(beta) exp(-beta); exp(-beta) exp(beta)];
-                [v, d] = eig(t);
-                t = v * sqrt(d) * v;
-                
-                o = zeros(2, 2, 2, 2);
-                o(1, 1, 1, 1) = 1;
-                o(2, 2, 2, 2) = 1;
-                
-                o = contract(o, 1:4, t, [-1 1], t, [-2 2], t, [-3 3], t, [-4 4]);
-                
-                O = fill_tensor(Tensor.zeros([2 2 2 2]), o);
-                
-            else
-                s = GradedSpace.new(Z2(0, 1), [1 1], false);
-                O = fill_tensor(Tensor([s s], [s s]), ...
-                    @(~, f) 2 * sqrt(prod(logical(f.uncoupled) .* sinh(beta) + ...
-                    ~logical(f.uncoupled) .* cosh(beta))));
-            end
-            
-            mpo = InfMpo(O);
-        end
         
         function mpo = fDimer()
             pspace = GradedSpace.new(fZ2(0, 1), [1 1], false);

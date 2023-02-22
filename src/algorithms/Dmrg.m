@@ -67,16 +67,16 @@ classdef Dmrg
                 t_iter = tic;
                 
                 order = sweeporder(alg, length(mps));
-                eta     = zeros(size(order));
-                lambda  = zeros(size(order));
+                eta     = zeros(1, length(mps));
+                lambda  = zeros(1, length(mps));
                 
-                for i = 1:length(order)
-                    [mps, envs, lambda(i), eta(i)] = ...
-                        localupdate(alg, mps, mpo, envs, order(i));
+                for pos = sweeporder(alg, length(mps))
+                    [mps, envs, lambda(pos), eta(pos)] = ...
+                        localupdate(alg, mps, mpo, envs, order(pos));
                 end
                 
                 eta = norm(eta, Inf);
-                lambda = sum(lambda);
+                lambda = sum(lambda) / length(lambda);
                 
                 if iter > alg.miniter && eta < alg.tol
                     disp_conv(alg, iter, lambda, eta, toc(t_total));
