@@ -220,7 +220,6 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
             C = tensorprod(varargin{:});
         end
         
-        
         function [AL, CL, lambda, eta] = uniform_leftorth(A, CL, kwargs)
             arguments
                 A
@@ -314,7 +313,6 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
                 fprintf('Not converged %2d:\terror = %0.4e\n', ctr, eta);
             end
         end
-        
         
         function [AR, CR, lambda, eta] = uniform_rightorth(A, CR, kwargs)
             arguments

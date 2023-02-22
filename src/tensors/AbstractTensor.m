@@ -488,5 +488,33 @@ classdef AbstractTensor
             o = contract(t1, 1:nspaces(t1), t2, flip(1:nspaces(t1)));
         end
     end
+    
+    
+    %% Contractions
+    methods
+        function v = applytransfer(L, R, v)
+            arguments
+                L
+                R
+                v = []
+            end
+            
+            if isempty(v)
+                v = tracetransfer(L, R);
+                return
+            end
+            
+            auxlegs_v = nspaces(v) - 2;
+            auxlegs_l = 0;
+            auxlegs_r = 0;
+            newrank = rank(v); newrank(2) = newrank(2) + auxlegs_l + auxlegs_r;
+            
+            v = contract(v, [1 3 (-(1:auxlegs_v) - 2 - auxlegs_l)], ...
+                L, [-1 2 1 (-(1:auxlegs_l) - 2)], ...
+                R, [3 2 -2 (-(1:auxlegs_r) - 3 - auxlegs_l - auxlegs_v)], ...
+                'Rank', newrank);
+        end
+        
+    end
 end
 
