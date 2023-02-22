@@ -43,12 +43,12 @@ classdef TestInfJMpo < matlab.unittest.TestCase
         function test1dIsing(tc)            
             alg = Vumps('which', 'smallestreal', 'maxiter', 5);
             D = 16;
-            mpo = InfJMpo.Ising(1, 1);
-            mps = UniformMps.randnc(CartesianSpace.new(2), CartesianSpace.new(D));
+            mpo = quantum1dIsing('J', 1, 'h', 1, 'L', Inf);
+            mps = initialize_mps(mpo, CartesianSpace.new(D));
             [mps2, lambda] = fixedpoint(alg, mpo, mps);
             tc.verifyTrue(isapprox(lambda, -1.27, 'RelTol', 1e-2))
             
-            mpo = InfJMpo.Ising(1, 1, 'Symmetry', 'Z2');
+            mpo = quantum1dIsing('J', 1, 'h', 1, 'L', Inf, 'Symmetry', 'Z2');
             mps = initialize_mps(mpo, GradedSpace.new(Z2(0, 1), [D D] ./ 2, false));
             [mps2, lambda2] = fixedpoint(alg, mpo, mps);
             tc.verifyTrue(isapprox(lambda, -1.27, 'RelTol', 1e-2))

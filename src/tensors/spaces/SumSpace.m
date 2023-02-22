@@ -32,6 +32,10 @@ classdef (InferiorClasses = {?GradedSpace, ?CartesianSpace, ?ComplexSpace}) SumS
         end
         
         function space = infimum(space1, space2)
+            arguments
+                space1 SumSpace
+                space2 SumSpace
+            end
             assert(isscalar(space1) && isscalar(space2));
             assert(isdual(space1) == isdual(space2));
             space = SumSpace(arrayfun(@infimum, space1.dimensions, space2.dimensions));
@@ -77,6 +81,17 @@ classdef (InferiorClasses = {?GradedSpace, ?CartesianSpace, ?ComplexSpace}) SumS
             for i = 1:numel(bools)
                 bools(i) = all(subspaces(spaces1(i)) == subspaces(spaces2(i)));
             end
+        end
+        
+        function bool = le(space1, space2)
+            arguments
+                space1 SumSpace
+                space2 SumSpace
+            end
+            
+            assert(isscalar(space1) && isscalar(space2));
+            
+            bool = le(sum(subspaces(space1)), sum(subspaces(space2)));
         end
         
         function s = subspaces(space, i)

@@ -75,6 +75,8 @@ classdef Tensor < AbstractTensor
                     elseif isempty(domain)
                         sz = nsubspaces(codomain);
                     else
+                        if ~isa(codomain, 'SumSpace'), codomain = SumSpace(codomain); end
+                        if ~isa(domain, 'SumSpace'), domain = SumSpace(domain); end
                         sz = [nsubspaces(codomain) flip(nsubspaces(domain))];
                     end
                     subs = ind2sub_(sz, 1:prod(sz));
@@ -836,9 +838,11 @@ classdef Tensor < AbstractTensor
             end
         end
         
-        function t = normalize(t)
+        function [t, n] = normalize(t)
+            n = zeros(size(t));
             for i = 1:numel(t)
-                t(i) = t(i) .* (1 / norm(t(i)));
+                n(i) = norm(t(i));
+                t(i) = t(i) .* (1 / n(i));
             end
         end
         
@@ -2352,6 +2356,11 @@ classdef Tensor < AbstractTensor
                 if ~isempty(tsrc.domain), tdst.domain = ComplexSpace(tsrc.domain); end
                 if ~isempty(tsrc.codomain), tdst.codomain = ComplexSpace(tsrc.codomain); end
             end
+        end
+        
+        function mps = FiniteMps(t, varargin)
+            A = MpsTensor.decompose_local_state(t, varargin{:});
+            mps = FiniteMps(A);
         end
     end
     
