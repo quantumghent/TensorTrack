@@ -76,6 +76,20 @@ classdef TestTensor < matlab.unittest.TestCase
                 'Dot should be sesquilinear.');
         end
         
+        function transpose_via_conversion(tc, spaces)
+            tc.assumeTrue(istwistless(braidingstyle(spaces)));
+            
+            t = Tensor.ones(spaces(1:3), spaces(4:5));
+            tdagger = t';
+            tc.assertTrue(isequal(t.domain, tdagger.codomain));
+            tc.assertTrue(isequal(t.codomain, tdagger.domain));
+            
+            tc.assertEqual(flip(dims(tdagger)), dims(t));
+            tc.assertEqual(conj(double(t)), double(conj(t)), ...
+                'AbsTol', tc.tol, 'RelTol', tc.tol, ...
+                sprintf('conj(double(t)) should be double(conj(t)). (%e)', distance(conj(double(t)), double(conj(t)))));
+        end
+        
         function matrix_functions(tc, spaces)
             for i = 1:3
                 t = Tensor.randnc(spaces(1:i), spaces(1:i));
