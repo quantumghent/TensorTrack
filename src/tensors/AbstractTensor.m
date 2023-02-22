@@ -324,11 +324,12 @@ classdef AbstractTensor
                 legcosts = unique(legcosts.', 'rows');
                 
                 currentcost = contractcost(indices, legcosts);
-                [sequence, cost] = netcon(indices, 1, 1, currentcost, 1, legcosts);
+                [sequence, cost] = netcon(indices, 0, 1, currentcost, 1, legcosts);
                 
                 if cost < currentcost
-                    warning('suboptimal contraction order.\n optimal: %s', ...
-                        num2str(sequence));
+                    warning('suboptimal contraction order.\n current (%d): %s\n optimal(%d): %s', ...
+                        currentcost, num2str(1:max(legcosts(:,1))), ...
+                        cost, num2str(sequence));
                 end
             end
             
@@ -512,7 +513,7 @@ classdef AbstractTensor
         end
         
         function sz = dims(t, inds)
-            sz = dims([t.codomain, t.domain']);
+            sz = dims(space(t));
             if nargin > 1
                 sz = sz(inds);
             end

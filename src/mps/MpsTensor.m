@@ -550,6 +550,10 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
         function type = underlyingType(A)
             type = underlyingType(A.var);
         end
+        
+        function disp(t)
+            builtin('disp', t);
+        end
     end
     
     
