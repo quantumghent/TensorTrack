@@ -639,7 +639,7 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor < AbstractTensor
                 end
                 
                 Ccod = space(A, uncA);
-                Cdom = space(B, uncB)';
+                Cdom = space(B, uncB);
                 
                 C = SparseTensor(Cind, Cvar, [size(A, 1) size(B, 2)], Ccod, Cdom);
                 C = reshape(C, szC);
@@ -819,7 +819,7 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor < AbstractTensor
                 return
             end
             
-            subs = sub2sub([t.sz(1) prod(t.sz(2:end))], t.sz, inds);
+            subs = sub2sub([t.sz(1) prod(t.sz(2:end))], t.sz, t.ind);
             I = subs(:,1);
             J = subs(:,2);
             
@@ -878,7 +878,8 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor < AbstractTensor
             t.var = t.var(p);
         end
         
-        function varargout = subsref(t, s)
+        function t = subsref(t, s)
+            
             switch s(1).type
                 case '()'
                     n = size(s(1).subs, 2);
@@ -902,12 +903,6 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor < AbstractTensor
                         if nA ~= length(unique(A))
                             error("Repeated index in position %i",i);
                         end
-                        if i > length(t.codomain)
-                            t.domain(end-(i-length(t.codomain))+1) = ...
-                                SumSpace(subspaces(t.domain(end-(i-length(t.codomain))+1), A));
-                        else
-                            t.codomain(i) = SumSpace(subspaces(t.codomain(i), A));
-                        end
                         if ~isempty(t.ind)
                             B = t.ind(:, i);
                             P = false(max(max(A), max(B)) + 1, 1);
@@ -927,16 +922,11 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor < AbstractTensor
                         assert(isscalar(t))
                         t = subsref(t.var, s(2:end));
                     end
-                    varargout{1} = t;
                 case '.'
-                    [varargout{1:nargout}] = builtin('subsref', t, s);
+                    t = builtin('subsref', t, s);
                 otherwise
                     error('sparse:index', '{} indexing not defined');
             end
-        end
-        
-        function n = numArgumentsFromSubscript(t, ~, ~)
-            n = 1;
         end
         
         function t = subsasgn(t, s, v)
@@ -950,7 +940,7 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor < AbstractTensor
             assert(length(s(1).subs) == size(t.sz, 2), 'sparse:index', ...
                 'number of indexing indices must match tensor size.');
             assert(all(t.sz >= cellfun(@max, s(1).subs)), 'sparse:bounds', ...
-                'out of bounds assignment disallowed');
+                'attempting to assign out of bounds');
             
             subsize = zeros(1, size(s(1).subs, 2));
             for i = 1:length(subsize)

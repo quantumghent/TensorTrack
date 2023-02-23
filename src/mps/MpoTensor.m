@@ -13,24 +13,12 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) MpoTensor < Ab
 
     properties
         tensors = []
-        scalars SparseArray = []
+        scalars = []
     end
     
     methods
         function n = nspaces(~)
             n = 4;
-        end
-        
-        function dom = domain(t)
-            dom = t.tensors.domain;
-        end
-        
-        function cod = codomain(t)
-            cod = t.tensors.codomain;
-        end
-        
-        function r = rank(t)
-            r = rank(t.tensors);
         end
     end
     
@@ -46,8 +34,8 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) MpoTensor < Ab
                     t.scalars = varargin{1}.scalars;
                     t.tensors = varargin{1}.tensors;
                 elseif isa(varargin{1}, 'Tensor') || isa(varargin{1}, 'SparseTensor')
-                    t.tensors = varargin{1};
-                    t.scalars = SparseArray.zeros(size(t.tensors, 1:4));
+                    t.tensors = sparse(varargin{1});
+                    t.scalars = zeros(size(t.tensors));
                 end
                 return
             end
@@ -187,22 +175,16 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) MpoTensor < Ab
                         iB(1:2) = flip(iB(1:2));
                     end
                     
-                    [Ia, Ja, Va] = find(spmatrix(reshape(permute(A.scalars, iA), ...
-                        [prod(size(A, uncA)) prod(size(A, dimA))])));
-                    [Ib, Jb, Vb] = find(reshape(tpermute(B, iB, rB), ...
-                        [prod(size(B, dimB)) prod(size(B, uncB))]));
-                    sz2 = [prod(size(A, uncA)) prod(size(B, uncB))];
+                    A_ = reshape(permute(A.scalars, iA), ...
+                        [prod(size(A, uncA)) prod(size(A, dimA))]);
+                    B = reshape(tpermute(B, iB, rB), ...
+                        [prod(size(B, dimB)) prod(size(B, uncB))]);
                     
-                    for i = 1:length(Jb)
-                        mask = find(Ja == Ib(i));
-                        if isempty(mask), continue; end
-                        subs = [Ia(mask) repmat(Jb(i), length(mask), 1)];
-                        idx = sb2ind_(sz2, subs);
-                        C(idx) = C(idx) + Va(mask) .* Vb(i);
-                    end
+                    C = C + reshape(sparse(A_) * B, size(C));
                 end
             else
                 C = tensorprod(A, B.tensors, dimA, dimB, ca, cb);
+                szC = size(C);
                 if nnz(B.scalars) > 0
                     assert(sum(dimB == 1 | dimB == 3, 'all') == 1, ...
                         'Cannot deduce output space unless leg 1 xor leg 3 is connected.');
@@ -222,19 +204,24 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) MpoTensor < Ab
                         iB(1:2) = flip(iB(1:2));
                     end
                     
-                    [Ia, Ja, Va] = find(reshape(tpermute(A, iA, rA), ...
-                        [prod(size(A, uncA)) prod(size(A, dimA))]));
-                    [Ib, Jb, Vb] = find(spmatrix(reshape(permute(B.scalars, iB), ...
-                        [prod(size(B, dimB)) prod(size(B, uncB))])));
-                    sz2 = [prod(size(A, uncA)) prod(size(B, uncB))];
+                    A_ = reshape(tpermute(A, iA, rA), ...
+                        [prod(size(A, uncA)) prod(size(A, dimA))]);
+                    B_ = reshape(permute(B.scalars, iB), ...
+                        [prod(size(B, dimB)) prod(size(B, uncB))]);
                     
-                    for i = 1:length(Ia)
-                        mask = find(Ja(i) == Ib);
-                        if isempty(mask), continue; end
-                        subs = [repmat(Ia(i), length(mask), 1) Jb(mask)];
+                    
+                    subs = zeros(size(A_, 1), 2);
+                    subs(:, 1) = (1:size(A_, 1)).';
+                    sz2 = [size(A_, 1) size(B_, 2)];
+                    [Brows, Bcols, Bvals] = find(B_);
+                    C = reshape(C, sz2);
+                    for i = 1:length(Bvals)
+                        Atmp = A_(:, Brows(i)) .* Bvals(i);
+                        subs(:, 2) = Bcols(i);
                         idx = sub2ind_(sz2, subs);
-                        C(idx) = C(idx) + Va(i) .* Vb(mask);
+                        C(idx) = C(idx) + Atmp;
                     end
+                    C = reshape(C, szC);
                 end
             end
         end
@@ -252,9 +239,6 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) MpoTensor < Ab
     
     methods
         function s = space(O, i)
-            if nargin == 1
-                i = 1:nspaces(O);
-            end
             s = space(O.tensors, i);
         end
         
@@ -287,12 +271,7 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) MpoTensor < Ab
         end
         
         function bool = iseye(O)
-            bool = nnz(O.tensors) == 0;
-            if ~bool, return; end
-            
-            scal_mat = reshape(O.scalars, ...
-                prod(size(O.scalars, 1:2)), prod(size(O.scalars, 3:4)));
-            bool = isequal(spmatrix(scal_mat), speye(size(scal_mat)));
+            bool = nnz(O.tensors) == 0 && isequal(O.scalars, eye(size(O.scalars)));
         end
         
         function n = nnz(O)
@@ -335,7 +314,7 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) MpoTensor < Ab
                 i = prod(size(t));
                 return
             end
-            if k > ndims(t)
+            if n > ndims(t)
                 i = 1;
             else
                 i = size(t, k);
@@ -362,20 +341,12 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) MpoTensor < Ab
                 [varargout{1:nargout}] = size(t.scalars);
             end
         end
-        
-        function n = ndims(t)
-            n = ndims(t.scalars);
-        end
-        
-        function disp(O)
-            builtin('disp', O);
-        end
     end
     
     methods (Static)
         function O = zeros(codomain, domain)
             tensors = SparseTensor.zeros(codomain, domain);
-            scalars = SparseArray.zeros(size(tensors));
+            scalars = zeros(size(tensors));
             O = MpoTensor(tensors, scalars);
         end
         
@@ -428,3 +399,4 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) MpoTensor < Ab
         end
     end
 end
+
