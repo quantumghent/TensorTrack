@@ -317,6 +317,10 @@ classdef (Abstract) AbstractSpace
             bool = ~le(space1, space2);
         end
         
+        function bool = ge(space1, space2)
+            bool = le(space2, space1);
+        end
+        
         function bool = isequal(spaces)
             % Check whether all input spaces are equal. Spaces are considered equal if they
             % are of same size, and are equal element-wise. For convenience, empty spaces

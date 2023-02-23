@@ -13,18 +13,13 @@ classdef InfMpo
                 O = varargin{1};
                 
                 if isa(O, 'InfMpo')
-                    for i = numel(O):1:1
-                        mpo(i, 1).O = O(i, 1).O;
-                    end
-                    mpo = reshape(mpo, size(O));
+                    mpo.O = O.O;
                     
                 elseif isa(O, 'MpoTensor')
                     mpo.O = {O};
                 
                 elseif isa(O, 'AbstractTensor')
-                    for i = height(O):-1:1
-                        mpo(i, 1).O = arrayfun(@MpoTensor, O(i, :), 'UniformOutput', false);
-                    end
+                    mpo.O = arrayfun(@MpoTensor, O, 'UniformOutput', false);
                     
                 elseif iscell(O)
                     mpo.O = O;
@@ -36,44 +31,55 @@ classdef InfMpo
     
     methods
         function p = period(mpo)
-            p = length(mpo(1).O);
+            p = size(mpo.O, 2);
         end
         
         function d = depth(mpo)
-            d = length(mpo);
+            d = size(mpo.O, 1);
         end
         
         function mpo = block(mpo)
             if depth(mpo) == 1, return; end
-            O_ = mpo(1, 1).O;
+            O_ = mpo.O(1, :);
             for d = 2:depth(mpo)
                 for w = period(mpo):-1:1
-                    vspaces = [rightvspace(O_{w})' rightvspace(mpo(d, 1).O{w})'];
+                    vspaces = [rightvspace(O_{w})' rightvspace(mpo.O{d, w})'];
                     fuser(w) = Tensor.eye(vspaces, prod(vspaces));
                 end
                 
                 for w = 1:period(mpo)
-                    O_{w} = MpoTensor(contract(O_{w}, [1 2 5 -4], mpo(d, 1).O{w}, [3 -2 4 2], ...
+                    O_{w} = MpoTensor(contract(O_{w}, [1 2 5 -4], mpo.O{d, w}, [3 -2 4 2], ...
                         fuser(prev(w, period(mpo)))', [-1 3 1], fuser(w), [5 4 -3], ...
                         'Rank', [2 2]));
                 end
             end
-            mpo = mpo(1, 1);
             mpo.O = O_;
         end
 
-        function s = pspace(mpo, x)
-            s = pspace(mpo.O{x});
+        function s = pspace(mpo, w)
+            s = pspace(mpo.O{w});
         end
         
-        function mpo = horzcat(varargin)
-            Os = cellfun(@(x) x.O, varargin, 'UniformOutput', false);
-            mpo = InfMpo([Os{:}]);
+        function s = leftvspace(mpo, w)
+            s = leftvspace(mpo.O{w});
         end
         
-        function mpo = vertcat(varargin)
+        function s = rightvspace(mpo, w)
+            s = rightvspace(mpo.O{w});
+        end
+        
+        function mpo = horzcat(mpo, varargin)
             Os = cellfun(@(x) x.O, varargin, 'UniformOutput', false);
-            mpo = InfMpo(vertcat(Os{:}));
+            mpo.O = horzcat(mpo.O, Os{:});
+        end
+        
+        function mpo = vertcat(mpo, varargin)
+            Os = cellfun(@(x) x.O, varargin, 'UniformOutput', false);
+            mpo.O = vertcat(mpo.O, Os{:});
+        end
+        
+        function mpo = slice(mpo, d)
+            mpo.O = mpo.O(d, :);
         end
         
         function mps = initialize_mps(mpo, vspaces)
@@ -213,10 +219,12 @@ classdef InfMpo
             
             H = cell(1, length(sites));
             for i = 1:length(sites)
-                gl = twistdual(GL{sites(i)}, 1);
-                gr = GR{next(sites(i), period(mps))};
-                gr = twistdual(gr, nspaces(gr));
-                H{i} = FiniteMpo(gl, mpo.O(sites(i)), gr);
+                for d = depth(mpo):-1:1
+                    gl = twistdual(GL{d, sites(i)}, 1);
+                    gr = GR{d, next(sites(i), period(mps))};
+                    gr = twistdual(gr, nspaces(gr));
+                    H{i}(d, 1) = FiniteMpo(gl, mpo.O(d, sites(i)), gr);
+                end
             end
         end
         
@@ -231,17 +239,19 @@ classdef InfMpo
             
             H = cell(1, length(sites));
             for i = 1:length(sites)
-                gl = GL{sites(i)};
-                gl = twistdual(gl, 1);
-                gr = GR{mod1(sites(i) + 2, period(mps))};
-                gr = twistdual(gr, nspaces(gr));
-                H{i} = FiniteMpo(gl, mpo.O(mod1(sites(i) + [0 1], period(mps))), gr);
+                for d = depth(mpo):-1:1
+                    gl = GL{d, sites(i)};
+                    gl = twistdual(gl, 1);
+                    gr = GR{d, mod1(sites(i) + 2, period(mps))};
+                    gr = twistdual(gr, nspaces(gr));
+                    H{i}(d, 1) = FiniteMpo(gl, mpo.O(d, mod1(sites(i) + [0 1], period(mps))), gr);
+                end
             end
         end
         
-        function H = C_hamiltonian(~, mps, GL, GR, sites)
+        function H = C_hamiltonian(mpo, mps, GL, GR, sites)
             arguments
-                ~
+                mpo
                 mps
                 GL = fixedpoint(transfermatrix(mpo, mps, 'Type', 'LL'))
                 GR = fixedpoint(transfermatrix(mpo, mps, 'Type', 'RR').')
@@ -250,53 +260,27 @@ classdef InfMpo
             
             H = cell(1, length(sites));
             for i = 1:length(sites)
-                gl = GL{next(sites(i), period(mps))};
-                for j = 1:numel(gl)
-                    if nnz(gl(j)) ~= 0
-                        gl(j) = twist(gl(j), find(isdual(space(gl(j), 1))));
+                for d = depth(mpo):-1:1
+                    gl = GL{d, next(sites(i), period(mps))};
+                    for j = 1:numel(gl)
+                        if nnz(gl(j)) ~= 0
+                            gl(j) = twist(gl(j), find(isdual(space(gl(j), 1))));
+                        end
                     end
-                end
-                gr = GR{next(sites(i), period(mps))};
-                for j = 1:numel(gr)
-                    if nnz(gr(j)) ~= 0
-                        gr(j) = twist(gr(j), find(isdual(space(gr(j), nspaces(gr(j))))) + ...
-                            nspaces(gr(j)) - 1);
+                    gr = GR{d, next(sites(i), period(mps))};
+                    for j = 1:numel(gr)
+                        if nnz(gr(j)) ~= 0
+                            gr(j) = twist(gr(j), find(isdual(space(gr(j), nspaces(gr(j))))) + ...
+                                nspaces(gr(j)) - 1);
+                        end
                     end
+                    H{i}(d, 1) = FiniteMpo(gl, {}, gr);
                 end
-                H{i} = FiniteMpo(gl, {}, gr);
             end
         end
     end
     
     methods (Static)
-        function mpo = Ising(beta, kwargs)
-            arguments
-                beta = log(1 + sqrt(2)) / 2;
-                kwargs.Symmetry {mustBeMember(kwargs.Symmetry, {'Z1', 'Z2'})} = 'Z1'
-            end
-            
-            if strcmp(kwargs.Symmetry, 'Z1')
-                t = [exp(beta) exp(-beta); exp(-beta) exp(beta)];
-                [v, d] = eig(t);
-                t = v * sqrt(d) * v;
-                
-                o = zeros(2, 2, 2, 2);
-                o(1, 1, 1, 1) = 1;
-                o(2, 2, 2, 2) = 1;
-                
-                o = contract(o, 1:4, t, [-1 1], t, [-2 2], t, [-3 3], t, [-4 4]);
-                
-                O = fill_tensor(Tensor.zeros([2 2 2 2]), o);
-                
-            else
-                s = GradedSpace.new(Z2(0, 1), [1 1], false);
-                O = fill_tensor(Tensor([s s], [s s]), ...
-                    @(~, f) 2 * sqrt(prod(logical(f.uncoupled) .* sinh(beta) + ...
-                    ~logical(f.uncoupled) .* cosh(beta))));
-            end
-            
-            mpo = InfMpo(O);
-        end
         
         function mpo = fDimer()
             pspace = GradedSpace.new(fZ2(0, 1), [1 1], false);

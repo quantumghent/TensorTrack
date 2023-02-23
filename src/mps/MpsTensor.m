@@ -115,19 +115,41 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
         function A = plus(varargin)
             for i = 1:2
                 if isa(varargin{i}, 'MpsTensor')
+                    alegs = varargin{i}.alegs;
                     varargin{i} = varargin{i}.var;
                 end
             end
-            A = plus(varargin{:});
+            A = MpsTensor(plus(varargin{:}), alegs);
         end
         
         function A = minus(varargin)
             for i = 1:2
                 if isa(varargin{i}, 'MpsTensor')
+                    alegs = varargin{i}.alegs;
                     varargin{i} = varargin{i}.var;
                 end
             end
-            A = minus(varargin{:});
+            A = MpsTensor(minus(varargin{:}), alegs);
+        end
+        
+        function A = rdivide(varargin)
+            for i = 1:2
+                if isa(varargin{i}, 'MpsTensor')
+                    alegs = varargin{i}.alegs;
+                    varargin{i} = varargin{i}.var;
+                end
+            end
+            A = MpsTensor(rdivide(varargin{:}), alegs);
+        end
+        
+        function A = ldivide(varargin)
+            for i = 1:2
+                if isa(varargin{i}, 'MpsTensor')
+                    alegs = varargin{i}.alegs;
+                    varargin{i} = varargin{i}.var;
+                end
+            end
+            A = MpsTensor(ldivide(varargin{:}), alegs);
         end
         
         function n = norm(A)
@@ -197,7 +219,6 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
             end
             C = tensorprod(varargin{:});
         end
-        
         
         function [AL, CL, lambda, eta] = uniform_leftorth(A, CL, kwargs)
             arguments
@@ -293,7 +314,6 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
             end
         end
         
-        
         function [AR, CR, lambda, eta] = uniform_rightorth(A, CR, kwargs)
             arguments
                 A
@@ -339,7 +359,12 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
             arguments
                 L MpsTensor
                 R MpsTensor
-                v
+                v = []
+            end
+            
+            if isempty(v)
+                v = tracetransfer(L, R);
+                return
             end
             
             auxlegs_v = nspaces(v) - 2;
@@ -351,6 +376,24 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
                 L, [-1 2 1 (-(1:auxlegs_l) - 2)], ...
                 R, [3 2 -2 (-(1:auxlegs_r) - 3 - auxlegs_l - auxlegs_v)], ...
                 'Rank', newrank);
+        end
+        
+        function v = tracetransfer(L, R)
+            arguments
+                L MpsTensor
+                R MpsTensor
+            end
+            
+            auxlegs_l = L.alegs;
+            auxlegs_r = R.alegs;
+            assert(R.plegs == L.plegs);
+            plegs = L.plegs; %#ok<PROPLC>
+            newrank = [2 auxlegs_l + auxlegs_r];
+            
+            v = contract(...
+                L, [-1 1:(plegs + 1) (-(1:auxlegs_l) - 2)], ...
+                R, [flip(1:(plegs + 1)) -2 (-(1:auxlegs_r) - 3 - auxlegs_l)], ...
+                'Rank', newrank); %#ok<PROPLC>
         end
         
         function rho = applyleft(T, B, rho)
@@ -507,6 +550,10 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
         function type = underlyingType(A)
             type = underlyingType(A.var);
         end
+        
+        function disp(t)
+            builtin('disp', t);
+        end
     end
     
     
@@ -521,6 +568,44 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
         function t = SparseTensor(A)
             t = reshape([A.var], size(A));
             t = sparse(t);
+        end
+    end
+    
+    
+    %%
+    methods (Static)
+        function local_tensors = decompose_local_state(psi, kwargs)
+            % convert a tensor into a product of local operators.
+            %
+            % Usage
+            % -----
+            % :code:`local_operators = MpoTensor.decompose_local_operator(H, kwargs)`.
+            %
+            % Arguments
+            % ---------
+            % H : :class:`AbstractTensor`
+            %   tensor representing a local operator on N sites.
+            %
+            % Keyword Arguments
+            % -----------------
+            % 'Trunc' : cell
+            %   optional truncation method for the decomposition. See also
+            %   :method:`Tensor.tsvd`
+            arguments
+                psi
+                kwargs.Trunc = {'TruncBelow', 1e-14}
+            end
+            
+            L = nspaces(psi);
+            assert(L >= 3, 'argerror', ...
+                sprintf('state must have at least 3 legs. (%d)', L));
+            
+            local_tensors = cell(1, L - 2);
+            for i = 1:length(local_tensors)-1
+                [u, s, psi] = tsvd(psi, [1 2], [3:nspaces(psi)], kwargs.Trunc{:});
+                local_tensors{i} = multiplyright(MpsTensor(u), s);
+            end
+            local_tensors{end} = MpsTensor(repartition(psi, [2 1]));
         end
     end
 end

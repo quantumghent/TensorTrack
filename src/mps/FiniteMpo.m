@@ -64,6 +64,61 @@ classdef FiniteMpo
             end
         end
         
+        function mps = initialize_mps(mpo, kwargs)
+            arguments
+                mpo
+                kwargs.MaxVspace
+            end
+            
+            pspaces = arrayfun(@(x) pspace(mpo, x), 1:length(mpo), 'UniformOutput', false);
+            
+            vspacefirst = rightvspace(mpo.L)';
+            vspacelast  = leftvspace(mpo.R);
+            
+            newkwargs = namedargs2cell(kwargs);
+            mps = FiniteMps.randnc(pspaces{:}, 'LeftVspace', vspacefirst, ...
+                'RightVspace', vspacelast, newkwargs{:});
+            mps = normalize(mps);
+        end
+        
+        function envs = initialize_envs(mpo)
+            arguments
+                mpo
+            end
+            
+            GL = cell(1, length(mpo) + 1);
+            GR = cell(1, length(mpo) + 1);
+            
+            GL{1} = mpo.L;
+            GR{end} = mpo.R;
+            
+            envs = FiniteEnvironment(GL, GR);
+        end
+        
+        function T = transfermatrix(mpo, mps1, mps2, sites)
+        arguments
+                mpo
+                mps1
+                mps2 = mps1
+                sites = 1:length(mps1)
+            end
+            
+            assert(all(diff(sites) == 1), 'sites must be neighbouring and increasing.');
+            A1 = mps1.A(sites);
+            A2 = mps2.A(sites);
+            O = mpo.O(sites);                                                               %#ok<PROPLC>
+            T = FiniteMpo.mps_channel_operator(A1, O, A2);                                  %#ok<PROPLC>
+        end
+        
+        function H = AC_hamiltonian(mpo, mps, envs, pos)
+            envs = movegaugecenter(envs, mpo, mps, mps, pos);
+            H = FiniteMpo(envs.GL{pos}, mpo.O(pos), envs.GR{pos + 1});
+        end
+        
+        function s = pspace(mpo, x)
+            s = pspace(mpo.O{x});
+        end
+        
         function s = domain(mpo)
             N = prod(cellfun(@(x) size(x, 4), mpo(1).O));
             s = conj(...

@@ -25,7 +25,6 @@ classdef Vumps < handle
         saveIterations = 1
         saveMethod = 'full'
         name = 'VUMPS'
-
     end
     
     properties (Access = private)
@@ -119,12 +118,16 @@ classdef Vumps < handle
             else
                 sites = 1:period(mps);
             end
-            
             H_AC = AC_hamiltonian(mpo, mps, GL, GR, sites);
-            AC = mps.AC(sites);
+            ACs = arrayfun(@(x) x.AC(sites), mps, 'UniformOutput', false);
+            AC = vertcat(ACs{:});
             for i = length(sites):-1:1
-                [AC(i).var, ~] = eigsolve(H_AC{i}, AC(sites(i)).var, 1, alg.which, ...
+                [AC(1, i).var, ~] = eigsolve(H_AC{i}, AC(1, i).var, 1, alg.which, ...
                     kwargs{:});
+                
+                for d = 2:depth(mpo)
+                    AC(d, i).var = H_AC{i}(d).apply(AC(d-1, i).var);
+                end
             end
         end
         
@@ -137,9 +140,15 @@ classdef Vumps < handle
             end
             
             H_C = C_hamiltonian(mpo, mps, GL, GR, sites);
+            Cs = arrayfun(@(x) x.C(sites), mps, 'UniformOutput', false);
+            C = vertcat(Cs{:});
             for i = length(sites):-1:1
-                [C(i), ~] = eigsolve(H_C{i}, mps.C(sites(i)), 1, alg.which, ...
+                [C(1, i), ~] = eigsolve(H_C{i}, C(1, i), 1, alg.which, ...
                     kwargs{:});
+                
+                for d = 2:depth(mpo)
+                    C(d, i) = H_C{i}(d).apply(C(d-1, i));
+                end
             end
         end
         
@@ -150,10 +159,12 @@ classdef Vumps < handle
                 sites = 1:period(mps);
             end
             
-            for i = length(AC):-1:1
-                [Q_AC, ~] = leftorth(AC(i), 'polar');
-                [Q_C, ~]  = leftorth(C(i), 1, 2, 'polar');
-                mps.AL(sites(i)) = multiplyright(Q_AC, Q_C');
+            for d = size(AC, 1):-1:1
+                for i = size(AC, 2):-1:1
+                    [Q_AC, ~] = leftorth(AC(d, i), 'polar');
+                    [Q_C, ~]  = leftorth(C(d, i), 1, 2, 'polar');
+                    mps(d).AL(sites(i)) = multiplyright(Q_AC, Q_C');
+                end
             end
             
             kwargs = namedargs2cell(alg.alg_canonical);
@@ -165,31 +176,40 @@ classdef Vumps < handle
                 alg
                 mpo
                 mps
-                GL = cell(1, period(mps))
-                GR = cell(1, period(mps))
+                GL = cell(depth(mpo), period(mps))
+                GR = cell(depth(mpo), period(mps))
             end
             
             kwargs = namedargs2cell(alg.alg_environments);
-            [GL, GR, lambda] = environments(mpo, mps, mps, GL, GR, ...
-                kwargs{:});
+            D = depth(mpo);
+            lambda = zeros(D, 1);
+            for d = 1:D
+                [GL(d, :), GR(d, :), lambda(d)] = environments(mpo.slice(d), mps(d), mps(next(d, D)), GL(d, :), GR(d, :), ...
+                    kwargs{:});
+            end
+            lambda = prod(lambda);
         end
         
         function eta = convergence(alg, mpo, mps, GL, GR)
+            % TODO: also implement galerkin error
             H_AC = AC_hamiltonian(mpo, mps, GL, GR);
             H_C  = C_hamiltonian(mpo, mps, GL, GR);
-            eta = zeros(1, period(mps));
-            for w = 1:period(mps)
-                AC_ = apply(H_AC{w}, mps.AC(w));
-                lambda_AC = dot(AC_, mps.AC(w));
-                AC_ = normalize(AC_ ./ lambda_AC);
-                
-                ww = prev(w, period(mps));
-                C_ = apply(H_C{ww}, mps.C(ww));
-                lambda_C = dot(C_, mps.C(ww));
-                C_ = normalize(C_ ./ lambda_C);
-            
-                eta(w) = distance(AC_ , ...
-                    repartition(multiplyleft(mps.AR(w), C_), rank(AC_)));
+            eta = zeros(depth(mpo), period(mps));
+            for d = 1:depth(mpo)
+                dd = next(d, depth(mpo));
+                for w = 1:period(mps)
+                    AC_ = apply(H_AC{w}(d), mps(d).AC(w));
+                    lambda_AC = dot(AC_, mps(dd).AC(w));
+                    AC_ = normalize(AC_ ./ lambda_AC);
+
+                    ww = prev(w, period(mps));
+                    C_ = apply(H_C{ww}(d), mps(d).C(ww));
+                    lambda_C = dot(C_, mps(dd).C(ww));
+                    C_ = normalize(C_ ./ lambda_C);
+
+                    eta(dd, w) = distance(AC_ , ...
+                        repartition(multiplyleft(mps(dd).AR(w), C_), rank(AC_)));
+                end
             end
             eta = max(eta, [], 'all');
         end
@@ -256,7 +276,7 @@ classdef Vumps < handle
                 axhistory.Children(end).YData(end+1) = eta;
             end
             
-            plot_entanglementspectrum(mps, 1:period(mps), axspectrum);
+            plot_entanglementspectrum(mps, 1:D, 1:W, axspectrum);
             drawnow
         end
         

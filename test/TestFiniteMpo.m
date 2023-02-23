@@ -8,6 +8,7 @@ classdef TestFiniteMpo < matlab.unittest.TestCase
                 FiniteMpo.randnc(ComplexSpace.new(2, false, 4, true, 2, true), ...
                 ComplexSpace.new(2, true, 3, false)) ...
             )
+        
     end
     
     methods (Test)
@@ -39,6 +40,40 @@ classdef TestFiniteMpo < matlab.unittest.TestCase
                 'transpose should not change mpo');
             tc.assertTrue(isequal(domain(mpo.'), codomain(mpo)'));
             tc.assertTrue(isequal(codomain(mpo.'), domain(mpo)'));
+        end
+        
+        function test2dIsing(tc)
+            L = 8;
+            D = 64;
+            alg = Dmrg('maxiter', 10, 'which', 'largestabs');
+            
+            mpo = statmech2dIsing('beta', 2, 'L', L);
+            vspace_max = CartesianSpace.new(D);
+            mps = initialize_mps(mpo, 'MaxVspace', vspace_max);
+            
+            [mps, envs, eta] = fixedpoint(alg, mpo, mps);
+            
+            mpo = statmech2dIsing('beta', 2, 'L', L, 'Symmetry', 'Z2');
+            vspace_max = GradedSpace.new(Z2(0, 1), D ./ [2 2], false);
+            mps = initialize_mps(mpo, 'MaxVspace', vspace_max);
+            [mps, envs, eta] = fixedpoint(alg, mpo, mps);
+        end
+        
+        function test1dIsing(tc)
+            L = 8;
+            D = 64;
+            alg = Dmrg('miniter', 2, 'maxiter', 5, 'which', 'smallestreal');
+            
+            mpo = quantum1dIsing('L', L);
+            vspace_max = CartesianSpace.new(D);
+            mps = initialize_mps(mpo, 'MaxVspace', vspace_max);
+            
+            [mps, envs, eta] = fixedpoint(alg, mpo, mps);
+            
+            mpo = quantum1dIsing('L', L, 'Symmetry', 'Z2');
+            vspace_max = GradedSpace.new(Z2(0, 1), D ./ [2 2], false);
+            mps = initialize_mps(mpo, 'MaxVspace', vspace_max);
+            [mps, envs, eta] = fixedpoint(alg, mpo, mps);
         end
     end
 end
