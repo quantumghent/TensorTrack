@@ -18,7 +18,8 @@ classdef Vumps2 < handle
         environments_tolfactor  = 1e-6
         
         trunc                   = {'TruncTotalDim', 100}
-        
+        notrunc                 = false
+
         multiAC {mustBeMember(multiAC, {'sequential'})} = 'sequential'
         dynamical_multiAC       = false;
         tol_multiAC = Inf
@@ -106,7 +107,7 @@ classdef Vumps2 < handle
                 disp_iter(alg, iter, lambda, eta, toc(t_iter));
 
                 if alg.doSave && mod(iter, alg.saveIterations) == 0
-                    save_iteration(alg, mps, lambda, iter);
+                    save_iteration(alg, mps, lambda, iter, eta);
                 end
             end
             
@@ -162,6 +163,10 @@ classdef Vumps2 < handle
                 [Q_AC, ~] = leftorth(AC2(i), 'polar');
                 [Q_C, ~]  = leftorth(C(i), 1, 2, 'polar');
                 AL = multiplyright(Q_AC, Q_C');
+                if alg.notrunc
+                    assert(isempty(alg.trunc) || strcmp(alg.trunc{1}, 'TruncTotalDim'), 'tba', 'notrunc only defined in combination with TruncTotalDim');
+                    alg.trunc{2} = max(alg.trunc{2}, dims(rightvspace(mps, sites(i))));
+                end
                 [AL1, C, AL2] = tsvd(AL.var, [1 2], [3 4], alg.trunc{:});
                 mps.AL(sites(i)) = multiplyright(MpsTensor(AL1), C);
                 mps.AL(next(sites(i), period(mps))) = AL2;
@@ -338,13 +343,14 @@ classdef Vumps2 < handle
             fprintf('---------------\n');
         end
                 
-        function save_iteration(alg, mps, lambda, iter)
+        function save_iteration(alg, mps, lambda, iter, eta)
             fileName = alg.name;
 
             fileData = struct;
             fileData.mps            = mps;
             fileData.lambda         = lambda;
             fileData.iteration = iter;
+            fileData.eta = eta;
             % save
             
             %if exist(fileName,'file')
