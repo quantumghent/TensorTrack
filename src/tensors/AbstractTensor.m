@@ -270,13 +270,13 @@ classdef AbstractTensor
                     'Tolerance', options.Tol, 'MaxIterations', options.MaxIter, ...
                     'IsFunctionSymmetric', ...
                     options.IsSymmetric, 'StartVector', x0_vec, ...
-                    'Display', options.Verbosity >= 3);
+                    'Display', options.Verbosity >= 3, 'FailureTreatment', 'keep');
             else
                 [V, D, flag] = eigs(A_fun, sz(1), howmany, sigma, ...
                     'Tolerance', options.Tol, 'MaxIterations', options.MaxIter, ...
                     'SubspaceDimension', options.KrylovDim, 'IsFunctionSymmetric', ...
                     options.IsSymmetric, 'StartVector', x0_vec, ...
-                    'Display', options.Verbosity >= 3);
+                    'Display', options.Verbosity >= 3, 'FailureTreatment', 'keep');
             end
             
             if nargout <= 1
@@ -294,7 +294,7 @@ classdef AbstractTensor
                 varargout{3} = flag;
             end
             
-            if flag && options.Verbosity > 0
+            if flag
                 warning('eigsolve did not converge.');
             elseif ~flag && options.Verbosity > 1
                 fprintf('eigsolve converged.\n');

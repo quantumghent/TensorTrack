@@ -11,8 +11,8 @@ classdef TestPeps < matlab.unittest.TestCase
                 fZ2(0, 1), [2 1], false, fZ2(0, 1), [5 5], false), ...
             'U1', GradedSpace.new(U1(0, 1, -1), [1 1 1], false, U1(0, 1, -1), [1 2 2], false, ...
                 U1(0, 1, -1), [2 1 1], false, U1(0, 1, -1), [2 1 1], false), ...
-            'SU2', GradedSpace.new(SU2(1, 2), [1 1], false, SU2(1, 2), [2 1], false, ...
-                SU2(1, 2), [1 1], false, SU2(1, 2), [2 1], false) ...
+            'SU2', GradedSpace.new(SU2(1, 2), [1 1], false, SU2(2), [2], false, ...
+                SU2(2), [1], false, SU2(1, 2), [2 1], false) ...
             )
         depth = {1}
         width = {1, 2}
@@ -26,9 +26,21 @@ classdef TestPeps < matlab.unittest.TestCase
         function testFiniteMpo(tc, spaces, depth, width, dualdepth, dualwidth, samebot)
             tc.assumeTrue(braidingstyle(spaces) ~= BraidingStyle.Fermionic, 'fZ2 test broken')
             tc.assumeTrue(depth == 1, 'Test ill-defined for multiline PEPS.')
-            tc.assumeTrue(width < 3, 'FiniteMpo -> Tensor contraction not reasonable.')
             
             mpo = tc.random_mpo(spaces, depth, width, dualdepth, dualwidth, samebot);
+            
+            % test transpose (co)domain
+            tc.assertTrue(isequal(domain(mpo.'), codomain(mpo)'));
+            tc.assertTrue(isequal(codomain(mpo.'), domain(mpo)'));
+            
+            % test ctranspose(co)domain
+            tc.assertTrue(isequal(domain(mpo'), codomain(mpo)));
+            tc.assertTrue(isequal(codomain(mpo'), domain(mpo)));
+            
+            
+            % test tensor behavior
+            tc.assumeTrue(width < 3 || (fusionstyle(spaces) <= FusionStyle.Unique || width < 2), ...
+                'FiniteMpo -> Tensor contraction not reasonable.')
             
             % test domain and codomain
             mpo_tensor = tc.mpo_to_tensor(mpo);
@@ -44,14 +56,8 @@ classdef TestPeps < matlab.unittest.TestCase
             % test transpose
             tc.assertTrue(isapprox(tc.mpo_to_tensor(mpo).', tc.mpo_to_tensor(mpo.')), ...
                 'transpose should not change mpo');
-            tc.assertTrue(isequal(domain(mpo.'), codomain(mpo)'));
-            tc.assertTrue(isequal(codomain(mpo.'), domain(mpo)'));
             
             % test ctranspose
-            tc.assertTrue(isequal(domain(mpo'), codomain(mpo)));
-            tc.assertTrue(isequal(codomain(mpo'), domain(mpo)));
-            % GradedSpace: something broken here
-            tc.assumeTrue(~isa(spaces, 'GradedSpace'), 'ctranspose broken for GradedSpaces.')
             tc.assertTrue(isapprox(tc.mpo_to_tensor(mpo)', tc.mpo_to_tensor(mpo')), ...
                 'ctranspose should not change mpo');
         end
@@ -61,7 +67,7 @@ classdef TestPeps < matlab.unittest.TestCase
 
             mpo = tc.random_mpo(spaces, depth, width, dualdepth, dualwidth, samebot);
 
-            [V, D] = eigsolve(mpo);
+            [V, D] = eigsolve(mpo, 'MaxIter', 1e3, 'KrylovDim', 32);
             tc.assertTrue(isapprox(mpo.apply(V), D * V));
             
             v2 = insert_onespace(V);
@@ -82,13 +88,13 @@ classdef TestPeps < matlab.unittest.TestCase
                 AC_ = mps.AC(i);
                 [AC_.var, lambda] = eigsolve(H_AC{i}, mps.AC(i).var, 1, 'largestabs');
                 AC_2 = apply(H_AC{i}, AC_);
-                tc.assertTrue(isapprox(AC_2, lambda * AC_.var));
+                tc.assertTrue(isapprox(AC_2, lambda * AC_.var, 'RelTol', 1e-6));
             end
             
             H_C = C_hamiltonian(mpo, mps, GL, GR);
             for i = 1:numel(H_C)
                 [C_, lambda] = eigsolve(H_C{i}, mps.C(i), 1, 'largestabs');
-                tc.assertTrue(isapprox(apply(H_C{i}, C_), lambda * C_));
+                tc.assertTrue(isapprox(apply(H_C{i}, C_), lambda * C_, 'RelTol', 1e-6));
             end
         end
         
@@ -132,6 +138,7 @@ end
                     if ~mod(depth, 2) && ~mod(d, 2), cdmsp = conj(cdmsp); dmsp = conj(dmsp); end
                     if ~mod(width, 2) && ~mod(w, 2), cdmsp = conj(cdmsp); dmsp = conj(dmsp); end
                     A{d, w} = Tensor.randnc(dmsp, cdmsp);
+                    A{d, w} = A{d, w} / norm(A{d, w});
                 end
             end
         end

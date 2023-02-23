@@ -112,7 +112,7 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) PepsSandwich
             else
                 auxlegs_r = 0;
             end
-            auxlegs = auxlegs_v + auxlegs_l + auxlegs_r;
+            auxlegs_extra = auxlegs_l + auxlegs_r;
             
             inds_top = arrayfun(@(x) [  5 + 5*(x-1), ...
                                         2 + 5*(x-1), ...
@@ -133,7 +133,7 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) PepsSandwich
                 L, [-1, 4, 2, 1, (-(1:auxlegs_l) - (2*W+2))], ...
                 Oargs{:}, ...
                 R, [3 + 5*W, 2 + 5*W, 4 + 5*W, -(2*W + 2), (-(1:auxlegs_r) - (2*W+2) - auxlegs_l - auxlegs_v)], ...
-                'Rank', rank(v) + [0 auxlegs]);
+                'Rank', rank(v) + [0 auxlegs_extra]);
         end
         
         function t = MpoTensor(T)

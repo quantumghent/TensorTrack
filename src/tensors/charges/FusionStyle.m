@@ -1,4 +1,4 @@
-classdef FusionStyle
+classdef FusionStyle < uint8
     % FusionStyle - The fusion product behaviour of charges.
     %   This represents the possibilities for the decomposition of the fusion product of two charges.
     %
@@ -7,9 +7,9 @@ classdef FusionStyle
     %   Generic - Multiple outputs.
     
     enumeration
-        Unique
-        Simple
-        Generic
+        Unique      (0)
+        Simple      (1)
+        Generic     (2)
     end
     
     methods

@@ -2196,6 +2196,7 @@ classdef Tensor < AbstractTensor
                     return
                 end
             end
+            bool = true;
         end
         
         function bool = iszero(t)
