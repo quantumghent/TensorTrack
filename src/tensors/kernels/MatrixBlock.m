@@ -627,12 +627,18 @@ classdef MatrixBlock < AbstractBlock
             % X : :class:`MatrixBlock`
             %   list of adjoint output matrices.
             
-            [X.rowsizes, X.colsizes] = swapvars(X.rowsizes, X.colsizes);
             X.rank = fliplr(X.rank);
             for i = 1:length(X.var)
                 X.var{i} = X.var{i}';
-                X.tdims{i} = fliplr(X.tdims{i});
+                ncols = length(X.colsizes{i}) - 1;
+                nrows = length(X.rowsizes{i}) - 1;
+                X.tdims{i} = reshape(permute(...
+                    reshape(fliplr(X.tdims{i}), nrows, ncols, []), ...
+                    [2 1 3]), ...
+                    ncols * nrows, []);
             end
+            
+            [X.rowsizes, X.colsizes] = swapvars(X.rowsizes, X.colsizes);
         end
         
         function v = vectorize(X, type)
