@@ -127,7 +127,7 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) MpoTensor < Ab
             else
                 auxlegs_r = 0;
             end
-            auxlegs = auxlegs_v + auxlegs_l + auxlegs_r;
+            auxlegs_extra = auxlegs_l + auxlegs_r;
             
             Oinds = arrayfun(@(x) [2*x-2 -x 2*x 2*x-1], 2:N-1, 'UniformOutput', false);
             O = [varargin(1:end-3); Oinds];
@@ -135,7 +135,7 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) MpoTensor < Ab
                 L, [-1 2 1 (-(1:auxlegs_l) - N)], ...
                 O{:}, ...
                 R, [2*N-1 2*N-2 -N (-(1:auxlegs_r) - N - auxlegs_l - auxlegs_v)], ...
-                'Rank', rank(v) + [0 auxlegs]);
+                'Rank', rank(v) + [0 auxlegs_extra]);
         end
         
         function O = rot90(O)
