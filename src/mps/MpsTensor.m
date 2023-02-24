@@ -65,6 +65,11 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
         function r = rank(A)
             r = rank([A.var]);
         end
+        
+        function tdst = insert_onespace(tsrc, varargin)
+            % insert a trivial space at position i.
+            tdst = MpsTensor(insert_onespace(tsrc.var, varargin{:}), tsrc.alegs + 1);
+        end
     end
     
     
@@ -78,7 +83,7 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
             
             if numel(A) > 1
                 for i = numel(A):-1:1
-                    [A(i), L(i)] = leftorth(A, alg);
+                    [A(i), L(i)] = leftorth(A(i), alg);
                 end
                 return
             end
@@ -96,6 +101,46 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
             end
         end
         
+        function [R, A] = rightorth(A, alg)
+            arguments
+                A
+                alg = 'rqpos'
+            end
+            
+            if numel(A) > 1
+                for i = numel(A):-1:1
+                    [R(i), A(i)] = rightorth(A, alg);
+                end
+                return
+            end
+            
+            [R, A.var] = rightorth(A.var, 1, 2:nspaces(A), alg);
+            if isdual(space(R, 1)) == isdual(space(R, 2))
+                R.domain = conj(R.domain);
+                R = twist(R, 2);
+                A.var.codomain = conj(A.var.codomain);
+            end
+        end
+        
+        function A = leftnull(A, alg)
+            arguments
+                A
+                alg = 'svd'
+            end
+            
+            if numel(A) > 1
+                for i = numel(A):-1:1
+                    A(i) = leftorth(A(i), alg);
+                end
+                return
+            end
+            
+            p = 1:nspaces(A);
+            p1 = p(1:(end - A.alegs - 1));
+            p2 = p((end - A.alegs):end);
+            A.var = leftnull(A.var, p1, p2, alg);
+        end
+        
         function d = dot(A, B)
             if isa(A, 'MpsTensor')
                 A = A.var;
@@ -104,6 +149,22 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
                 B = B.var;
             end
             d = dot(A, B);
+        end
+        
+        function C = mtimes(A, B)
+            if isnumeric(A)
+                C = B;
+                C.var = A * C.var;
+                return
+            end
+            
+            if isnumeric(B)
+                C = A;
+                C.var = C.var * B;
+                return
+            end
+            
+            error('not implemented when both inputs not numeric.');
         end
         
         function A = repartition(A, varargin)
@@ -162,27 +223,6 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
 
         function A = twist(A, varargin)
             [A.var] = twist([A.var], varargin{:});
-        end
-        
-        function [R, A] = rightorth(A, alg)
-            arguments
-                A
-                alg = 'rqpos'
-            end
-            
-            if numel(A) > 1
-                for i = numel(A):-1:1
-                    [R(i), A(i)] = rightorth(A, alg);
-                end
-                return
-            end
-            
-            [R, A.var] = rightorth(A.var, 1, 2:nspaces(A), alg);
-            if isdual(space(R, 1)) == isdual(space(R, 2))
-                R.domain = conj(R.domain);
-                R = twist(R, 2);
-                A.var.codomain = conj(A.var.codomain);
-            end
         end
         
         function t = ctranspose(t)
@@ -511,21 +551,21 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
         end
         
         function A = multiplyright(A, C)
-%             if A.alegs == 0
-%                 A = MpsTensor(repartition(...
-%                     repartition(A, [nspaces(A)-1 1]) * repartition(C, [1 1]), ...
-%                     rank(A)), 0);
-%                 return
-%             end
-%             if isdual(space(C, 1)), C = twist(C, 1); end
+            Clegs = nspaces(C);
             Alegs = nspaces(A);
-            if A.alegs == 0
-                A = contract(A, [-(1:Alegs-1) 1], C, [1 -Alegs], 'Rank', rank(A));
-            else
-                A = contract(A, [-(1:Alegs-1-A.alegs) 1 -(Alegs-A.legs+1:Alegs)], ...
+            
+            if A.alegs == 0 && Clegs == 2
+                A.var = contract(A, [-(1:Alegs-1) 1], C, [1 -Alegs], 'Rank', rank(A));
+            elseif Clegs == 2
+                A.var = contract(A, [-(1:Alegs-1-A.alegs) 1 -(Alegs-A.legs+1:Alegs)], ...
                     C, [1 Alegs - A.alegs], 'Rank', rank(A));
+            elseif A.alegs == 0
+                A.var = contract(A, [-(1:Alegs-1) 1], C, [1 -Alegs-(0:Clegs-2)], ...
+                    'Rank', rank(A) + [0 Clegs - 2]);
+                A.alegs = A.alegs + Clegs - 2;
+            else
+                error('contraction with auxiliary leg on A and C not implemented.');
             end
-            A = MpsTensor(A);
         end
         
         function C = initializeC(AL, AR)
@@ -568,6 +608,65 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
         function t = SparseTensor(A)
             t = reshape([A.var], size(A));
             t = sparse(t);
+        end
+    end
+    
+    
+    %% Solvers
+    methods
+        function v = vectorize(t, type)
+            % Collect all parameters in a vector, weighted to reproduce the correct
+            % inproduct.
+            %
+            % Arguments
+            % ---------
+            % t : :class:`Tensor`
+            %   input tensor.
+            %
+            % type : 'real' or 'complex'
+            %   optionally specify if complex entries should be seen as 1 or 2 parameters.
+            %   Defaults to 'complex', with complex parameters.
+            %
+            % Returns
+            % -------
+            % v : numeric
+            %   real or complex vector containing the parameters of the tensor.
+            
+            arguments
+                t
+                type = 'complex'
+            end
+            
+            v = vectorize(t.var, type);
+        end
+        
+        function t = devectorize(v, t, type)
+            % Collect all parameters from a vector, and insert into a tensor.
+            %
+            % Arguments
+            % ---------
+            % v : numeric
+            %   real or complex vector containing the parameters of the tensor.
+            %
+            % t : :class:`Tensor`
+            %   input tensor.
+            %
+            % type : 'real' or 'complex'
+            %   optionally specify if complex entries should be seen as 1 or 2 parameters.
+            %   Defaults to 'complex', with complex parameters.
+            %
+            % Returns
+            % -------
+            % t : :class:`Tensor`
+            %   output tensor, filled with the parameters.
+            
+            arguments
+                v
+                t
+                type = 'complex'
+            end
+            
+            t.var = devectorize(v, t.var, type);
         end
     end
     

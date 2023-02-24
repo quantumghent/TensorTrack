@@ -108,7 +108,7 @@ classdef GradedSpace < AbstractSpace
             %   array of spaces.
             
             if isstruct(varargin{1})    % default 
-                assert(mod(nargin, 2) == 0);
+                assert(mod(nargin, 2) == 0, 'input arguments should come in pairs');
                 spaces = GradedSpace(varargin{:});
                 return
             end
