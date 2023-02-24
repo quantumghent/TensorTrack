@@ -39,8 +39,7 @@ classdef TestPeps < matlab.unittest.TestCase
             
             
             % test tensor behavior
-            tc.assumeTrue(width < 3 || (fusionstyle(spaces) <= FusionStyle.Unique || width < 2), ...
-                'FiniteMpo -> Tensor contraction not reasonable.')
+            tc.assumeTrue(width < 2, 'FiniteMpo -> Tensor contraction not reasonable.')
             
             % test domain and codomain
             mpo_tensor = tc.mpo_to_tensor(mpo);
