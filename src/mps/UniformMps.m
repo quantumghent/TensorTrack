@@ -170,9 +170,7 @@ classdef UniformMps
     methods
         function p = period(mps)
             % period over which the mps is translation invariant.
-            for i = numel(mps):-1:1
-                p(i) = length(mps(i).AL);
-            end
+            p = length(mps(1).AL);
         end
         
         function d = depth(mps)
@@ -186,6 +184,14 @@ classdef UniformMps
             Cs =  cellfun(@(x) x.C, varargin, 'UniformOutput', false);
             ACs = cellfun(@(x) x.AC, varargin, 'UniformOutput', false);
             mps = UniformMps([ALs{:}], [ARs{:}], [Cs{:}], [ACs{:}]);
+        end
+        
+        function mps = vertcat(varargin)
+            for i = 2:length(varargin)
+                assert(period(varargin{1}) == period(varargin{i}), ...
+                    'Can only stack UniformMps with matching periods.')
+            end
+            mps = builtin('vertcat', varargin{:});
         end
         
         function s = leftvspace(mps, w)
@@ -601,43 +607,46 @@ classdef UniformMps
             svals = cellfun(@diag, svals, 'UniformOutput', false);
         end
         
-        function plot_entanglementspectrum(mps, w, ax)
-            if nargin == 1
-                w = 1:period(mps);
+        function plot_entanglementspectrum(mps, d, w, ax)
+            arguments
+                mps
+                d = 1:depth(mps)
+                w = 1:period(mps)
+                ax = []
+            end
+            if isempty(ax)
                 figure;
                 ax = gobjects(depth(mps), width(mps));
-                for ww = 1:length(w)
-                    ax(1, ww) = subplot(1, length(w), ww);
-                end
-            elseif nargin == 2
-                figure;
-                ax = gobjects(depth(mps), width(mps));
-                for ww = 1:length(w)
-                    ax(1, ww) = subplot(1, length(w), ww);
+                for dd = 1:length(d)
+                    for ww = 1:length(w)
+                        ax(dd, ww) = subplot(length(d), length(w), ww + (dd-1)*length(w));
+                    end
                 end
             end
             
             lim_y = 1;
-            for ww = 1:length(w)
-                [svals, charges] = schmidt_values(mps, w(ww));
-                ctr = 0;
-                hold off;
-                lim_x = 1;
-                
-                ticks = zeros(size(svals));
-                labels = arrayfun(@string, charges, 'UniformOutput', false);
-                lengths = cellfun(@length, svals);
-                ticks = cumsum(lengths);
-                try
-                semilogy(ax(1, ww), 1:sum(lengths), vertcat(svals{:}).', '.', 'MarkerSize', 10);
-                catch
-                    bla
+            for dd = 1:length(d)
+                for ww = 1:length(w)
+                    [svals, charges] = schmidt_values(mps(dd), w(ww));
+                    ctr = 0;
+                    hold off;
+                    lim_x = 1;
+
+                    ticks = zeros(size(svals));
+                    labels = arrayfun(@string, charges, 'UniformOutput', false);
+                    lengths = cellfun(@length, svals);
+                    ticks = cumsum(lengths);
+                    try
+                        semilogy(ax(dd, ww), 1:sum(lengths), vertcat(svals{:}).', '.', 'MarkerSize', 10);
+                    catch
+                        bla
+                    end
+                    set(ax(dd, ww), 'TickLabelInterpreter', 'latex');
+                    set(ax(dd, ww), 'Xtick', ticks, 'XTickLabel', labels, 'fontsize', 10, ...
+                        'XtickLabelRotation', 60, 'Xgrid', 'on');
+                    xlim(ax(dd, ww), [1 - 1e-8 ticks(end) + 1e-8]);
+
                 end
-                set(ax(1, ww), 'TickLabelInterpreter', 'latex');
-                set(ax(1, ww), 'Xtick', ticks, 'XTickLabel', labels, 'fontsize', 10, ...
-                    'XtickLabelRotation', 60, 'Xgrid', 'on');
-                xlim(ax(1, ww), [1 - 1e-8 ticks(end) + 1e-8]);
-                
             end
                 
 %             for ww = 1:length(w)

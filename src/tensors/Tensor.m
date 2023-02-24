@@ -75,6 +75,8 @@ classdef Tensor < AbstractTensor
                     elseif isempty(domain)
                         sz = nsubspaces(codomain);
                     else
+                        if ~isa(codomain, 'SumSpace'), codomain = SumSpace(codomain); end
+                        if ~isa(domain, 'SumSpace'), domain = SumSpace(domain); end
                         sz = [nsubspaces(codomain) flip(nsubspaces(domain))];
                     end
                     subs = ind2sub_(sz, 1:prod(sz));
@@ -456,15 +458,13 @@ classdef Tensor < AbstractTensor
             end
         end
         
-        function sz = dims(t, inds)
-            sz = dims([t.codomain, t.domain']);
-            if nargin > 1
-                sz = sz(inds);
-            end
-        end
-        
         function sp = space(t, inds)
-            sp = [t.codomain t.domain'];
+            if isscalar(t)
+                sp = [t.codomain t.domain'];
+            else
+                [cod, dom] = deduce_spaces(t);
+                sp = [cod, dom'];
+            end
             if nargin > 1
                 sp = sp(inds);
             end
@@ -835,9 +835,11 @@ classdef Tensor < AbstractTensor
             end
         end
         
-        function t = normalize(t)
+        function [t, n] = normalize(t)
+            n = zeros(size(t));
             for i = 1:numel(t)
-                t(i) = t(i) .* (1 / norm(t(i)));
+                n(i) = norm(t(i));
+                t(i) = t(i) .* (1 / n(i));
             end
         end
         
@@ -2352,11 +2354,53 @@ classdef Tensor < AbstractTensor
                 if ~isempty(tsrc.codomain), tdst.codomain = ComplexSpace(tsrc.codomain); end
             end
         end
+        
+        function mps = FiniteMps(t, varargin)
+            A = MpsTensor.decompose_local_state(t, varargin{:});
+            mps = FiniteMps(A);
+        end
     end
     
     
     %% Utility
     methods
+        function [I, J, V] = find(t, k, which)
+            arguments
+                t
+                k = []
+                which = 'first'
+            end
+            assert(strcmp(which, 'first'), 'not implemented yet')
+            if ~isempty(k)
+                assert(k <= numel(t));
+            else
+                k = numel(t);
+            end
+            
+            if isempty(t)
+                I = [];
+                J = [];
+                V = [];
+                return
+            end
+            
+            if ~isempty(k)
+                if strcmp(which, 'first')
+                    I = 1:k;
+                else
+                    I = numel(t):-1:numel(t)+1-k;
+                end
+            end
+            I = reshape(I, [], 1);
+            if nargout < 2, return; end
+            
+            sz = size(t);
+            subs = ind2sub_([sz(1) prod(sz(2:end))], I);
+            I = subs(:, 1);
+            J = subs(:, 2);
+            V = reshape(t, [], 1);
+        end
+        
         function s = GetMD5_helper(t)
             s = {t.codomain t.domain};
         end
