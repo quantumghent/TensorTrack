@@ -294,9 +294,9 @@ classdef AbstractTensor
                 varargout{3} = flag;
             end
             
-            if flag
-                warning('eigsolve did not converge.');
-            elseif ~flag && options.Verbosity > 1
+            if any(flag)
+                warning('eigsolve did not converge on eigenvalues %s.', num2str(find(flag)));
+            elseif ~any(flag) && options.Verbosity > 1
                 fprintf('eigsolve converged.\n');
             end
         end
