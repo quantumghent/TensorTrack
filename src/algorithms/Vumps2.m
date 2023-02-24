@@ -277,7 +277,7 @@ classdef Vumps2 < handle
                 axhistory.Children(end).YData(end+1) = eta;
             end
             
-            plot_entanglementspectrum(mps, 1:period(mps), axspectrum);
+            plot_entanglementspectrum(mps, 1:D, 1:W, axspectrum);
             drawnow
         end
         
