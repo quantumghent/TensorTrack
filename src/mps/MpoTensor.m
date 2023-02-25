@@ -105,6 +105,7 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) MpoTensor < Ab
                 R MpsTensor
                 v
             end
+            
             auxlegs_v = nspaces(v) - 3;
             auxlegs_l = nspaces(L) - 3;
             auxlegs_r = nspaces(R) - 3;

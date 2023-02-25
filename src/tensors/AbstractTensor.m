@@ -303,7 +303,7 @@ classdef AbstractTensor
         
         function C = contract(tensors, indices, kwargs)
             arguments (Repeating)
-                tensors {mustBeA(tensors, 'AbstractTensor')}
+                tensors
                 indices (1, :) {mustBeInteger}
             end
             

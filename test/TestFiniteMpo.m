@@ -43,20 +43,32 @@ classdef TestFiniteMpo < matlab.unittest.TestCase
         end
         
         function test2dIsing(tc)
-            L = 8;
+            beta = 0.8 * log(1 + sqrt(2)) / 2;
+            free_energy_exact = statmech2dIsing_free_energy(beta);
+            
+            L = 16;
             D = 64;
             alg = Dmrg('maxiter', 10, 'which', 'largestabs');
             
-            mpo = statmech2dIsing('beta', 2, 'L', L);
+            mpo = statmech2dIsing('beta', beta, 'L', L);
             vspace_max = CartesianSpace.new(D);
             mps = initialize_mps(mpo, 'MaxVspace', vspace_max);
             
             [mps, envs, eta] = fixedpoint(alg, mpo, mps);
             
-            mpo = statmech2dIsing('beta', 2, 'L', L, 'Symmetry', 'Z2');
+            free_energy = - 1 / (beta * (L)) * log(expectation_value(mps, mpo, mps));
+            
+            tc.assertEqual(free_energy, free_energy_exact, 'RelTol', 1e-2);
+            
+            mpo = statmech2dIsing('beta', beta, 'L', L, 'Symmetry', 'Z2');
             vspace_max = GradedSpace.new(Z2(0, 1), D ./ [2 2], false);
             mps = initialize_mps(mpo, 'MaxVspace', vspace_max);
+            
             [mps, envs, eta] = fixedpoint(alg, mpo, mps);
+            
+            free_energy = - 1 / (beta * (L)) * log(expectation_value(mps, mpo, mps));
+            
+            tc.assertEqual(free_energy, free_energy_exact, 'RelTol', 1e-2);
         end
         
         function test1dIsing(tc)
