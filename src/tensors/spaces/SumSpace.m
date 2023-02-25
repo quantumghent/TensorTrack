@@ -75,6 +75,12 @@ classdef (InferiorClasses = {?GradedSpace, ?CartesianSpace, ?ComplexSpace}) SumS
     
     %% Utility
     methods
+        function d = dims(spaces)
+            for i = length(spaces):-1:1
+                d(i) = sum(dims(subspaces(spaces(i))));
+            end
+        end
+        
         function bools = eq(spaces1, spaces2)
             assert(isequal(size(spaces1), size(spaces2)));
             bools = false(size(spaces1));

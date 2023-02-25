@@ -88,7 +88,7 @@ classdef ComplexSpace < AbstractSpace
             % c : []
             %   empty result.
             
-            c = [];
+            c = Z1;
         end
         
         function d = degeneracies(spaces)

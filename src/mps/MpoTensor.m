@@ -21,6 +21,14 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) MpoTensor < Ab
             n = 4;
         end
         
+        function dom = domain(t)
+            dom = t.tensors.domain;
+        end
+        
+        function cod = codomain(t)
+            cod = t.tensors.codomain;
+        end
+        
         function r = rank(t)
             r = rank(t.tensors);
         end
@@ -97,6 +105,7 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) MpoTensor < Ab
                 R MpsTensor
                 v
             end
+            
             auxlegs_v = nspaces(v) - 3;
             auxlegs_l = nspaces(L) - 3;
             auxlegs_r = nspaces(R) - 3;
@@ -433,4 +442,3 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) MpoTensor < Ab
         end
     end
 end
-
