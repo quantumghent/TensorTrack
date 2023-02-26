@@ -225,7 +225,7 @@ classdef FiniteMps
             arguments
                 mps1
                 mps2
-                rholeft = []
+                rholeft  = []
                 rhoright = []
             end
             
@@ -239,6 +239,28 @@ classdef FiniteMps
             rhoright = apply(Tright, rhoright);
             
             o = overlap(rholeft, rhoright);
+        end
+        
+        function E = expectation_value(mps1, O, mps2)
+            arguments
+                mps1
+                O
+                mps2 = mps1
+            end
+            
+            if isa(O, 'FiniteMpo')
+                n = floor(length(mps1) / 2);
+                Tleft = transfermatrix(O, mps1, mps2, 1:n);
+                rholeft = apply(Tleft, O.L);
+                Tright = transfermatrix(O, mps1, mps2, n+1:length(mps1)).';
+                rhoright = apply(Tright, O.R);
+                
+                E = overlap(rholeft, rhoright);
+                
+            else
+                error('unknown operator');
+            end
+            
         end
         
         function n = norm(mps)
