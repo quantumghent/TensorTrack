@@ -10,11 +10,12 @@ if ~isfinite(kwargs.L)
     O = InfMpo({MpoTensor(bulk_mpo(kwargs.beta, kwargs.Symmetry))});
     
 else
+    assert(kwargs.L > 3, 'needs to be implemented');
     r = boundary_mpo(kwargs.beta, kwargs.Symmetry);
     l = r';
     o = bulk_mpo(kwargs.beta, kwargs.Symmetry);
     
-    O = FiniteMpo(MpsTensor(l), repmat({MpoTensor(o)}, 1, kwargs.L), MpsTensor(r));
+    O = FiniteMpo(MpsTensor(l), repmat({MpoTensor(o)}, 1, kwargs.L-2), MpsTensor(r));
 end
 
 end

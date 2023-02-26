@@ -459,15 +459,13 @@ classdef Tensor < AbstractTensor
             end
         end
         
-        function sz = dims(t, inds)
-            sz = dims([t.codomain, t.domain']);
-            if nargin > 1
-                sz = sz(inds);
-            end
-        end
-        
         function sp = space(t, inds)
-            sp = [t.codomain t.domain'];
+            if isscalar(t)
+                sp = [t.codomain t.domain'];
+            else
+                [cod, dom] = deduce_spaces(t);
+                sp = [cod, dom'];
+            end
             if nargin > 1
                 sp = sp(inds);
             end

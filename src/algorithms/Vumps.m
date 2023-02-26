@@ -66,7 +66,7 @@ classdef Vumps < handle
             end
         end
         
-        function [mps, lambda, GL, GR, eta] = fixedpoint(alg, mpo, mps)
+        function [mps, lambda, GL, GR, eta, time] = fixedpoint(alg, mpo, mps)
             
             if period(mpo) ~= period(mps)
                 error('vumps:argerror', ...
@@ -92,6 +92,7 @@ classdef Vumps < handle
                 
                 if iter > alg.miniter && eta < alg.tol
                     disp_conv(alg, iter, lambda, eta, toc(t_total));
+                    time = toc(t_total);
                     return
                 end
                 alg = updatetols(alg, iter, eta);
@@ -99,10 +100,10 @@ classdef Vumps < handle
                 disp_iter(alg, iter, lambda, eta, toc(t_iter));
 
                 if alg.doSave && mod(iter, alg.saveIterations) == 0
-                    save_iteration(alg, mps, lambda, iter);
+                    save_iteration(alg, mps, lambda, iter, eta, toc(t_total));
                 end
             end
-            
+            time = toc(t_total);
             disp_maxiter(alg, iter, lambda, eta, toc(t_total));
         end
     end
@@ -341,13 +342,15 @@ classdef Vumps < handle
             fprintf('---------------\n');
         end
                 
-        function save_iteration(alg, mps, lambda, iter)
+        function save_iteration(alg, mps, lambda, iter, eta, t)
             fileName = alg.name;
 
             fileData = struct;
             fileData.mps            = mps;
             fileData.lambda         = lambda;
             fileData.iteration = iter;
+            fileData.eta = eta;
+            fileData.time = t;
             % save
             
             %if exist(fileName,'file')
