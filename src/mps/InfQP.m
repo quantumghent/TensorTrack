@@ -97,9 +97,7 @@ classdef InfQP
         end
         
         function bool = istrivial(qp)
-            bool = qp.p == 0 && ...
-                space(qp.X(1), nspaces(qp.X(1))) == one(space(qp.X(1), nspaces(qp.X(1)))) || ...
-                space(qp.X(1), nspaces(qp.X(1))) == one(space(qp.X(1), nspaces(qp.X(1))))';
+            bool = qp.p == 0 && istrivial(auxspace(qp, 1));
         end
     end
     
