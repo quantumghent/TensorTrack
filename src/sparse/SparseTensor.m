@@ -654,7 +654,8 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor < AbstractTensor
                 t2 = repmat(t2, size(t1));
             end
             
-            assert(isequal(size(t1), size(t2)));
+            nd = max(ndims(t1), ndims(t2));
+            assert(isequal(size(t1, 1:nd), size(t2, 1:nd)));
             
             if isnumeric(t1)
                 t = t2;
@@ -662,7 +663,7 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor < AbstractTensor
                 t1 = t1(idx);
                 idx2 = find(t1);
                 if ~isempty(idx2)
-                    t.var = t.var(idx2) .* full(t1(idx2));
+                    t.var = t.var(idx2) .* reshape(full(t1(idx2)), [],1);
                     t.ind = t.ind(idx2, :);
                 else
                     t.var = t.var(idx2);

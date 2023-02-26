@@ -822,6 +822,8 @@ classdef SparseArray
                 s(1).subs = {sub2ind(a.sz, s(1).subs{:})};
             end
             
+            rhs = full(rhs);
+            
             [I, ~, V] = find(a.var);
             [lia, locb] = ismember(s(1).subs{1}, I);
             newI = vertcat(I, s(1).subs{1}(~lia));

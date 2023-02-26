@@ -99,6 +99,44 @@ classdef InfQP
         function bool = istrivial(qp)
             bool = qp.p == 0 && istrivial(auxspace(qp, 1));
         end
+        
+        function rho = fixedpoint(qp, type, w)
+            % compute the fixed point of the transfer matrix of an mps.
+            %
+            % Usage
+            % -----
+            % :code:`rho = fixedpoint(mps, type, w)`
+            %
+            % Arguments
+            % ---------
+            % mps : :class:`UniformMps`
+            %   input state.
+            %
+            % type : char
+            %   specification of the type of transfer matrix:
+            %   general format: sprintf(%c_%c%c, side, top, bot) where side is 'l' or 'r' to
+            %   determine which fixedpoint, and top and bot are 'L' or 'R' to specify
+            %   whether to use AL or AR in the transfer matrix.
+            %
+            % w : integer
+            %   position within the mps unitcell of the fixed point.
+            
+            arguments
+                qp
+                type {mustBeMember(type, ...
+                    {'l_LL' 'l_LR' 'l_RL' 'l_RR' 'r_LL' 'r_LR' 'r_RL' 'r_RR'})}
+                w = strcmp(type(1), 'l') * 1 + strcmp(type(1), 'r') * period(qp)
+            end
+            
+            switch type(1)
+                case 'l'
+                    rho = fixedpoint(qp.mpsleft, type, w);
+                case 'r'
+                    rho = fixedpoint(qp.mpsright, type, w);
+                otherwise
+                    error('invalid type');
+            end
+        end
     end
     
     methods

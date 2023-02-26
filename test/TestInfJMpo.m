@@ -11,16 +11,87 @@ classdef TestInfJMpo < matlab.unittest.TestCase
     end
     
     methods (Test, ParameterCombination='sequential')
-        function testEnvironments(tc, mpo, mps)
-            [GL, lambdaL] = leftenvironment(mpo, mps, mps);
-            tc.verifyTrue(isapprox(abs(lambdaL), abs(real(lambdaL)), 'RelTol', 1e-6), ...
-                sprintf('lambda should be real. (%-g i)', imag(lambdaL)));
+        function testEnvironments(tc)
+            D = 16;
+            mpo = quantum1dIsing('Symmetry', 'Z2');
+            mps = initialize_mps(mpo, GradedSpace.new(Z2(0, 1), D ./ [2 2], false));
             
-            [GR, lambdaR] = rightenvironment(mpo, mps, mps);
-            tc.verifyTrue(isapprox(abs(lambdaR), abs(real(lambdaR)), 'RelTol', 1e-6), ...
-                sprintf('lambda should be real. (%gi)', imag(lambdaR)));
+            [GL, GR, lambda] = environments(mpo, mps);
             
-            tc.verifyTrue(isapprox(lambdaL, lambdaR), 'lambdas should be equal.');
+            % left environment
+            fp_left  = repartition(insert_onespace(fixedpoint(mps, 'l_LL'), ...
+                2, ~isdual(leftvspace(mpo, 1))), rank(GL{1}));
+            fp_right = insert_onespace(fixedpoint(mps, 'r_LL'), ...
+                2, ~isdual(rightvspace(mpo, 1)));
+            
+            TL = transfermatrix(mpo, mps, mps, 'Type', 'LL');
+            GL_2 = apply(TL, GL{1});
+            lambda2 = overlap(GL_2(end), fp_right);
+            GL_2(end) = GL_2(end) - lambda2 * fp_left;
+            tc.assertTrue(isapprox(GL_2, GL{1}), ...
+                'left environment fixed point equation unfulfilled.');
+            tc.assertEqual(lambda, lambda2, 'RelTol', 1e-10);
+            
+            % right environment
+            fp_left  = insert_onespace(fixedpoint(mps, 'l_RR'), ...
+                2, ~isdual(leftvspace(mpo, 1)));
+            fp_right = repartition(insert_onespace(fixedpoint(mps, 'r_RR'), ...
+                2, ~isdual(rightvspace(mpo, 1))), rank(GR{1}));
+            
+            TR = transfermatrix(mpo, mps, mps, 'Type', 'RR').';
+            GR_2 = apply(TR, GR{1});
+            lambda3 = overlap(GR_2(1), fp_left);
+            GR_2(1) = GR_2(1) - lambda3 * fp_right;
+            tc.assertTrue(isapprox(GR_2, GR{1}), ...
+                'right environment fixed point equation unfulfilled.');
+            tc.assertEqual(lambda, lambda3, 'RelTol', 1e-10);
+        end
+        
+        function testQuasiEnvironments(tc)
+            D = 16;
+            mpo = quantum1dIsing('Symmetry', 'Z2');
+            mps = initialize_mps(mpo, GradedSpace.new(Z2(0, 1), D ./ [2 2], false));
+            [~, ~, lambda] = environments(mpo, mps);
+            
+            mpo = mpo - lambda;
+            [GL, GR, lambda] = environments(mpo, mps);
+            tc.assertEqual(lambda, 0, 'AbsTol', 1e-10);
+            
+            for charge = Z2([1 0])
+                for p = [0 pi 0.5]
+                    qp = InfQP.randnc(mps, mps, p, charge);
+                    
+%                     [GBL, GBR] = quasienvironments(mpo, qp, GL, GR);
+                    
+                    % left environments
+                    GBL = leftquasienvironment(mpo, qp, GL, GR);
+                    tc.assertEqual(norm(GBL{1}(1)), 0, 'AbsTol', 1e-10);
+                    
+                    T_R = transfermatrix(mpo, qp, qp, 'Type', 'RL');
+                    T_B = transfermatrix(mpo, qp, qp, 'Type', 'BL');
+                    
+                    GBL2 = apply(T_R, GBL{1}) + apply(T_B, GL{1});
+                    if istrivial(qp)
+                        fp_left = insert_onespace(insert_onespace(...
+                            fixedpoint(qp, 'l_RL'), ...
+                            2, ~isdual(leftvspace(mpo, 1))), ...
+                            4, isdual(auxspace(qp, 1)));
+                        fp_left = repartition(fp_left, rank(GBL2(end)));
+                        fp_right = insert_onespace(insert_onespace(...
+                            fixedpoint(qp, 'r_RL'), ...
+                            2, ~isdual(rightvspace(mpo, 1))), ...
+                            1, ~isdual(auxspace(qp, 1)));
+                        GBL2(end) = GBL2(end) - overlap(GBL2(end), fp_right) * fp_left;
+                    end
+                    tc.assertTrue(isapprox(GBL2, GBL{1} * exp(1i*p)), ...
+                        sprintf('left environment fixed point equation unfulfilled for p=%e, c=%d', p, charge));
+                    
+                    
+                    
+                    % right environments
+                end
+            end
+            
         end
         
         function testDerivatives(tc, mpo, mps)

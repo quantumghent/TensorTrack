@@ -50,13 +50,12 @@ classdef InfJMpo < InfMpo
                         2, isdual(space(rhs, 2))), rank(rhs));
                     fp_right = insert_onespace(fixedpoint(mps1, 'r_LL'), ...
                         2, ~isdual(space(rhs, 2)));
-                    lambda = contract(rhs, 1:3, fp_right, 3:-1:1);
+                    lambda = overlap(rhs, fp_right);
                     
                     rhs = rhs - lambda * fp_left;
                     [GL{1}(i), ~] = linsolve(@(x) x - apply(Tdiag, x), rhs, GL{1}(i), ...
                         linkwargs{:});
-                    GL{1}(i) = GL{1}(i) - ...
-                        contract(GL{1}(i), 1:3, fp_right, 3:-1:1) * fp_left;
+                    GL{1}(i) = GL{1}(i) - overlap(GL{1}(i), fp_right) * fp_left;
                 else
                     [GL{1}(i), ~] = linsolve(@(x) x - apply(Tdiag, x), rhs, GL{1}(i), ...
                         linkwargs{:});
@@ -133,6 +132,65 @@ classdef InfJMpo < InfMpo
             end
         end
         
+        function GBL = leftquasienvironment(mpo, qp, GL, GR, linopts)
+            arguments
+                mpo
+                qp
+                GL
+                GR
+                linopts.Algorithm = 'bicgstab'
+                linopts.MaxIter = 500
+                linopts.Verbosity = Verbosity.warn
+                linopts.Tol = eps(underlyingType(qp))^(3/4)
+            end
+            
+            linkwargs = namedargs2cell(linopts);
+            expP = exp(-1i*qp.p);
+            
+            T = transfermatrix(mpo, qp, qp, 'Type', 'RL');
+            TB = transfermatrix(mpo, qp, qp, 'Type', 'BL');
+            
+            GBL = cell(size(GL));
+            GBL{1} = SparseTensor.zeros(domain(T), auxspace(qp, 1));
+            
+            for i = 2:size(GBL{1}, 2)
+                rhs = apply(slice(T, i, 1:i-1), GBL{1}(1, 1:i-1, 1, 1)) + ...
+                    apply(slice(TB, i, 1:i), GL{1}(1, 1:i, 1));
+                
+                Tdiag = slice(T, i, i);
+                if iszero(Tdiag)
+                    GBL{1}(i) = expP * rhs;
+                    
+                elseif iseye(T, i) && istrivial(qp)
+                    fp_left = insert_onespace(insert_onespace(...
+                        fixedpoint(qp, 'l_RL'), ...
+                        2, ~isdual(leftvspace(mpo, 1))), ...
+                        4, isdual(auxspace(qp, 1)));
+                    fp_left = repartition(fp_left, rank(rhs));
+                    fp_right = insert_onespace(insert_onespace(...
+                        fixedpoint(qp, 'r_RL'), ...
+                        2, ~isdual(rightvspace(mpo, 1))), ...
+                        1, ~isdual(auxspace(qp, 1)));
+                    rhs = rhs - overlap(rhs, fp_right) * fp_left;
+                    [GBL{1}(i), ~] = linsolve(@(x) x - expP * apply_regularized(Tdiag, fp_left, fp_right, x), ...
+                        expP * rhs, [], linkwargs{:});
+                else
+                    [GBL{1}(i), ~] = linsolve(@(x) x - expP * apply(Tdiag, x), expP * rhs, [], ...
+                        linkwargs{:});
+                end
+            end
+            
+            
+            if nnz(GL{1}) == numel(GL{1})
+                GL{1} = full(GL{1});
+            end
+            
+            for w = 1:period(qp)-1
+                T = transfermatrix(mpo, mps1, mps2, w, 'Type', 'LL');
+                GL{next(w, period(mps1))} = apply(T, GL{w});
+            end
+        end
+        
         function [GL, GR, lambda] = environments(mpo, mps1, mps2, GL, GR, linopts)
             arguments
                 mpo
@@ -150,8 +208,8 @@ classdef InfJMpo < InfMpo
             [GL, lambdaL] = leftenvironment(mpo, mps1, mps2, GL, kwargs{:});
             [GR, lambdaR] = rightenvironment(mpo, mps1, mps2, GR, kwargs{:});
             lambda = (lambdaL + lambdaR) / 2;
-            if abs(lambdaL - lambdaR)/abs(lambda) > eps(lambda)^(1/3)
-                warning('lambdas disagree');
+            if ~isapprox(lambdaL, lambdaR, 'AbsTol', eps^(1/3), 'RelTol', eps(lambda)^(1/3))
+                warning('lambdas disagree (%e, %e)', lambdaL, lambdaR);
             end
         end
         
@@ -164,10 +222,15 @@ classdef InfJMpo < InfMpo
                 for i = 1:period(a)
                     a.O{i}(1, 1, end, 1) = a.O{i}(1, 1, end, 1) + b(i);
                 end
+                mpo = a;
                 
             elseif isnumeric(a) && isa(b, 'InfJMpo')
                 mpo = b + a;
             end
+        end
+        
+        function mpo = minus(a, b)
+            mpo = a + (-b);
         end
         
         function mpo = mtimes(mpo, b)

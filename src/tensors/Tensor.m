@@ -1236,7 +1236,8 @@ classdef Tensor < AbstractTensor
                 B = repmat(B, size(A));
             end
             
-            assert(isequal(size(A), size(B)), ...
+            nd = max(ndims(A), ndims(B));
+            assert(isequal(size(A, 1:nd), size(B, 1:nd)), ...
                 'times:dimagree', 'incompatible dimensions.');
             
             if isnumeric(A)

@@ -70,6 +70,14 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) MpoTensor < Ab
         end
         
         function t = plus(t, t2)
+            if isnumeric(t2)
+                t.scalars = t.scalars + t2;
+                return
+            end
+            if isnumeric(t)
+                t = t2 + t;
+                return
+            end
             t.tensors = t.tensors + t2.tensors;
             t.scalars = t.scalars + t2.scalars;
         end
@@ -234,7 +242,10 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) MpoTensor < Ab
                         if isempty(mask), continue; end
                         subs = [repmat(Ia(i), length(mask), 1) Jb(mask)];
                         idx = sub2ind_(sz2, subs);
-                        C(idx) = C(idx) + Va(i) .* Vb(mask);
+                        % TODO this should probably work vectorized?
+                        for j = 1:length(idx)
+                            C(idx(j)) = C(idx(j)) + Va(i) .* Vb(mask(j));
+                        end
                     end
                 end
             end
