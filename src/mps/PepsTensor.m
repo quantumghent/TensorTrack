@@ -1,6 +1,18 @@
 classdef PepsTensor
-    % Generic PEPS tensor objects that have a notion of virtual and physical legs.
-    
+    % Generic PEPS tensor object that hos a notion of virtual and physical legs.
+    %   This object represents the PEPS tensor at a single site as a rank (1, 4) tensor,
+    %   where the physical index lies in the codomain and the virtual indices lie in the
+    %   domain.
+    %
+    %                               5   1
+    %                               |  /
+    %                               v ^
+    %                               |/
+    %                        2 ->-- O --<- 4
+    %                               |
+    %                               ^
+    %                               |
+    %                               3
     properties
         var
     end
@@ -12,14 +24,7 @@ classdef PepsTensor
             arguments
                 tensor = []
             end
-            
-            if iscell(tensor)
-                for i = length(tensor):-1:1
-                    A(i) = PepsTensor(tensor{i});
-                end
-                return
-            end
-            
+                        
             if ~isempty(tensor)
                 A.var = tensor;
             end
@@ -29,14 +34,14 @@ classdef PepsTensor
     
     %% Properties
     methods
+        function n = nspaces(A)
+            n = 5;
+        end
+        
         function s = space(A, varargin)
             s = space(A.var, varargin{:});
         end
-        
-        function n = nspaces(A)
-            n = nspaces(A.var);
-        end
-        
+                
         function s = pspace(A)
             s = space(A, 1);
         end
@@ -76,11 +81,7 @@ classdef PepsTensor
     
     
     %% Linear Algebra
-    methods
-        function d = dot(A, B)
-            % TODO?
-        end
-        
+    methods        
         function A = repartition(A, varargin)
             A.var = repartition(A.var, varargin{:});
         end
@@ -89,22 +90,20 @@ classdef PepsTensor
             A.var = tpermute(A.var, varargin{:});
         end
         
-        function A = plus(varargin)
-            for i = 1:2
-                if isa(varargin{i}, 'PepsTensor')
-                    varargin{i} = varargin{i}.var;
-                end
+        function A = plus(A, B)
+            arguments
+                A PepsTensor
+                B PepsTensor
             end
-            A = plus(varargin{:});
+            A.var = plus(A.var, B.var);
         end
         
-        function A = minus(varargin)
-            for i = 1:2
-                if isa(varargin{i}, 'PepsTensor')
-                    varargin{i} = varargin{i}.var;
-                end
+        function A = minus(A, B)
+            arguments
+                A PepsTensor
+                B PepsTensor
             end
-            A = minus(varargin{:});
+            A.var = minus(A.var, B.var);
         end
         
         function n = norm(A)
@@ -120,26 +119,7 @@ classdef PepsTensor
         end
                 
         function t = ctranspose(t)
-            % Compute the adjoint of a tensor. This is defined as swapping the codomain and
-            % domain, while computing the adjoint of the matrix blocks.
-            %
-            % Usage
-            % -----
-            % :code:`t = ctranspose(t)`
-            % :code:`t = t'`
-            %
-            % Arguments
-            % ---------
-            % t : :class:`Tensor`
-            %   input tensor.
-            %
-            % Returns
-            % -------
-            % t : :class:`Tensor`
-            %   adjoint tensor.
-            
             t.var = t.var';
-            
             t = permute(t, ndims(t):-1:1);
         end
         
@@ -167,6 +147,39 @@ classdef PepsTensor
         function t = SparseTensor(A)
             t = reshape([A.var], size(A));
             t = sparse(t);
+        end
+    end
+    
+
+    %% Static constructors
+    methods (Static)
+        function t = new(fun, pspace, westvspace, southvspace, eastvspace, northvspace)
+            arguments
+                fun
+                pspace
+                westvspace
+                southvspace
+                eastvspace = westvspace'
+                northvspace = southvspace'
+            end
+            
+            t = PepsTensor(Tensor.new(fun, pspace, [westvspace, southvspace, eastvspace, northvspace]'));
+        end
+        
+        function t = rand(varargin)
+            t = PepsTensor.new(@rand, varargin{:});
+        end
+        
+        function t = randn(varargin)
+            t = PepsTensor.new(@randn, varargin{:});
+        end
+        
+        function t = randc(varargin)
+            t = PepsTensor.new(@randc, varargin{:});
+        end
+        
+        function t = randnc(varargin)
+            t = PepsTensor.new(@randnc, varargin{:});
         end
     end
 end

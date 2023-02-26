@@ -24,7 +24,7 @@ classdef TestPeps < matlab.unittest.TestCase
     methods (Test, ParameterCombination='exhaustive')
         
         function testFiniteMpo(tc, spaces, depth, width, dualdepth, dualwidth, samebot)
-            tc.assumeTrue(braidingstyle(spaces) ~= BraidingStyle.Fermionic, 'fZ2 test broken')
+            tc.assumeTrue(istwistless(braidingstyle(spaces)), 'Fermionic tests broken.')
             tc.assumeTrue(depth == 1, 'Test ill-defined for multiline PEPS.')
             
             mpo = tc.random_mpo(spaces, depth, width, dualdepth, dualwidth, samebot);
@@ -42,7 +42,7 @@ classdef TestPeps < matlab.unittest.TestCase
             tc.assumeTrue(width < 2, 'FiniteMpo -> Tensor contraction not reasonable.')
             
             % test domain and codomain
-            mpo_tensor = tc.mpo_to_tensor(mpo);
+            mpo_tensor = Tensor(mpo);
             tc.assertTrue(isequal(mpo.domain, mpo_tensor.domain), ...
                 'domain should remain fixed after conversion.');
             tc.assertTrue(isequal(mpo.codomain, mpo_tensor.codomain), ...
@@ -53,16 +53,16 @@ classdef TestPeps < matlab.unittest.TestCase
             tc.assertTrue(isapprox(mpo.apply(v), mpo_tensor * v));
             
             % test transpose
-            tc.assertTrue(isapprox(tc.mpo_to_tensor(mpo).', tc.mpo_to_tensor(mpo.')), ...
+            tc.assertTrue(isapprox(Tensor(mpo).', Tensor(mpo.')), ...
                 'transpose should not change mpo');
             
             % test ctranspose
-            tc.assertTrue(isapprox(tc.mpo_to_tensor(mpo)', tc.mpo_to_tensor(mpo')), ...
+            tc.assertTrue(isapprox(Tensor(mpo)', Tensor(mpo')), ...
                 'ctranspose should not change mpo');
         end
         
         function testFixedpoints(tc, spaces, depth, width, dualdepth, dualwidth, samebot)
-            tc.assumeTrue(braidingstyle(spaces) ~= BraidingStyle.Fermionic, 'fZ2 test broken')
+            tc.assumeTrue(istwistless(braidingstyle(spaces)), 'Fermionic tests broken.')
 
             mpo = tc.random_mpo(spaces, depth, width, dualdepth, dualwidth, samebot);
 
@@ -74,7 +74,7 @@ classdef TestPeps < matlab.unittest.TestCase
         end
         
         function testDerivatives(tc, spaces, depth, width, dualdepth, dualwidth, samebot)
-            tc.assumeTrue(braidingstyle(spaces) ~= BraidingStyle.Fermionic, 'fZ2 test broken')
+            tc.assumeTrue(istwistless(braidingstyle(spaces)), 'Fermionic tests broken.')
 
             mpo = tc.random_inf_mpo(spaces, depth, width, dualdepth, dualwidth, samebot);
             vspaces = repmat({spaces(end)}, 1, width);
@@ -98,11 +98,11 @@ classdef TestPeps < matlab.unittest.TestCase
         end
         
         function testMpoTensor(tc, spaces, dualdepth, dualwidth)
-            tc.assumeTrue(braidingstyle(spaces) ~= BraidingStyle.Fermionic, 'fZ2 test broken')
+            tc.assumeTrue(istwistless(braidingstyle(spaces)), 'Fermionic tests broken.')
 
             pspace = spaces(1); horzspace = spaces(2); vertspace = spaces(3);
-            top = TestPeps.random_peps(pspace, horzspace, vertspace, 1, 1, dualdepth, dualwidth);
-            bot = TestPeps.random_peps(pspace', vertspace, horzspace, 1, 1, dualdepth, dualwidth);
+            top = TestPeps.random_peps_unitcell(pspace, horzspace, vertspace, 1, 1, dualdepth, dualwidth);
+            bot = TestPeps.random_peps_unitcell(pspace', vertspace, horzspace, 1, 1, dualdepth, dualwidth);
             O = PepsSandwich(top{1}, bot{1});
             t = MpoTensor(O);
         end
@@ -110,44 +110,42 @@ classdef TestPeps < matlab.unittest.TestCase
 end
     
     methods (Static)
-        function A = random_peps(pspace, horzspace, vertspace, depth, width, dualdepth, dualwidth)
-            % spit out random peps unit cell
-            A = cell(depth, width);
+        function A = random_peps_unitcell(pspace, horzspace, vertspace, depth, width, dualdepth, dualwidth)
+            % Spit out random peps unit cell with all kinds of arrows for testing
+            
             if dualwidth, horzspace = horzspace'; end
             if dualdepth, vertspace = vertspace'; end
-
-            if mod(depth, 2)
-                vertspaces = [vertspace vertspace'];
+            pspaces = repmat(pspace, depth, width); pspaces(2:2:depth*width) = conj(pspaces(2:2:depth*width));
+            westspaces = repmat(horzspace, depth, width);
+            southspaces = repmat(vertspace, depth, width);
+            
+            % staggering
+            if ~mod(width, 2)
+                westspaces(2:2:depth*width) = conj(westspaces(2:2:depth*width));
+                eastspaces = westspaces;
             else
-                vertspaces = [vertspace vertspace];
+                eastspaces = conj(westspaces);
             end
-
-            if mod(width, 2)
-                horzspaces = [horzspace horzspace'];
+            if ~mod(depth, 2)
+                southspaces(2:2:depth*width) = conj(southspaces(2:2:depth*width));
+                northspaces = southspaces;
             else
-                horzspaces = [horzspace horzspace];
+                northspaces = conj(southspaces);
             end
-
-            codomainspaces = reshape([vertspaces; horzspaces], 1, []);
-
-            for d = 1:depth
-                for w = 1:width
-                    dmsp = pspace;
-                    cdmsp = codomainspaces;
-                    if ~mod(depth, 2) && ~mod(d, 2), cdmsp = conj(cdmsp); dmsp = conj(dmsp); end
-                    if ~mod(width, 2) && ~mod(w, 2), cdmsp = conj(cdmsp); dmsp = conj(dmsp); end
-                    A{d, w} = Tensor.randnc(dmsp, cdmsp);
-                    A{d, w} = A{d, w} / norm(A{d, w});
-                end
-            end
+            
+            % fill up cell
+            for d = depth:-1:1, for w = width:-1:1
+                A{d, w} = PepsTensor.randnc(pspaces(d, w), ...
+                    westspaces(d, w), southspaces(d, w), eastspaces(d, w), northspaces(d, w));
+            end, end
         end
         
         function T = random_sandwich(pspace, horzspace, vertspace, depth, width, dualdepth, dualwidth, samebot)
-            top = TestPeps.random_peps(pspace, horzspace, vertspace, depth, width, dualdepth, dualwidth);
+            top = TestPeps.random_peps_unitcell(pspace, horzspace, vertspace, depth, width, dualdepth, dualwidth);
             if samebot
                 bot = cellfun(@conj, top, 'UniformOutput', false);
             else
-                bot = TestPeps.random_peps(pspace', horzspace, vertspace, depth, width, dualdepth, dualwidth);
+                bot = TestPeps.random_peps_unitcell(pspace', horzspace, vertspace, depth, width, dualdepth, dualwidth);
             end
             T = cellfun(@(t, b) PepsSandwich(t, b), top, bot, 'UniformOutput', false);
         end
@@ -166,32 +164,7 @@ end
             pspace = spaces(1); horzspace = spaces(2); vertspace = spaces(3);
             O = TestPeps.random_sandwich(pspace, horzspace, vertspace, depth, width, dualdepth, dualwidth, samebot);
             mpo = InfMpo(O);
-        end
-        
-        function t = mpo_to_tensor(mpo)
-            % contract FiniteMpo{PepsSandwich} to tensor...
-            assert(depth(mpo) == 1, 'not implemented for 1 < depth');
-            W = length(mpo);
-            inds_top = arrayfun(@(x) [  3 + 3*(x-1), ...
-                                        1 + 3*(x-1), ...
-                                        -(2 + 2*(x-1)), ...
-                                        1 + 3*x, ...
-                                        -(4*W + 5 - 2*x)], ...
-                                        1:W,  'UniformOutput', false);
-            inds_bot = arrayfun(@(x) [  3 + 3*(x-1), ...
-                                        2 + 3*(x-1), ...
-                                        -(3 + 2*(x-1)), ...
-                                        2 + 3*x, ...
-                                        -(4*W + 4 - 2*x)], ...
-                                        1:W,  'UniformOutput', false);
-            tops = cellfun(@(x) x.top.var, mpo.O, 'UniformOutput', false);
-            bots = cellfun(@(x) x.bot.var, mpo.O, 'UniformOutput', false);
-            args = [tops; inds_top; bots; inds_bot];
-            t = contract(mpo.L, [-1, 2, 1, -(4*W + 4)], args{:}, mpo.R, [-(2*W + 3), 1 + 3*W, 2 + 3*W, -(2 + 2*W)], ...
-                    'Rank', [2*W+2, 2*W+2]);
-
-        end
-        
+        end        
     end
 end
 

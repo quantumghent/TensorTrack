@@ -14,14 +14,7 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) PepsSandwich
                 top
                 bot = conj(top)
             end
-            
-            if ~isa(top, 'PepsTensor')
-                top = PepsTensor(top);
-            end
-            if ~isa(bot, 'PepsTensor')
-                bot = PepsTensor(bot);
-            end
-            
+                        
             T.top = top;
             T.bot = bot;
         end
@@ -44,7 +37,6 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) PepsSandwich
         end
         
         function T = ctranspose(T)
-            % TODO: test if this is correct when inserted into FiniteMpo
             T.top = tpermute(conj(T.top), [1, 2, 5, 4, 3], rank(T.top));
             T.bot = tpermute(conj(T.bot), [1, 2, 5, 4, 3], rank(T.bot));
         end
@@ -93,7 +85,6 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) PepsSandwich
         end
         
         function v = applympo(varargin)
-            % lolz
             assert(nargin >= 3)
             v = varargin{end};
             R = varargin{end-1};
