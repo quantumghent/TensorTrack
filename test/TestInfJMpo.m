@@ -72,7 +72,6 @@ classdef TestInfJMpo < matlab.unittest.TestCase
             [gs_mps] = fixedpoint(alg, mpo, mps);
             lambda = expectation_value(gs_mps, mpo);
             tc.verifyEqual(lambda / period(mps), -1.40, 'RelTol', 1e-2);
-            
         end
     end
 end
