@@ -211,6 +211,10 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
             t = permute(t, ndims(t):-1:1);
         end
         
+        function A = tpermute(A, varargin)
+            A.var = tpermute(A.var, varargin{:});
+        end
+        
         function C = tensorprod(varargin)
             for i = 1:2
                 if isa(varargin{i}, 'MpsTensor')
@@ -372,10 +376,28 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
             auxlegs_r = R.alegs;
             newrank = rank(v); newrank(2) = newrank(2) + auxlegs_l + auxlegs_r;
             
-            v = contract(v, [1 3 (-(1:auxlegs_v) - 2 - auxlegs_l)], ...
-                L, [-1 2 1 (-(1:auxlegs_l) - 2)], ...
-                R, [3 2 -2 (-(1:auxlegs_r) - 3 - auxlegs_l - auxlegs_v)], ...
+            v = contract( ...
+                v, [1, R.plegs+2, (-(1:auxlegs_v) - 2 - auxlegs_l)], ...
+                L, [-1, (1:L.plegs)+1, 1 (-(1:auxlegs_l) - (1+L.plegs))], ...
+                R, [R.plegs+2, (R.plegs:-1:1)+1, -2, (-(1:auxlegs_r) - (2+R.plegs) - auxlegs_l - auxlegs_v)], ...
                 'Rank', newrank);
+        end
+        
+        function v = contracttransfer(L, R)
+            arguments
+                L MpsTensor
+                R MpsTensor
+            end
+            
+            auxlegs_l = L.alegs;
+            auxlegs_r = R.alegs;
+            assert(R.plegs == L.plegs);
+            plegs = L.plegs; %#ok<PROPLC>
+            
+            v = contract(...
+                L, [-1, 1:plegs, -4, (-(1:auxlegs_l) - 4)], ...
+                R, [-3, flip(1:plegs), -2 (-(1:auxlegs_r) - 4 - auxlegs_l)], ...
+                'Rank', [2, 2] + [0, auxlegs_l + auxlegs_r]); %#ok<PROPLC>
         end
         
         function v = tracetransfer(L, R)
@@ -392,7 +414,7 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
             
             v = contract(...
                 L, [-1 1:(plegs + 1) (-(1:auxlegs_l) - 2)], ...
-                R, [flip(1:(plegs + 1)) -2 (-(1:auxlegs_r) - 3 - auxlegs_l)], ...
+                R, [flip(1:(plegs + 1)) -2 (-(1:auxlegs_r) - 2 - auxlegs_l)], ...
                 'Rank', newrank); %#ok<PROPLC>
         end
         
@@ -496,36 +518,13 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
         end
         
         function A = multiplyleft(A, C)
-%             A = MpsTensor(repartition(...
-%                 repartition(C, [1 1]) * repartition(A, [1 nspaces(A)-1]), ...
-%                 rank(A)), A.alegs);
-%             if ~isdual(space(C, 2))
-%                 C = twist(C, 2);
-%             end
-%             if isdual(space(A, 1)), C = twist(C, 2); end
-            [A.var] = contract(C, [-1 1], [A.var], [1 -2 -3], 'Rank', rank(A));
-%             A = MpsTensor(tpermute(...
-%                 multiplyright(MpsTensor(tpermute(A, [3 2 1])), tpermute(C, [2 1])), [3 2 1]));
-%             A = MpsTensor(multiplyright(A', C')');
-%             A = MpsTensor(contract(C, [-1 1], A, [1 -(2:nspaces(A))], 'Rank', rank(A)));
+            [A.var] = contract(C, [-1 1], ...
+                [A.var], [1 -((1:A.plegs)+1) -((1:A.alegs+1)+A.plegs+1)], 'Rank', rank(A));
         end
         
         function A = multiplyright(A, C)
-%             if A.alegs == 0
-%                 A = MpsTensor(repartition(...
-%                     repartition(A, [nspaces(A)-1 1]) * repartition(C, [1 1]), ...
-%                     rank(A)), 0);
-%                 return
-%             end
-%             if isdual(space(C, 1)), C = twist(C, 1); end
-            Alegs = nspaces(A);
-            if A.alegs == 0
-                A = contract(A, [-(1:Alegs-1) 1], C, [1 -Alegs], 'Rank', rank(A));
-            else
-                A = contract(A, [-(1:Alegs-1-A.alegs) 1 -(Alegs-A.legs+1:Alegs)], ...
-                    C, [1 Alegs - A.alegs], 'Rank', rank(A));
-            end
-            A = MpsTensor(A);
+            [A.var] = contract([A.var], [-(1:A.plegs+1) 1 -((1:A.alegs)+A.plegs+2)], ...
+                C, [1 -(2+A.plegs)], 'Rank', rank(A));
         end
         
         function C = initializeC(AL, AR)

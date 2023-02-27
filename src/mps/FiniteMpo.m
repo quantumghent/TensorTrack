@@ -120,13 +120,13 @@ classdef FiniteMpo
         end
         
         function s = domain(mpo)
-            N = prod(cellfun(@(x) size(x, 4), mpo(1).O));
-            s = conj(...
-                [rightvspace(mpo(1).L) cellfun(@(x) pspace(x)', mpo(1).O) leftvspace(mpo(1).R)]);
+            sO = flip(cellfun(@(x) domainspace(x), mpo(1).O, 'UniformOutput', false));
+            s = [leftvspace(mpo(1).R) [sO{:}] rightvspace(mpo(1).L)]';
         end
         
         function s = codomain(mpo)
-            s = [leftvspace(mpo(end).L) cellfun(@pspace, mpo(end).O) rightvspace(mpo(end).R)];
+            sO = cellfun(@(x) codomainspace(x), mpo(1).O, 'UniformOutput', false);
+            s = [leftvspace(mpo(end).L) [sO{:}] rightvspace(mpo(end).R)];
         end
         
         function d = depth(mpo)
@@ -147,10 +147,12 @@ classdef FiniteMpo
             end
             
             for d = 1:depth(mpo)
-                mpo(d).L = mpo(d).L';
+                mpo(d).L = tpermute(mpo(d).L', ...
+                    [1, flip(2:nspaces(mpo(d).L)-1), nspaces(mpo(d).L)]);
                 mpo(d).O = cellfun(@ctranspose, mpo(d).O, ...
                     'UniformOutput', false);
-                mpo(d).R = mpo(d).R';
+                mpo(d).R = tpermute(mpo(d).R', ...
+                    [1, flip(2:nspaces(mpo(d).R)-1), nspaces(mpo(d).R)]);
             end
         end
         
@@ -237,13 +239,14 @@ classdef FiniteMpo
 %         
         function t = Tensor(mpo)
             assert(depth(mpo) == 1, 'not implemented for 1 < depth');
-            N = length(mpo);
-            inds = arrayfun(@(x) [x -(x+1) (x+1) -(N+x+3)], 1:N, ...
-                'UniformOutput', false);
-            args = [mpo.O; inds];
-            t = contract(mpo.L, [-1 1 -(2*N+4)], args{:}, mpo.R, [-(N+3) N+1 -(N+2)], ...
-                    'Rank', [N+2 N+2]);
+            W = length(mpo);
+            if W == 0
+                t = contracttransfer(mpo.L, mpo.R);
+            else
+                t = contractmpo(mpo.O{:}, mpo.L, mpo.R);
+            end
         end
+        
     end
     
     methods (Static)
@@ -273,8 +276,8 @@ classdef FiniteMpo
                 twistinds = 1 + find(isdual(space(Atop(i), 2:nspaces(Atop(i)) - 1)));
                 abot = twist(Abot(i)', twistinds);
                 
-                assert(isequal(space(abot, 2), space(o, 1)'));
-                assert(isequal(space(o, 3), space(atop, 2)'));
+                assert(isequal(pspace(abot)', leftvspace(o)));
+                assert(isequal(rightvspace(o)', pspace(atop)));
                 
                 T(i, 1) = FiniteMpo(abot, {o}, atop);
             end

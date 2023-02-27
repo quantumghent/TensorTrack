@@ -170,10 +170,10 @@ classdef InfMpo
             end
             
             for w = 1:period(mps1)
-                overlap = sqrt(contract(GL{w}, [1 3 2], ...
-                    mps1.C(prev(w, period(mps1))), [2 4], ...
-                    mps2.C(prev(w, period(mps1)))', [5 1], ...
-                    GR{w}, [4 3 5]));
+                overlap = sqrt(contract(GL{w}, [1, 3:nspaces(GL{w}), 2], ...
+                    mps1.C(prev(w, period(mps1))), [2, nspaces(GL{w})+1], ...
+                    mps2.C(prev(w, period(mps1)))', [nspaces(GL{w})+2, 1], ...
+                    GR{w}, [nspaces(GL{w})+1, flip(3:nspaces(GL{w})), nspaces(GL{w})+2]));
                 GL{w} = GL{w} ./ overlap;
                 GR{w} = GR{w} ./ overlap;
             end
@@ -223,7 +223,9 @@ classdef InfMpo
                     gl = twistdual(GL{d, sites(i)}, 1);
                     gr = GR{d, next(sites(i), period(mps))};
                     gr = twistdual(gr, nspaces(gr));
-                    H{i}(d, 1) = FiniteMpo(gl, mpo.O(d, sites(i)), gr);
+                    gr_better = tpermute(gr, [1, flip(2:nspaces(gr)-1), nspaces(gr)]);
+                    gl_better = tpermute(gl, [1, flip(2:nspaces(gl)-1), nspaces(gl)]);
+                    H{i}(d, 1) = FiniteMpo(gl_better, mpo.O(d, sites(i)), gr_better);
                 end
             end
         end

@@ -3,8 +3,8 @@ classdef Arrow < logical
 %   Enumeration class with directions.
 
 enumeration
-    in (false)
-    out (true)
+    in (true)
+    out (false)
 end
 
 end
