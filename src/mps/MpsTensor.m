@@ -383,6 +383,23 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
                 'Rank', newrank);
         end
         
+        function v = contracttransfer(L, R)
+            arguments
+                L MpsTensor
+                R MpsTensor
+            end
+            
+            auxlegs_l = L.alegs;
+            auxlegs_r = R.alegs;
+            assert(R.plegs == L.plegs);
+            plegs = L.plegs; %#ok<PROPLC>
+            
+            v = contract(...
+                L, [-1, 1:plegs, -4, (-(1:auxlegs_l) - 4)], ...
+                R, [-3, flip(1:plegs), -2 (-(1:auxlegs_r) - 4 - auxlegs_l)], ...
+                'Rank', [2, 2] + [0, auxlegs_l + auxlegs_r]); %#ok<PROPLC>
+        end
+        
         function v = tracetransfer(L, R)
             arguments
                 L MpsTensor
@@ -397,7 +414,7 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
             
             v = contract(...
                 L, [-1 1:(plegs + 1) (-(1:auxlegs_l) - 2)], ...
-                R, [flip(1:(plegs + 1)) -2 (-(1:auxlegs_r) - 3 - auxlegs_l)], ...
+                R, [flip(1:(plegs + 1)) -2 (-(1:auxlegs_r) - 2 - auxlegs_l)], ...
                 'Rank', newrank); %#ok<PROPLC>
         end
         

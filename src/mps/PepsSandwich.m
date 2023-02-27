@@ -127,6 +127,46 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) PepsSandwich
                 'Rank', rank(v) + [0 auxlegs_extra]);
         end
         
+        function t = contractmpo(varargin)
+            assert(nargin >= 3)
+            R = varargin{end};
+            L = varargin{end-1};
+            O = varargin(1:end-2);
+            W = length(O);
+            
+            if isa(L, 'MpsTensor')
+                auxlegs_l = L.alegs;
+            else
+                auxlegs_l = 0;
+            end
+            if isa(R, 'MpsTensor')
+                auxlegs_r = R.alegs;
+            else
+                auxlegs_r = 0;
+            end
+
+            inds_top = arrayfun(@(x) [  3 + 3*(x-1), ...
+                                        1 + 3*(x-1), ...
+                                        -(2 + 2*(x-1)), ...
+                                        1 + 3*x, ...
+                                        -(4*W + 5 - 2*x)], ...
+                                        1:W,  'UniformOutput', false);
+            inds_bot = arrayfun(@(x) [  3 + 3*(x-1), ...
+                                        2 + 3*(x-1), ...
+                                        -(3 + 2*(x-1)), ...
+                                        2 + 3*x, ...
+                                        -(4*W + 4 - 2*x)], ...
+                                        1:W,  'UniformOutput', false);
+            tops = cellfun(@(x) x.top.var, O, 'UniformOutput', false);
+            bots = cellfun(@(x) x.bot.var, O, 'UniformOutput', false);
+            args = [tops; inds_top; bots; inds_bot];
+            t = contract(...
+                    L, [-1, 2, 1, -(4*W + 4), -(1:auxlegs_l) - (4*W + 4)], ...
+                    args{:}, ...
+                    R, [-(2*W + 3), 1 + 3*W, 2 + 3*W, -(2 + 2*W), -(1:auxlegs_r) - (4*W + 4) - auxlegs_r], ...
+                    'Rank', [2*W+2, 2*W+2] + [0, auxlegs_l + auxlegs_r]);
+        end
+        
         function t = MpoTensor(T)
             fuse_east = Tensor.eye(prod(leftvspace(T)), leftvspace(T));
             fuse_south = Tensor.eye(prod(codomainspace(T)), codomainspace(T));

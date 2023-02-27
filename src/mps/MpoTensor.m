@@ -312,9 +312,37 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) MpoTensor < Ab
         function n = nnz(O)
             n = nnz(O.tensors) + nnz(O.scalars);
         end
+        
+        function t = contractmpo(varargin)
+            assert(nargin >= 3)
+            R = varargin{end};
+            L = varargin{end-1};
+            O = varargin(1:end-2);
+            W = length(O);
+            
+            if isa(L, 'MpsTensor')
+                auxlegs_l = L.alegs;
+            else
+                auxlegs_l = 0;
+            end
+            if isa(R, 'MpsTensor')
+                auxlegs_r = R.alegs;
+            else
+                auxlegs_r = 0;
+            end
+            
+            inds = arrayfun(@(x) [x -(x+1) (x+1) -(2*W+4-x)], 1:W, ...
+                'UniformOutput', false);
+            args = [O; inds];
+            t = contract(...
+                    L, [-1, 1, -(2*W+4), -(1:auxlegs_l) - 2*W+4], ...
+                    args{:}, ...
+                    R, [-(W+3), W+1, -(W+2), -(1:auxlegs_r) - 2*W+4 - auxlegs_l], ...
+                    'Rank', [W+2 W+2] + [0, auxlegs_l + auxlegs_r]);
+        end
     end
     
-    methods 
+    methods
         function t = subsref(t, s)
             assert(length(s) == 1, 'mpotensor:index', ...
                 'only a single level of indexing allowed.');
