@@ -153,6 +153,8 @@ classdef InfJMpo < InfMpo
             GBL = cell(size(GL));
             GBL{1} = SparseTensor.zeros(domain(T), auxspace(qp, 1));
             
+            % GBL{1}(1) = 0 because of quasiparticle gauge
+            
             for i = 2:size(GBL{1}, 2)
                 rhs = apply(slice(T, i, 1:i-1), GBL{1}(1, 1:i-1, 1, 1)) + ...
                     apply(slice(TB, i, 1:i), GL{1}(1, 1:i, 1));
@@ -176,6 +178,71 @@ classdef InfJMpo < InfMpo
                         expP * rhs, [], linkwargs{:});
                 else
                     [GBL{1}(i), ~] = linsolve(@(x) x - expP * apply(Tdiag, x), expP * rhs, [], ...
+                        linkwargs{:});
+                end
+            end
+            
+            
+            if nnz(GL{1}) == numel(GL{1})
+                GL{1} = full(GL{1});
+            end
+            
+            for w = 1:period(qp)-1
+                T = transfermatrix(mpo, mps1, mps2, w, 'Type', 'LL');
+                GL{next(w, period(mps1))} = apply(T, GL{w});
+            end
+        end
+        
+        function GBR = rightquasienvironment(mpo, qp, GL, GR, linopts)
+            arguments
+                mpo
+                qp
+                GL
+                GR
+                linopts.Algorithm = 'bicgstab'
+                linopts.MaxIter = 500
+                linopts.Verbosity = Verbosity.warn
+                linopts.Tol = eps(underlyingType(qp))^(3/4)
+            end
+            
+            linkwargs = namedargs2cell(linopts);
+            expP = exp(+1i*qp.p);
+            
+            T = transfermatrix(mpo, qp, qp, 'Type', 'LR').';
+            TB = transfermatrix(mpo, qp, qp, 'Type', 'BR').';
+            
+            GBR = cell(size(GR));
+            GBR{1} = SparseTensor.zeros(domain(T), auxspace(qp, 1));
+            
+            N = size(GBR{1}, 2);
+            
+            for i = N:-1:1
+                if i == N
+                    rhs = apply(slice(TB, i, i:N), GR{1}(1, i:N, 1));
+                else
+                    rhs = apply(slice(T, i, i+1:N), GBR{1}(1, i+1:N, 1, 1)) + ...
+                        apply(slice(TB, i, i:N), GR{1}(1, i:N, 1));
+                end
+                
+                Tdiag = slice(T, i, i);
+                if iszero(Tdiag)
+                    GBR{1}(i) = expP * rhs;
+                    
+                elseif iseye(T, i) && istrivial(qp)
+                    fp_left = insert_onespace(insert_onespace(...
+                        fixedpoint(qp, 'l_LR'), ...
+                        2, ~isdual(leftvspace(mpo, 1))), ...
+                        1, ~isdual(auxspace(qp, 1)));
+                    fp_right = insert_onespace(insert_onespace(...
+                        fixedpoint(qp, 'r_LR'), ...
+                        2, ~isdual(rightvspace(mpo, 1))), ...
+                        4, isdual(auxspace(qp, 1)));
+                    fp_right = repartition(fp_right, rank(rhs));
+                    rhs = rhs - overlap(rhs, fp_left) * fp_right;
+                    [GBR{1}(i), ~] = linsolve(@(x) x - expP * apply_regularized(Tdiag, fp_right, fp_left, x), ...
+                        expP * rhs, [], linkwargs{:});
+                else
+                    [GBR{1}(i), ~] = linsolve(@(x) x - expP * apply(Tdiag, x), expP * rhs, [], ...
                         linkwargs{:});
                 end
             end

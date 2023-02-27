@@ -65,7 +65,8 @@ classdef TestInfJMpo < matlab.unittest.TestCase
                     
                     % left environments
                     GBL = leftquasienvironment(mpo, qp, GL, GR);
-                    tc.assertEqual(norm(GBL{1}(1)), 0, 'AbsTol', 1e-10);
+                    tc.assertEqual(norm(GBL{1}(1)), 0, 'AbsTol', 1e-10, ...
+                        'left gauge quasiparticle violation.');
                     
                     T_R = transfermatrix(mpo, qp, qp, 'Type', 'RL');
                     T_B = transfermatrix(mpo, qp, qp, 'Type', 'BL');
@@ -83,12 +84,30 @@ classdef TestInfJMpo < matlab.unittest.TestCase
                             1, ~isdual(auxspace(qp, 1)));
                         GBL2(end) = GBL2(end) - overlap(GBL2(end), fp_right) * fp_left;
                     end
-                    tc.assertTrue(isapprox(GBL2, GBL{1} * exp(1i*p)), ...
+                    tc.assertTrue(isapprox(GBL2, GBL{1} * exp(+1i*p)), ...
                         sprintf('left environment fixed point equation unfulfilled for p=%e, c=%d', p, charge));
                     
-                    
-                    
                     % right environments
+                    GBR = rightquasienvironment(mpo, qp, GL, GR);
+                    
+                    T_L = transfermatrix(mpo, qp, qp, 'Type', 'LR').';
+                    T_B = transfermatrix(mpo, qp, qp, 'Type', 'BR').';
+                    
+                    GBR2 = apply(T_L, GBR{1}) + apply(T_B, GR{1});
+                    if istrivial(qp)
+                        fp_left = insert_onespace(insert_onespace(...
+                            fixedpoint(qp, 'l_LR'), ...
+                            2, ~isdual(leftvspace(mpo, 1))), ...
+                            1, ~isdual(auxspace(qp, 1)));
+                        fp_right = insert_onespace(insert_onespace(...
+                            fixedpoint(qp, 'r_LR'), ...
+                            2, ~isdual(rightvspace(mpo, 1))), ...
+                            4, isdual(auxspace(qp, 1)));
+                        fp_right = repartition(fp_right, rank(GBR2(1)));
+                        GBR2(1) = GBR2(1) - overlap(GBR2(1), fp_left) * fp_right;
+                    end
+                    tc.assertTrue(isapprox(GBR2, GBR{1} * exp(-1i*p)), ...
+                        sprintf('right environment fixed point equation unfulfilled for p=%e, c=%d', p, charge));
                 end
             end
             
