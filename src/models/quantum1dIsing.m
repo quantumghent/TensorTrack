@@ -35,9 +35,9 @@ else
     vSpace = GradedSpace.new(Z2(1), 1, false);
     trivSpace = one(pSpace);
     
-    Sx_l = fill_matrix(Tensor([trivSpace pSpace], [pSpace vSpace]), {1 1});
-    Sx_r = fill_matrix(Tensor([vSpace pSpace], [pSpace trivSpace]), {1 1});
-    Sz = fill_matrix(Tensor([trivSpace pSpace], [pSpace trivSpace]), {1 -1});
+    Sx_l = fill_matrix(Tensor([trivSpace pSpace], [pSpace vSpace]), {1 1}) / 2;
+    Sx_r = fill_matrix(Tensor([vSpace pSpace], [pSpace trivSpace]), {1 1}) / 2;
+    Sz = fill_matrix(Tensor([trivSpace pSpace], [pSpace trivSpace]), {1 -1}) / 2;
     
     cod = SumSpace([one(vSpace) vSpace one(vSpace)], pSpace);
     dom = SumSpace(pSpace, [one(vSpace), vSpace, one(vSpace)]);

@@ -4,7 +4,7 @@ classdef QPAnsatz
     properties
         alg_eigs = struct('MaxIter', 100, 'KrylovDim', 30, 'Tol', 1e-8, ...
             'Verbosity', Verbosity.diagnostics)
-        alg_environments = struct
+        alg_environments = struct('Tol', 1e-10);
         howmany = 1
         which = 'smallestreal'
     end
@@ -47,8 +47,7 @@ classdef QPAnsatz
             [X, mu] = eigsolve(H_effective, qp.X, alg.howmany, alg.which, ...
                 eigkwargs{:});
             
-            qp = repmat(qp, [1 alg.howmany]);
-            for i = alg.howmany:-1:1
+            for i = alg.howmany:-1:2
                 qp(i).X = X(i);
                 qp(i).B = computeB(qp(i));
             end

@@ -642,6 +642,15 @@ classdef MatrixBlock < AbstractBlock
         end
         
         function v = vectorize(X, type)
+            if numel(X) > 1
+                vs = cell(size(X));
+                for i = 1:numel(vs)
+                    vs{i} = vectorize(X(i), type);
+                end
+                v = vertcat(vs{:});
+                return
+            end
+            
             qdims = sqrt(qdim(X.charge));
             switch type
                 case 'complex'
@@ -663,25 +672,26 @@ classdef MatrixBlock < AbstractBlock
         end
         
         function X = devectorize(v, X, type)
-            qdims = sqrt(qdim(X.charge));
-            switch type
-                case 'complex'
-                    ctr = 0;
-                    for i = 1:length(X.var)
-                        n = numel(X.var{i});
-                        X.var{i} = reshape(v(ctr + (1:n)), size(X.var{i})) ./ qdims(i);
-                        ctr = ctr + n;
-                    end
-                    
-                case 'real'
-                    ctr = 0;
-                    for i = 1:length(X.var)
-                        n = numel(X.var{i});
-                        sz = size(X.var{i});
-                        X.var{i} = complex(reshape(v(ctr + (1:n)), sz), ...
-                            reshape(v(ctr + (n + 1:2 * n)), sz)) ./ qdims(i);
-                        ctr = ctr + 2 * n;
-                    end
+            ctr = 0;
+            for i = 1:numel(X)
+                qdims = sqrt(qdim(X(i).charge));
+                switch type
+                    case 'complex'
+                        for j = 1:length(X(i).var)
+                            n = numel(X(i).var{j});
+                            X(i).var{j} = reshape(v(ctr + (1:n)), size(X(i).var{j})) ./ qdims(j);
+                            ctr = ctr + n;
+                        end
+
+                    case 'real'
+                        for j = 1:length(X(i).var)
+                            n = numel(X(i).var{j});
+                            sz = size(X(i).var{j});
+                            X(i).var{j} = complex(reshape(v(ctr + (1:n)), sz), ...
+                                reshape(v(ctr + (n + 1:2 * n)), sz)) ./ qdims(j);
+                            ctr = ctr + 2 * n;
+                        end
+                end
             end
         end
     end

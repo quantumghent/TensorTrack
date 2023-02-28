@@ -181,46 +181,61 @@ classdef TestInfJMpo < matlab.unittest.TestCase
             mpo = quantum1dIsing('J', 1, 'h', 1, 'L', Inf);
             mps = initialize_mps(mpo, CartesianSpace.new(D));
             [gs, lambda] = fixedpoint(alg, mpo, mps);
-%             tc.verifyTrue(isapprox(lambda, -1.27, 'RelTol', 1e-2))
+            tc.verifyTrue(isapprox(lambda, -0.53, 'RelTol', 1e-2))
             
             p = 0;
-            qp = InfQP.randnc(gs, gs);
-            momenta = 0:0.2:pi;
-            for i = 1:length(momenta)
-                qp.p = momenta(i);
-                [qp, mu(i)] = excitations(QPAnsatz(), mpo, qp);
-                mu
-            end
+            qp = InfQP.randnc(gs, gs, p);
+            [qp, mu] = excitations(QPAnsatz(), mpo, qp);
+            tc.verifyEqual(mu, 0.5, 'AbsTol', 1e-8);
             
-            mu
+            gs2 = [gs gs];
+            mpo2 = [mpo mpo];
+            gs2 = fixedpoint(alg, mpo2, gs2);
+            
+            qp2 = InfQP.randnc(gs2, gs2);
+            [qp2, mu2] = excitations(QPAnsatz(), mpo2, qp2);
+            
+            tc.verifyEqual(mu, mu2, 'AbsTol', 1e-8);
+            
             mpo = quantum1dIsing('J', 1, 'h', 1, 'L', Inf, 'Symmetry', 'Z2');
             mps = initialize_mps(mpo, GradedSpace.new(Z2(0, 1), [D D] ./ 2, false));
             [mps2, lambda2] = fixedpoint(alg, mpo, mps);
-            tc.verifyTrue(isapprox(lambda, -1.27, 'RelTol', 1e-2))
+            tc.verifyTrue(isapprox(lambda2, -0.53, 'RelTol', 1e-2))
+            
+            p = 0;
+            qp = InfQP.randnc(mps2, mps2, p, Z2(2));
+            [qp, mu] = excitations(QPAnsatz(), mpo, qp);
+            tc.verifyEqual(mu, 0.5, 'AbsTol', 1e-8);
             
             mpo = [mpo mpo];
-            mps = [mps mps];
-            [mps2, lambda2] = fixedpoint(alg, mpo, mps);
-            tc.verifyTrue(isapprox(lambda2/2, -1.27, 'RelTol', 5e-2))
+            mps2 = [mps2 mps2];
+            [mps2, lambda2] = fixedpoint(alg, mpo, mps2);
+            tc.verifyTrue(isapprox(lambda2/2, -0.53, 'RelTol', 1e-2))
+            
+            p = 0;
+            qp = InfQP.randnc(mps2, mps2, p, Z2(2));
+            [qp, mu] = excitations(QPAnsatz(), mpo, qp);
+            tc.verifyEqual(mu, 0.5, 'AbsTol', 1e-8);
         end
         
         function test1dHeisenberg(tc)
-            alg = Vumps('which', 'smallestreal', 'maxiter', 5);
+            alg = Vumps('which', 'smallestreal', 'maxiter', 100);
             
             mpo = quantum1dHeisenberg('Spin', 1, 'Symmetry', 'SU2');
-            mpo = [mpo mpo];
-            
-            vspace1 = GradedSpace.new(SU2(1:2:5), [5 5 1], false);
-            vspace2 = GradedSpace.new(SU2(1:2:5), [5 5 1], false);
-            mps = initialize_mps(mpo, vspace1, vspace2);
+            vspace1 = GradedSpace.new(SU2(2:2:6), [5 5 1], false);
+            mps = initialize_mps(mpo, vspace1);
             
             [gs_mps] = fixedpoint(alg, mpo, mps);
             lambda = expectation_value(gs_mps, mpo);
-            tc.verifyEqual(lambda / period(mps), -1.40, 'RelTol', 1e-2);
+            tc.verifyEqual(lambda, -1.4, 'RelTol', 1e-2);
             
             p = 0;
             charge = SU2(3);
             qp = InfQP.randnc(gs_mps, gs_mps, p, charge);
+            
+            [qp, mu] = excitations(QPAnsatz(), mpo, qp);
+            mu
+            
         end
     end
 end

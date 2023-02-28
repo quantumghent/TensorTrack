@@ -2260,7 +2260,7 @@ classdef Tensor < AbstractTensor
                 type = 'complex'
             end
             
-            v = vectorize(t.var, type);
+            v = vectorize([t.var], type);
         end
         
         function t = devectorize(v, t, type)
@@ -2287,6 +2287,14 @@ classdef Tensor < AbstractTensor
                 v
                 t
                 type = 'complex'
+            end
+            
+            if numel(t) > 1
+                X = devectorize(v, [t.var], type);
+                for i = 1:numel(t)
+                    t(i).var = X(i);
+                end
+                return
             end
             
             t.var = devectorize(v, t.var, type);
