@@ -864,7 +864,12 @@ classdef Tensor < AbstractTensor
                 else
                     if ~isequal(t1(i).domain, t2(i).domain) || ...
                             ~isequal(t1(i).codomain, t2(i).codomain)
-                        error('plus:spacemismatch', 'Incompatible spaces.');
+                        t1_str = sprintf('%s\t<-\t%s', join(string(t1(i).codomain)), ...
+                            join(string(t1(i).domain)));
+                        t2_str = sprintf('%s\t<-\t%s', join(string(t2(i).codomain)), ...
+                            join(string(t2(i).domain)));
+                        error('tensors:spacemismatch', ...
+                            'Added spaces incompatible.\n%s\n%s', t1_str, t2_str);
                     end
                     t1(i).var = t1(i).var + t2(i).var;
                 end
@@ -1721,7 +1726,8 @@ classdef Tensor < AbstractTensor
             dims.degeneracies = dims.degeneracies(mask);
             Ns = Ns(mask);
             
-            N = t.eye(t.codomain, t.codomain.new(dims, false));
+            W = t.codomain.new(dims, false);
+            N = t.eye(t.codomain, W);
             N.var = fill_matrix_data(N.var, Ns, dims.charges);
         end
         

@@ -9,8 +9,8 @@ end
 J = kwargs.J;
 h = kwargs.h;
 
-sigma_x = [0 1; 1 0];
-sigma_z = [1 0; 0 -1];
+sigma_x = [0 1; 1 0] / 2;
+sigma_z = [1 0; 0 -1] / 2;
 
 if strcmp(kwargs.Symmetry, 'Z1')
     pSpace = CartesianSpace.new(2);

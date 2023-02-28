@@ -31,7 +31,7 @@ classdef FiniteMpo
         
         function v = apply_regularized(mpo, fp1, fp2, v)
             v = apply(mpo, v);
-            v = v - overlap(v, fp2) * fp1;
+            v = v - overlap(v, fp2) * repartition(fp1, rank(v));
         end
         
         function [V, D, flag] = eigsolve(mpo, v0, howmany, sigma, options)

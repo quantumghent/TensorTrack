@@ -355,7 +355,7 @@ classdef InfMpo
             for i = 1:length(sites)
                 for d = depth(mpo):-1:1
                     gl = twistdual(GL{d, sites(i)}, 1);
-                    gr = GR{d, next(sites(i), period(mps))};
+                    gr = GR{d, next(sites(i), period(mpo))};
                     gr = twistdual(gr, nspaces(gr));
                     H{i}(d, 1) = FiniteMpo(gl, mpo.O(d, sites(i)), gr);
                 end
@@ -410,6 +410,31 @@ classdef InfMpo
                     end
                     H{i}(d, 1) = FiniteMpo(gl, {}, gr);
                 end
+            end
+        end
+        
+        function H = B_hamiltonian(mpo, qp, GL, GR, sites, envopts, kwargs)
+            arguments
+                mpo
+                qp
+                GL
+                GR
+                sites = 1:period(mpo)
+                envopts = {}
+                kwargs.Type
+            end
+            
+            switch kwargs.Type
+                case {'l', 'left'}
+                    GBL = leftquasienvironment(mpo, qp, GL, GR, envopts{:});
+                    H = AC_hamiltonian(mpo, qp, GBL, GR, sites);
+                case {'c', 'center'}
+                    H = AC_hamiltonian(mpo, qp, GL, GR, sites);
+                case {'r', 'right'}
+                    GBR = rightquasienvironment(mpo, qp, GL, GR, envopts{:});
+                    H = AC_hamiltonian(mpo, qp, GL, GBR, sites);
+                otherwise
+                    error('unknown type %s', kwargs.Type)
             end
         end
     end

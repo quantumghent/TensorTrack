@@ -7,8 +7,8 @@ classdef InfQP
         mpsleft  UniformMps
         mpsright UniformMps
         X
-        VL
         B
+        VL
         p
     end
     
@@ -47,8 +47,8 @@ classdef InfQP
             AL = mpsleft.AL;
             for i = period(mpsleft):-1:1
                 VL(i) = leftnull(AL(i));
-                rVspace = rightvspace(mpsleft, i);
-                lVspace = leftvspace(mpsright, i);
+                rVspace = rightvspace(VL(i));
+                lVspace = leftvspace(mpsright, next(i, period(mpsleft)));
                 if isempty(charge)
                     aspace = one(rVspace);
                 else
@@ -90,9 +90,14 @@ classdef InfQP
         end
         
         function B = computeB(qp)
-            if ~isempty(qp.B), B = qp.B; return; end
             for w = period(qp):-1:1
                 B(w) = multiplyright(qp.VL(w), qp.X(w));
+            end
+        end
+        
+        function X = computeX(qp)
+            for w = period(qp):-1:1
+                X(w) = tracetransfer(qp.VL(w)', qp.B(w));
             end
         end
         

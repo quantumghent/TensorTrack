@@ -151,6 +151,17 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
             d = dot(A, B);
         end
         
+        function d = overlap(A, B)
+            arguments
+                A
+                B MpsTensor
+            end
+            
+            inds = 1:nspaces(A);
+            
+            d = contract(A, inds, B, [fliplr(inds(1:end-B.alegs)) inds(end-B.alegs+1:end)]);
+        end
+        
         function C = mtimes(A, B)
             if isnumeric(A)
                 C = B;
@@ -593,6 +604,10 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
         
         function disp(t)
             builtin('disp', t);
+        end
+        
+        function n = nnz(t)
+            n = nnz(t.var);
         end
     end
     

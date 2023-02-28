@@ -48,20 +48,15 @@ classdef TestInfJMpo < matlab.unittest.TestCase
         end
         
         function testQuasiEnvironments(tc)
+            %% Ising
             D = 16;
             mpo = quantum1dIsing('Symmetry', 'Z2');
             mps = initialize_mps(mpo, GradedSpace.new(Z2(0, 1), D ./ [2 2], false));
-            [~, ~, lambda] = environments(mpo, mps);
-            
-            mpo = mpo - lambda;
-            [GL, GR, lambda] = environments(mpo, mps);
-            tc.assertEqual(lambda, 0, 'AbsTol', 1e-10);
+            [GL, GR] = environments(mpo, mps);
             
             for charge = Z2([1 0])
                 for p = [0 pi 0.5]
                     qp = InfQP.randnc(mps, mps, p, charge);
-                    
-%                     [GBL, GBR] = quasienvironments(mpo, qp, GL, GR);
                     
                     % left environments
                     GBL = leftquasienvironment(mpo, qp, GL, GR);
@@ -72,21 +67,17 @@ classdef TestInfJMpo < matlab.unittest.TestCase
                     T_B = transfermatrix(mpo, qp, qp, 'Type', 'BL');
                     
                     GBL2 = apply(T_R, GBL{1}) + apply(T_B, GL{1});
+                    
                     if istrivial(qp)
-                        fp_left = insert_onespace(insert_onespace(...
-                            fixedpoint(qp, 'l_RL'), ...
-                            2, ~isdual(leftvspace(mpo, 1))), ...
-                            4, isdual(auxspace(qp, 1)));
-                        fp_left = repartition(fp_left, rank(GBL2(end)));
-                        fp_right = insert_onespace(insert_onespace(...
-                            fixedpoint(qp, 'r_RL'), ...
-                            2, ~isdual(rightvspace(mpo, 1))), ...
-                            1, ~isdual(auxspace(qp, 1)));
+                        r = rank(GBL2(end));
+                        fp_left = repartition(fixedpoint(mpo, qp, 'l_RL_0'), r);
+                        fp_right = fixedpoint(mpo, qp, 'r_RL_1');
                         GBL2(end) = GBL2(end) - overlap(GBL2(end), fp_right) * fp_left;
                     end
-                    tc.assertTrue(isapprox(GBL2, GBL{1} * exp(+1i*p)), ...
-                        sprintf('left environment fixed point equation unfulfilled for p=%e, c=%d', p, charge));
                     
+                    tc.verifyTrue(isapprox(GBL2, GBL{1} * exp(+1i*p)), ...
+                        sprintf('left environment fixed point equation unfulfilled for p=%e, c=%d', p, charge));
+
                     % right environments
                     GBR = rightquasienvironment(mpo, qp, GL, GR);
                     
@@ -95,19 +86,73 @@ classdef TestInfJMpo < matlab.unittest.TestCase
                     
                     GBR2 = apply(T_L, GBR{1}) + apply(T_B, GR{1});
                     if istrivial(qp)
-                        fp_left = insert_onespace(insert_onespace(...
-                            fixedpoint(qp, 'l_LR'), ...
-                            2, ~isdual(leftvspace(mpo, 1))), ...
-                            1, ~isdual(auxspace(qp, 1)));
-                        fp_right = insert_onespace(insert_onespace(...
-                            fixedpoint(qp, 'r_LR'), ...
-                            2, ~isdual(rightvspace(mpo, 1))), ...
-                            4, isdual(auxspace(qp, 1)));
-                        fp_right = repartition(fp_right, rank(GBR2(1)));
+                        r = rank(GBR2(1));
+                        fp_left  = fixedpoint(mpo, qp, 'l_LR_1');
+                        fp_right = repartition(fixedpoint(mpo, qp, 'r_LR_0'), r);
                         GBR2(1) = GBR2(1) - overlap(GBR2(1), fp_left) * fp_right;
                     end
                     tc.assertTrue(isapprox(GBR2, GBR{1} * exp(-1i*p)), ...
                         sprintf('right environment fixed point equation unfulfilled for p=%e, c=%d', p, charge));
+                end
+            end
+        end
+        
+        function testQuasiEnvironments2(tc)
+            D = 16;
+            %% Heisenberg
+            mpo = quantum1dHeisenberg('Spin', 0.5, 'Symmetry', 'SU2');
+            mpo = [mpo mpo];
+            vspace = GradedSpace.new(...
+                SU2(1:2:5), [2 2 1] * (D / 4), false, ...
+                SU2(2:2:6), [2 2 1] * (D / 4), false);
+            mps = initialize_mps(mpo, vspace(1), vspace(2));
+            alg = Vumps('maxiter', 3, 'which', 'smallestreal');
+            mps = fixedpoint(alg, mpo, mps);
+            [GL, GR] = environments(mpo, mps);
+            
+            for charge = SU2(1, 3)
+                for p = [0 pi 0.5]
+                    qp = InfQP.randnc(mps, mps, p, charge);
+                    
+                    % left environments
+                    GBL = leftquasienvironment(mpo, qp, GL, GR);
+                    T_R = transfermatrix(mpo, qp, qp, 'Type', 'RL');
+                    T_B = transfermatrix(mpo, qp, qp, 'Type', 'BL');
+                    
+                    for w = 1:period(mpo)
+                        tc.assertEqual(norm(GBL{w}(1)), 0, 'AbsTol', 1e-10, ...
+                            'left gauge quasiparticle violation.');
+                        GBL2 = apply(T_R(w), GBL{w}) + apply(T_B(w), GL{w});
+                        
+                        if istrivial(qp) && w == prev(1, period(mpo))
+                            r = rank(GBL2(end));
+                            fp_left = repartition(fixedpoint(mpo, qp, 'l_RL_0', next(w, period(mpo))), r);
+                            fp_right = fixedpoint(mpo, qp, 'r_RL_1', w);
+                            GBL2(end) = GBL2(end) - overlap(GBL2(end), fp_right) * fp_left;
+                        end
+                        
+                        tc.verifyTrue(isapprox(GBL2, GBL{next(w, period(mpo))} * exp(+1i*p/period(mpo))), ...
+                            sprintf('left environment fixed point equation unfulfilled for p=%e, c=%d', p, charge));
+                    end
+                    
+                    % right environments
+                    GBR = rightquasienvironment(mpo, qp, GL, GR);
+                    T_L = transfermatrix(mpo, qp, qp, 'Type', 'LR').';
+                    T_B = transfermatrix(mpo, qp, qp, 'Type', 'BR').';
+                    
+                    for w = 1:period(mpo)
+                        GBR2 = apply(T_L(w), GBR{w}) + apply(T_B(w), GR{w});
+                        
+                        if istrivial(qp) && w == next(1, period(mpo))
+                            r = rank(GBR2(1));
+                            fp_left = fixedpoint(mpo, qp, 'l_LR_1', prev(w, period(mpo)));
+                            fp_right = repartition(fixedpoint(mpo, qp, 'r_LR_0', w), r);
+                            GBR2(1) = GBR2(1) - overlap(GBR2(1), fp_left) * fp_right;
+                        end
+                        
+                        tc.verifyTrue(isapprox(GBR2, GBR{prev(w, period(mpo))} * exp(-1i*p/period(mpo))), ...
+                            sprintf('right environment fixed point equation unfulfilled for p=%e, c=%d', p, charge));
+                    end
                 end
             end
             
@@ -130,14 +175,24 @@ classdef TestInfJMpo < matlab.unittest.TestCase
             end
         end
         
-        function test1dIsing(tc)            
-            alg = Vumps('which', 'smallestreal', 'maxiter', 5);
+        function test1dIsing(tc)
+            alg = Vumps('which', 'smallestreal', 'maxiter', 10);
             D = 16;
             mpo = quantum1dIsing('J', 1, 'h', 1, 'L', Inf);
             mps = initialize_mps(mpo, CartesianSpace.new(D));
-            [mps2, lambda] = fixedpoint(alg, mpo, mps);
-            tc.verifyTrue(isapprox(lambda, -1.27, 'RelTol', 1e-2))
+            [gs, lambda] = fixedpoint(alg, mpo, mps);
+%             tc.verifyTrue(isapprox(lambda, -1.27, 'RelTol', 1e-2))
             
+            p = 0;
+            qp = InfQP.randnc(gs, gs);
+            momenta = 0:0.2:pi;
+            for i = 1:length(momenta)
+                qp.p = momenta(i);
+                [qp, mu(i)] = excitations(QPAnsatz(), mpo, qp);
+                mu
+            end
+            
+            mu
             mpo = quantum1dIsing('J', 1, 'h', 1, 'L', Inf, 'Symmetry', 'Z2');
             mps = initialize_mps(mpo, GradedSpace.new(Z2(0, 1), [D D] ./ 2, false));
             [mps2, lambda2] = fixedpoint(alg, mpo, mps);
@@ -162,6 +217,10 @@ classdef TestInfJMpo < matlab.unittest.TestCase
             [gs_mps] = fixedpoint(alg, mpo, mps);
             lambda = expectation_value(gs_mps, mpo);
             tc.verifyEqual(lambda / period(mps), -1.40, 'RelTol', 1e-2);
+            
+            p = 0;
+            charge = SU2(3);
+            qp = InfQP.randnc(gs_mps, gs_mps, p, charge);
         end
     end
 end

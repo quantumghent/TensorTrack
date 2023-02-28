@@ -144,7 +144,8 @@ classdef TestInfMpo < matlab.unittest.TestCase
             tc.assertEqual(-log(lambda) / beta, f, 'RelTol', 1e-5);
             
             % compute excitations
-            qp = InfQP.new([], mps2, mps2);
+            p = 0;
+            qp = InfQP.randnc(mps2, mps2, p);
             GBL = leftquasienvironment(mpo, qp);
             
             
