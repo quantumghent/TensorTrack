@@ -506,7 +506,14 @@ classdef AbstractTensor
             if isempty(i1) && isempty(i2), B = A; return; end
             assert(length(i1) == length(i2), 'invalid indices');
             
-            E = A.eye(conj(space(A, i1)), space(A, i2));
+            firstspaces = conj(space(A, i1));
+            secondspaces = space(A, i2);
+            assert(isequal(firstspaces, secondspaces), 'Tensor:SpaceMismatch', ...
+                'Cannot trace spaces %s and %s', string(firstspaces), string(secondspaces));
+            
+            E = A.eye(firstspaces, secondspaces);
+            E = twistdual(E, 1:length(firstspaces));
+            
             iA = [i1 i2];
             iE = [1:length(i1) length(i1) + (length(i2):-1:1)];
             B = tensorprod(A, E, iA, iE);

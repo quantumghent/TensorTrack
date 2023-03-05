@@ -218,6 +218,13 @@ classdef TestTensor < matlab.unittest.TestCase
             t4 = contract(t1, [-1 1 2 2 1 -2], 'Rank', [1 1]);
             tc.assertTrue(isapprox(t3, t4, 'AbsTol', tc.tol, 'RelTol', tc.tol));
             
+            % issue with fermionic traces:
+            Nl = Tensor.randnc(spaces(1), spaces(1:2));
+            Nr = Tensor.randnc(spaces(1:2), spaces(1));
+            result1 = contract(Nl, [-1 1 2], Nr, [2 1 -2]);
+            result2 = contract(contract(Nl, [-1 1 -4], Nr, [-2 1 -3]), [-1 1 -2 1]);
+            tc.assertTrue(isapprox(result1, result2, 'AbsTol', tc.tol, 'RelTol', tc.tol));
+            
             t5 = contract(t1, [1 2 3 3 2 1]);
             t6 = contract(t4, [1 1]);
             tc.assertTrue(isapprox(t5, t6, 'AbsTol', tc.tol, 'RelTol', tc.tol));
