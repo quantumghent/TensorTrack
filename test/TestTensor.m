@@ -44,6 +44,7 @@ classdef TestTensor < matlab.unittest.TestCase
     end
     
     methods (Test)
+        %% General properties
         function basic_linear_algebra(tc, spaces)
             t1 = Tensor.rand(spaces(1:3), spaces(4:5));
             
@@ -115,6 +116,8 @@ classdef TestTensor < matlab.unittest.TestCase
             end
         end
         
+        
+        %% Contractions
         function permute_via_inner(tc, spaces)
             rng(213);
             t1 = Tensor.rand(spaces, []);
@@ -249,6 +252,8 @@ classdef TestTensor < matlab.unittest.TestCase
             end
         end
         
+        
+        %% Factorizations
         function orthogonalize(tc, spaces)
             t = Tensor.randnc(spaces, []);
             
