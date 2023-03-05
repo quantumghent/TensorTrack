@@ -60,9 +60,6 @@ classdef (Abstract) AbstractBlock
                     med = MatrixBlock(codomain, domain);
                 end
             end
-%             if ~strcmp(class(charges(codomain)), class(med(1).charge))
-%                 bla
-%             end
             X = med;
         end
     end
