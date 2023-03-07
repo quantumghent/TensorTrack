@@ -936,12 +936,14 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor < AbstractTensor
             end
         end
         
-        function n = numArgumentsFromSubscript(t, ~, ~)
+        function n = numArgumentsFromSubscript(~, ~, ~)
             n = 1;
         end
         
         function t = subsasgn(t, s, v)
             assert(strcmp(s(1).type, '()'), 'sparse:index', 'only () indexing allowed');
+            
+            % Todo: check spaces when assigning
             
             if length(s(1).subs) == 1
                 I = ind2sub_(t.sz, s(1).subs{1});
