@@ -85,6 +85,9 @@ classdef TestUniformMps < matlab.unittest.TestCase
            [~, charges] = matrixblocks(V);
            [V2, D2] = transfereigs(mps, mps, 1, 'largestabs', 'Charge', one(charges));
            
+           xi = correlation_length(mps);
+           [epsilon, delta] = marek_gap(mps);
+           tc.verifyEqual(xi, 1/epsilon, 'AbsTol', 1e-12);
         end
     end
 end

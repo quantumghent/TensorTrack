@@ -524,7 +524,7 @@ classdef UniformMps
             [V, D] = eigsolve(T, v0, howmany, which, eigkwargs{:});
             
             if kwargs.Type(1) == 'r', V = V'; end
-            if nargout < 2, V = D; end
+            if nargout < 2, V = diag(D); end
         end
         
         function f = fidelity(mps1, mps2, kwargs)
@@ -665,8 +665,119 @@ classdef UniformMps
             mps.AC = desymmetrize(mps.AC);
         end
         
-        xi = CorrelationLength(mps, charge);
-        [epsilon, delta, spectrum] = MarekGap(mps, charge, angle, num)
+        function [xi, theta] = correlation_length(mps, charge)
+            % Compute the correlation length of an MPS in a given charge sector.
+            %
+            % Usage
+            % -----
+            % :code:`[xi, theta] = correlation_length(mps, charge)`
+            %
+            % Arguments
+            % ---------
+            % mps : :class:`UniformMps`
+            %   input mps.
+            %
+            % charge : :class:`AbstractCharge`
+            %   charge sector for correlation length to target.
+            %
+            % Returns
+            % -------
+            % xi : numeric
+            %   correlation length in the given charge sector.
+            %
+            % theta : numeric
+            %   angle of the corresponding oscillation period.
+            
+            arguments
+                mps
+                charge = []
+            end
+            
+            if isempty(charge) || charge == one(charge)
+                f = transfereigs(mps, mps, 5, 'KrylovDim', 30);
+                if abs(f(1) - 1) > 1e-12
+                    warning('mps:noninjective', ...
+                        'mps might be non-injective:\n%s', num2str(f));
+                end
+                epsilon = -log(abs(f(2)));
+                theta = angle(f(2));
+            else
+                f = transfereigs(mps, mps, 1, 'KrylovDim', 20, 'Charge', charge);
+                epsilon = -log(abs(f));
+                theta = angle(f);
+            end
+            
+            xi = 1 / epsilon;
+        end
+        
+        function [epsilon, delta, spectrum] = marek_gap(mps, charge, kwargs)
+            % Compute the Marek gap of an MPS in a given charge sector.
+            %
+            % Usage
+            % -----
+            % :code:`[epsilon, delta, spectrum] = marek_gap(mps, charge, kwargs)`
+            %
+            % Arguments
+            % ---------
+            % mps : :class:`UniformMps`
+            %   input mps.
+            %
+            % charge : :class:`AbstractCharge`
+            %   charge sector for correlation length to target.
+            %
+            % Keyword Arguments
+            % -----------------
+            % HowMany : int
+            %   amount of transfer matrix eigenvalues to compute.
+            %
+            % Angle : numeric
+            %   angle in radians around which the gap should be computed.
+            %
+            % AngleTol : numeric
+            %   tolerance in radians for angles to be considered equal.
+            %
+            % Returns
+            % -------
+            % epsilon : numeric
+            %   inverse correlation length in the given charge sector.
+            %
+            % delta : numeric
+            %   refinement parameter.
+            %
+            % spectrum : numeric
+            %   computed partial transfer matrix spectrum.
+            arguments
+                mps
+                charge = []
+                kwargs.Angle
+                kwargs.AngleTol = 1e-1
+                kwargs.HowMany = 20
+            end
+            
+            spectrum = transfereigs(mps, mps, kwargs.HowMany, 'largestabs', 'Charge', charge);
+            [d, p] = sort(abs(spectrum), 'descend');
+            inds = d > 1 - 1e-12;
+            
+            if ((isempty(charge) || charge == one(charge)) && sum(inds) > 1) || ...
+                    sum(inds) > 0
+                warning('mps:noninjective', ...
+                    'mps might be non-injective:\n%s', num2str(spectrum));
+            end
+            
+            d(inds) = [];
+            p(inds) = [];
+            
+            if abs(diff(unwrap(angle(spectrum(p(1:2)))))) > 1e-1
+                warning('comparing values with different angles:\n%s', num2str(spectrum));
+            end
+            if isfield('Angle', kwargs)
+                error('tba');
+            end
+            
+            epsilon = -log(d(1));
+            delta = log(d(1) / d(2));
+        end
+
         S = EntanglementEntropy(mps, loc);
         S = RenyiEntropy(mps,n, loc);
         E = ExpectationValue(mps, W, GL, GR)
