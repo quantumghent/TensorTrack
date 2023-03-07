@@ -778,6 +778,36 @@ classdef UniformMps
             delta = log(d(1) / d(2));
         end
 
+        function S = entanglement_entropy(mps, w)
+            arguments
+                mps
+                w = 1
+            end
+            
+            [svals, charges] = schmidt_values(mps, w);
+            
+            S = 0;
+            for i = 1:length(svals)
+                S = S - qdim(charges(i)) * sum(svals{i}.^2 .* log(svals{i}.^2));
+            end
+        end
+        
+        function S = renyi_entropy(mps, n, w)
+            arguments
+                mps
+                n
+                w = 1
+            end
+            
+            [svals, charges] = schmidt_values(mps, w);
+            
+            S = 0;
+            for i = 1:length(svals)
+                S = S + qdim(charges(i)) * sum(svals{i}.^(2 * n));
+            end
+            S = 1 / (1 - n) * log(S);
+        end
+        
         S = EntanglementEntropy(mps, loc);
         S = RenyiEntropy(mps,n, loc);
         E = ExpectationValue(mps, W, GL, GR)
