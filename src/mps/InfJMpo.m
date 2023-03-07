@@ -302,7 +302,7 @@ classdef InfJMpo < InfMpo
                 case 'l'
                     fp = insert_onespace(fp, 2, ~isdual(leftvspace(operator, w)));
                 case 'r'
-                    fp = insert_onespace(fp, 2, ~isdual(rightvspace(operator, w)));
+                    fp = insert_onespace(fp, 2, isdual(rightvspace(operator, w)));
                 otherwise
                     error('invalid fixedpoint type (%s)', type);
             end
@@ -368,6 +368,44 @@ classdef InfJMpo < InfMpo
             leftedge = MpsTensor(Tensor.eye([one(lspace) lspace], one(lspace))');
             
             finitempo = FiniteMpo(leftedge, Os, rightedge);
+        end
+    end
+    
+    methods (Static)
+        function mpo = twosite(Htwosite, Honesite, kwargs)
+            arguments
+                Htwosite
+                Honesite = []
+                kwargs.Trunc
+            end
+            newkwargs = namedargs2cell(kwargs);
+            local_ops = MpoTensor.decompose_local_operator(Htwosite, newkwargs{:});
+            L = local_ops{1};
+            R = local_ops{2};
+            
+            assert(pspace(L) == pspace(R), 'operators:spacemismatch', ...
+                sprintf('incompatible physical spaces %s and %s', pspace(L), pspace(R)));
+            
+            cod = SumSpace([leftvspace(L), leftvspace(R), rightvspace(R)'], pspace(L));
+            dom = SumSpace(pspace(L), [leftvspace(L)', rightvspace(L), rightvspace(R)]);
+            
+            O = MpoTensor.zeros(cod, dom);
+            O(1, 1, 1, 1) = 1;
+            O(3, 1, 3, 1) = 1;
+            O(1, 1, 2, 1) = L;
+            O(2, 1, 3, 1) = R;
+            
+            if ~isempty(Honesite)
+                local_op = MpoTensor.decompose_local_operator(Honesite, newkwargs{:});
+                assert(leftvspace(local_op{1}) == subspaces(leftvspace(O), 1) && ...
+                    rightvspace(local_op{1}) == subspaces(rightvspace(O), 3) && ...
+                    pspace(local_op) == subspaces(pspace(O), 1), ...
+                    'operators:spacemismatch', ...
+                    'onesite operator incompatible with twosite operator.');
+                O(1, 1, 3, 1) = local_op{1};
+            end
+            
+            mpo = InfJMpo(O);
         end
     end
 end

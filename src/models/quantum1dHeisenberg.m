@@ -16,30 +16,44 @@ switch kwargs.Symmetry
     case 'SU2'
         assert(isscalar(J) || all(J == J(1)), ...
             'Different spin couplings not invariant under SU2');
+        J = J(1);
         assert(h == 0, 'Magnetic field not invariant under SU2');
         
-        pSpace = GradedSpace.new(Q, 1, false);
-        vSpace = GradedSpace.new(SU2(3), 1, false);
-        tSpace = one(vSpace);
+        H2 = sigma_exchange(kwargs.Spin, 'SU2');
+        H1 = [];
         
-        s = kwargs.Spin;
-        L = Tensor.ones([tSpace pSpace], [pSpace vSpace]);
-        L = L * (-J(1) * (s^2 + s));
-        R = Tensor.ones([vSpace pSpace], [pSpace tSpace]);
+    case 'U1'
+        if isscalar(J)
+            Jxy = J;
+            Jz = J;
+        else
+            assert(length(J) == 2)
+            Jxy = J(1);
+            Jz = J(2);
+        end
+        assert(h == 0, 'TBA');
         
-        cod = SumSpace([one(vSpace) vSpace one(vSpace)], pSpace);
-        dom = SumSpace(pSpace, [one(vSpace), vSpace, one(vSpace)]);
-        O = MpoTensor.zeros(cod, dom);
-        O(1, 1, 1, 1) = 1;
-        O(3, 1, 3, 1) = 1;
-        O(1, 1, 2, 1) = L;
-        O(2, 1, 3, 1) = R;
+        Splus = sigma_plus(kwargs.Spin, 'U1');
+        Smin = sigma_min(kwargs.Spin, 'U1');
+        Sz = sigma_z(kwargs.Spin, 'U1');
+        
+        H2 = Jxy/2 * (contract(Splus, [-1 1 -3], conj(Splus), [-4 1 -2], 'Rank', [2 2]) + ...
+            contract(Smin, [-1 1 -3], conj(Smin), [-4 1 -2], 'Rank', [2 2]));
+        if Jz ~= 0
+            H2 = H2 + Jz * contract(Sz, [-1 -3], Sz, [-2 -4], 'Rank', [2 2]);
+        end
+        
+        if h == 0
+            H1 = [];
+        else
+            H1 = h * Sz;
+        end
         
     otherwise
         error('TBA');
 end
 
-mpo = InfJMpo(O);
+mpo = InfJMpo.twosite(H2, H1);
 
 if isfinite(kwargs.L)
     mpo = open_boundary_conditions(mpo, L);
