@@ -203,7 +203,7 @@ classdef TestInfJMpo < matlab.unittest.TestCase
             tc.verifyTrue(isapprox(lambda2, -0.53, 'RelTol', 1e-2))
             
             p = 0;
-            qp = InfQP.randnc(mps2, mps2, p, Z2(2));
+            qp = InfQP.randnc(mps2, mps2, p, Z2(0));
             [qp, mu] = excitations(QPAnsatz(), mpo, qp);
             tc.verifyEqual(mu, 0.5, 'AbsTol', 1e-8);
             
@@ -213,7 +213,7 @@ classdef TestInfJMpo < matlab.unittest.TestCase
             tc.verifyTrue(isapprox(lambda2/2, -0.53, 'RelTol', 1e-2))
             
             p = 0;
-            qp = InfQP.randnc(mps2, mps2, p, Z2(2));
+            qp = InfQP.randnc(mps2, mps2, p, Z2(0));
             [qp, mu] = excitations(QPAnsatz(), mpo, qp);
             tc.verifyEqual(mu, 0.5, 'AbsTol', 1e-8);
         end
@@ -227,9 +227,9 @@ classdef TestInfJMpo < matlab.unittest.TestCase
             
             [gs_mps] = fixedpoint(alg, mpo, mps);
             lambda = expectation_value(gs_mps, mpo);
-            tc.verifyEqual(lambda, -1.4, 'RelTol', 1e-2);
+            tc.verifyEqual(lambda, -1.401, 'RelTol', 1e-2);
             
-            p = 0;
+            p = pi;
             charge = SU2(3);
             qp = InfQP.randnc(gs_mps, gs_mps, p, charge);
             
