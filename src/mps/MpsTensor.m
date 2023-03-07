@@ -130,7 +130,7 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
             
             if numel(A) > 1
                 for i = numel(A):-1:1
-                    A(i) = leftorth(A(i), alg);
+                    A(i) = leftnull(A(i), alg);
                 end
                 return
             end
@@ -139,6 +139,22 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
             p1 = p(1:(end - A.alegs - 1));
             p2 = p((end - A.alegs):end);
             A.var = leftnull(A.var, p1, p2, alg);
+        end
+        
+        function A = rightnull(A, alg)
+            arguments
+                A
+                alg = 'svd'
+            end
+            
+            if numel(A) > 1
+                for i = numel(A):-1:1
+                    A(i) = rightnull(A(i), alg);
+                end
+                return
+            end
+            
+            A.var = rightnull(A.var, 1, 2:nspaces(A), alg);
         end
         
         function d = dot(A, B)

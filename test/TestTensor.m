@@ -298,7 +298,10 @@ classdef TestTensor < matlab.unittest.TestCase
             %% Left nullspace
             for alg = ["qr", "svd"]
                 N = leftnull(t, [3 4 2], [1 5], alg);
-                
+                dimN = dims(N, nspaces(N));
+                dimW = prod(dims(t, [3 4 2]));
+                dimV = prod(dims(t, [1 5]));
+                tc.assertTrue(dimW == dimN + dimV);
                 assertTrue(tc, norm(N' * tpermute(t, [3 4 2 1 5], [3 2])) < ...
                     100 * eps(norm(t)), ...
                     'N should be a left nullspace.');
@@ -311,6 +314,10 @@ classdef TestTensor < matlab.unittest.TestCase
             %% Right nullspace
             for alg = ["lq", "svd"]
                 N = rightnull(t, [3 4], [2 1 5], alg);
+                dimN = dims(N, 1);
+                dimW = prod(dims(t, [3 4]));
+                dimV = prod(dims(t, [2 1 5]));
+                tc.assertTrue(dimV == dimW + dimN);
                 assertTrue(tc, norm(tpermute(t, [3 4 2 1 5], [2 3]) * N') < ...
                     100 * eps(norm(t)), ...
                     'N should be a right nullspace.');
