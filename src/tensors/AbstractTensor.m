@@ -255,7 +255,10 @@ classdef AbstractTensor
             
             x0_vec = vectorize(x0);
             sz = size(x0_vec);
-            assert(sz(1) >= howmany);
+            if sz(1) < howmany
+                warning('requested %d out of %d eigenvalues.', howmany, sz(1));
+                howmany = min(howmany, sz(1));
+            end
 
             if isa(A, 'function_handle')
                 A_fun = @(x) vectorize(A(devectorize(x, x0)));
