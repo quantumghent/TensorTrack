@@ -607,12 +607,14 @@ classdef UniformMps
             svals = cellfun(@diag, svals, 'UniformOutput', false);
         end
         
-        function plot_entanglementspectrum(mps, d, w, ax)
+        function plot_entanglementspectrum(mps, d, w, ax, kwargs)
             arguments
                 mps
                 d = 1:depth(mps)
                 w = 1:period(mps)
                 ax = []
+                kwargs.SymmetrySort = true
+                kwargs.ExpandQdim = false
             end
             if isempty(ax)
                 figure;
@@ -623,35 +625,44 @@ classdef UniformMps
                     end
                 end
             end
-            
-            lim_y = 1;
+            hold off
             for dd = 1:length(d)
                 for ww = 1:length(w)
                     [svals, charges] = schmidt_values(mps(dd), w(ww));
+                    if kwargs.ExpandQdim
+                        for i = 1:length(svals)
+                            svals{i} = reshape(repmat(svals{i}, 1, qdim(charges(i))), [], 1);
+                        end
+                    end
                     ctr = 0;
-                    hold off;
-                    lim_x = 1;
-
-                    ticks = zeros(size(svals));
                     labels = arrayfun(@string, charges, 'UniformOutput', false);
                     lengths = cellfun(@length, svals);
                     ticks = cumsum(lengths);
-                    try
-                        semilogy(ax(dd, ww), 1:sum(lengths), vertcat(svals{:}).', '.', 'MarkerSize', 10);
-                    catch
-                        bla
+                    if kwargs.SymmetrySort
+                        for i = 1:length(svals)
+                            semilogy(ax(dd, ww), ctr+(1:lengths(i)), svals{i}, '.', 'MarkerSize', 10, 'Color', colors(i));
+                            if i == 1, hold(ax(dd,ww), 'on'); end
+                            ctr = ctr + lengths(i);
+                        end
+                        set(ax(dd, ww), 'Xtick', ticks, 'fontsize', 10, ...
+                            'XtickLabelRotation', 60, 'Xgrid', 'on');
+                    else
+                        [~, p] = sort(vertcat(svals{:}), 'descend');
+                        p = invperm(p);
+                        for i = 1:length(svals)
+                            semilogy(ax(dd, ww), p(ctr+(1:lengths(i))), svals{i}, '.', 'MarkerSize', 10, 'Color', colors(i));
+                            if i == 1, hold(ax(dd,ww), 'on'); end
+                            ctr = ctr + lengths(i);
+                        end
+                        
                     end
+                    legend(ax(dd, ww), labels)
                     set(ax(dd, ww), 'TickLabelInterpreter', 'latex');
-                    set(ax(dd, ww), 'Xtick', ticks, 'XTickLabel', labels, 'fontsize', 10, ...
-                        'XtickLabelRotation', 60, 'Xgrid', 'on');
                     xlim(ax(dd, ww), [1 - 1e-8 ticks(end) + 1e-8]);
-
                 end
             end
-                
-%             for ww = 1:length(w)
-%                 ylim(ax(1, ww), [10^(floor(log10(lim_y))) 1]);
-%             end
+            hold off
+            linkaxes(ax, 'y');
         end
         
         function mps = desymmetrize(mps)

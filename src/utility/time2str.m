@@ -22,10 +22,18 @@ switch unit
     case 'm'
         time = time / 60;
         
+    case 's'
+        
+    case 'ms'
+        time = time * 1000;
+        
+    case 'mus'
+        time = time * 1000000;
+
 end
 
 
-timeStr = sprintf('%0.*f%c', precision, time, unit);
+timeStr = sprintf('%0.*f%s', precision, time, unit);
 
 
 end
