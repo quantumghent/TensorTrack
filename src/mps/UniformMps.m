@@ -625,9 +625,9 @@ classdef UniformMps
                     end
                 end
             end
-            hold off
             for dd = 1:length(d)
                 for ww = 1:length(w)
+                    hold(ax(dd,ww), 'off');
                     [svals, charges] = schmidt_values(mps(dd), w(ww));
                     if kwargs.ExpandQdim
                         for i = 1:length(svals)
