@@ -49,11 +49,16 @@ classdef Expand
         function [mps, flag] = changebonds(alg, mpo, mps)
             % Change sectors and bond dimensions of mps virtual spaces.
             
+            % canonicalize before starting
+            for d = 1:depth(mps)
+                mps(d) = canonicalize(mps(d));
+            end
+
             % determine new charges and bonds
-            [addbond, addcharge, flag] = determine_new_bonds(alg, mpo, mps);
+            [new_spaces, flag] = determine_new_spaces(alg, mpo, mps);
             
             % expand mps tensors
-            mps = expand_mps(alg, mps, addbond, addcharge);
+            mps = expand_mps(alg, mps, new_spaces);
             
             % finalize
             if strcmp(alg.finalize, 'vomps')
@@ -61,28 +66,45 @@ classdef Expand
             end
         end
         
-        function [addbond, addcharge, flag] = determine_new_bonds(alg, mpo, mps)
+        function [new_spaces, flag] = determine_new_spaces(alg, mpo, mps)
             % Determine which charges and bond dimensions to add/remvove in mps virtual
             % spaces.
             
-            addbond = cell(depth(mps), period(mps));
-            addcharge = cell(depth(mps), period(mps));
-            
-            for d = 1:depth(mps)
-                for w = 1:period(mps)
+            for d = depth(mps):-1:1
+                for w = period(mps):-1:1
                     if strcmp(alg.bondsmethod, 'twosite') || strcmp(alg.chargesmethod, 'twosite')
                         % twosite expansion takes care of both bonds and charges at the same time
-                        [addbond{d, w}, addcharge{d, w}] = expand_twosite(alg, mpo, mps, d, w);
+                        [addbond, addcharge] = expand_twosite(alg, mpo, mps, d, w);
                     else
                         % heuristic charge and bond expansion based on current spectrum
                         [svals, charges] = schmidt_values(mps(d), w);
-                        addbond{d, w} = expand_bonds(alg, svals);
-                        addcharge{d, w} = expand_charges(alg, mps, d, w, svals, charges);
+                        addbond = expand_bonds(alg, svals);
+                        addcharge = expand_charges(alg, mps, d, w, svals, charges);
                     end
                     if alg.notrunc
-                        addbond{d,w} = max(0, addbond{d,w});
+                        addbond = max(0, addbond);
                     end
-                    flag = addcharge{d, w}.flag ~= 0 || nnz(addbond{d, w}) > 0;
+                    flag = addcharge.flag ~= 0 || nnz(addbond) > 0;
+                    
+                    new_space = rightvspace(mps(d).AR(w));
+                    
+                    % add/remove bonds
+                    new_space.dimensions.degeneracies = new_space.dimensions.degeneracies ...
+                        + addbond;
+                    
+                    if addcharge.flag == +1          % add charges
+                        new_space.dimensions.charges = [new_space.dimensions.charges, addcharge.charges];
+                        new_space.dimensions.degeneracies = [new_space.dimensions.degeneracies, addcharge.bonds];
+                        
+                    elseif addcharge.flag == -1        % remove charges
+                        keep = ~ismember(new_space.dimensions.charges, addcharge.charges);
+                        new_space.dimensions.charges = new_space.dimensions.charges(keep);
+                        new_space.dimensions.degeneracies = new_space.dimensions.degeneracies(keep);
+                        
+                    end
+                    
+                    new_spaces(d, w) = new_space;
+                    
                 end
             end
         end
@@ -91,23 +113,23 @@ classdef Expand
         function [addbond, addcharge] = expand_twosite(alg, mpo, mps, d, w)
             % Does a twosite update and adds/removes charges that are above/under the cut
             % in the new spectrum.
-            % For larger unit cells, cut is chosen to the left of site w, so
-            % couple sites w-1 and w.
+            % For larger unit cells, cut is chosen to the right of site w, so
+            % couple sites w and w+1.
             
             [svals, charges] = schmidt_values(mps(d), w);
             dd = prev(d, depth(mps));
-            ww = prev(w, period(mps));
+            ww = next(w, period(mps));
             
             % perform twosite update, take SVD and normalize
             [GL, GR] = environments(Vumps, mpo, mps); % should be able to input this...
-            H_AC2 = AC2_hamiltonian(mpo, mps, GL, GR, ww);
-            AC2 = MpsTensor(contract(mps(dd).AC(ww), [-(1:mps(dd).AC(ww).plegs+1), 1], ...
-                mps(dd).AR(w), [1, -(1:mps(dd).AR(w).plegs+1) - 1 - mps(dd).AC(ww).plegs], ...
-                'Rank', [1 + mps(dd).AC(ww).plegs, 1 + mps(dd).AR(w).plegs]));
+            H_AC2 = AC2_hamiltonian(mpo, mps, GL, GR, w);
+            AC2 = MpsTensor(contract(mps(dd).AC(w), [-(1:mps(dd).AC(w).plegs+1), 1], ...
+                mps(dd).AR(ww), [1, -(1:mps(dd).AR(ww).plegs+1) - 1 - mps(dd).AC(ww).plegs], ...
+                'Rank', [1 + mps(dd).AC(w).plegs, 1 + mps(dd).AR(ww).plegs]));
             [AC2.var, ~] = eigsolve(H_AC2{1}, AC2.var, 1, alg.which);
             [~, C2, ~] = tsvd(AC2.var, ...
-                1:mps(dd).AC(ww).plegs+1,  ...
-                (1:mps(dd).AR(w).plegs+1) + 1 + mps(dd).AC(ww).plegs, ...
+                1:mps(dd).AC(w).plegs+1,  ...
+                (1:mps(dd).AR(ww).plegs+1) + 1 + mps(dd).AC(w).plegs, ...
                 'TruncBelow', alg.schmidtcut, ...
                 'TruncDim', alg.maxbond);
             [svals2, charges2] = matrixblocks(C2);
@@ -292,54 +314,14 @@ classdef Expand
             end
         end
         
-        function mps = expand_mps(alg, mps, addbond, addcharge)
+        function mps = expand_mps(alg, mps, new_spaces)
             % Update mps virtual spaces according to given charge and bond expansion.
             
             for d  = 1:depth(mps)
-                % make canonical
-                mps(d) = canonicalize(mps(d), 'DiagC', true); % TODO: why DiagC?
-                % expand tensors
-                newAR = mps(d).AR;
-                for w = 1:period(mps)
-                    ww = next(w, period(mps));
-                    addBnd = struct('left', addbond{d, w}, 'right', addbond{d, ww});
-                    addCh = struct('left', addcharge{d, w}, 'right', addcharge{d, ww});
-                    newAR(w) = expand_tensor(mps(d).AR(w), addBnd, addCh);
-                end
-                % convert to UniformMps after expansion
-                mps(d) = UniformMps(newAR);
+                % expand tensors and convert to UniformMps
+                mps(d) = UniformMps(expand(mps(d).AR, new_spaces(d, :), alg.noisefactor));
             end
-            
-            function newAR = expand_tensor(AR, addbond, addcharge)
-                % fuck
-                vspaces.left = leftvspace(AR);
-                vspaces.right = rightvspace(AR);
-                
-                for side = ["left", "right"]
-                    
-                    % add/remove bonds
-                    vspaces.(side).dimensions.degeneracies = vspaces.(side).dimensions.degeneracies ...
-                        + addbond.(side);
-                    
-                    if addcharge.(side).flag == +1          % add charges
-                        vspaces.(side).dimensions.charges = [vspaces.(side).dimensions.charges, addcharge.(side).charges];
-                        vspaces.(side).dimensions.degeneracies = [vspaces.(side).dimensions.degeneracies, addcharge.(side).bonds];
-                        
-                    elseif addcharge.(side).flag == -1        % remove charges
-                        keep = ~ismember(vspaces.(side).dimensions.charges, addcharge.(side).charges);
-                        vspaces.(side).dimensions.charges = vspaces.(side).dimensions.charges(keep);
-                        vspaces.(side).dimensions.degeneracies = vspaces.(side).dimensions.degeneracies(keep);
-                        
-                    end
-                end
-                
-                newAR = MpsTensor(Tensor.randnc([vspaces.left], [space(AR, 2:AR.plegs+1), vspaces.right]', 'Rank', rank(AR)));
-                
-                newAR.var = embed(AR.var, newAR.var .* alg.noisefactor);
-                
-            end
-            
-            
         end
+        
     end
 end
