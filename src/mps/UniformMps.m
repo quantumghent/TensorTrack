@@ -63,7 +63,7 @@ classdef UniformMps
                     end
                     mps = reshape(mps, size(mps));
                     
-                elseif isa(varargin{1}, 'Tensor')
+                elseif isa(varargin{1}, 'Tensor') || isa(varargin{1}, 'MpsTensor')
                     % by default we take the input as AR, as canonicalize right
                     % orthogonalizes before left orthogonalization
                     for i = height(varargin{1}):-1:1
