@@ -517,11 +517,13 @@ classdef Tensor < AbstractTensor
         end
         
         function tdst = embed(tsrc, tdst)
+            % embed a tensor in a different tensor.
             
-            bsrc = tensorblocks(tsrc);
-            fsrc = fusiontrees(tsrc);
-            bdst = tensorblocks(tdst);
-            fdst = fusiontrees(tdst);
+            assert(isequal(rank(tsrc), rank(tdst)), 'tensors:argerror', ...
+                'tensors must have the same rank');
+            
+            [bsrc, fsrc] = tensorblocks(tsrc);
+            [bdst, fdst] = tensorblocks(tdst);
             
             [lia, locb] = ismember(fsrc, fdst);
             nsp = nspaces(tdst);

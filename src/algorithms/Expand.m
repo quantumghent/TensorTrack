@@ -27,7 +27,7 @@ classdef Expand
         mincharges = 2
         
         % optional finalization
-        finalize {mustBeMember(finalize, {'nothing', 'vomps'})} = 'nothing'
+        finalize = []
     end
         
     
@@ -46,23 +46,21 @@ classdef Expand
             end
         end
         
-        function [mps, flag] = changebonds(alg, mpo, mps)
+        function [mps2, flag] = changebonds(alg, mpo, mps1)
             % Change sectors and bond dimensions of mps virtual spaces.
             
             % canonicalize before starting
-            for d = 1:depth(mps)
-                mps(d) = canonicalize(mps(d));
+            for d = 1:depth(mps1)
+                mps1(d) = canonicalize(mps1(d));
             end
 
-            % determine new charges and bonds
-            [new_spaces, flag] = determine_new_spaces(alg, mpo, mps);
+            [new_spaces, flag] = determine_new_spaces(alg, mpo, mps1);
             
-            % expand mps tensors
-            mps = expand_mps(alg, mps, new_spaces);
+            mps2 = expand_mps(alg, mps1, new_spaces);
             
             % finalize
-            if strcmp(alg.finalize, 'vomps')
-                error('tbd')
+            if ~isempty(alg.finalize)
+                mps2 = approximate(alg.finalize, mpo, mps1, mps2);
             end
         end
         
@@ -77,34 +75,31 @@ classdef Expand
                         [addbond, addcharge] = expand_twosite(alg, mpo, mps, d, w);
                     else
                         % heuristic charge and bond expansion based on current spectrum
-                        [svals, charges] = schmidt_values(mps(d), w);
-                        addbond = expand_bonds(alg, svals);
-                        addcharge = expand_charges(alg, mps, d, w, svals, charges);
+                        [S, C] = schmidt_values(mps(d), w);
+                        addbond = expand_bonds(alg, S);
+                        addcharge = expand_charges(alg, mps, d, w, S, C);
                     end
                     if alg.notrunc
                         addbond = max(0, addbond);
                     end
                     flag = addcharge.flag ~= 0 || nnz(addbond) > 0;
                     
-                    new_space = rightvspace(mps(d).AR(w));
+                    old_space = rightvspace(mps(d).AR(w));
                     
-                    % add/remove bonds
-                    new_space.dimensions.degeneracies = new_space.dimensions.degeneracies ...
-                        + addbond;
+                    new_space = struct;
+                    new_space.charges = charges(old_space);
+                    new_space.degeneracies = degeneracies(old_space) + addbond;
                     
                     if addcharge.flag == +1          % add charges
-                        new_space.dimensions.charges = [new_space.dimensions.charges, addcharge.charges];
-                        new_space.dimensions.degeneracies = [new_space.dimensions.degeneracies, addcharge.bonds];
-                        
+                        new_space.charges = [new_space.charges, addcharge.charges];
+                        new_space.degeneracies = [new_space.degeneracies, addcharge.bonds];
                     elseif addcharge.flag == -1        % remove charges
-                        keep = ~ismember(new_space.dimensions.charges, addcharge.charges);
-                        new_space.dimensions.charges = new_space.dimensions.charges(keep);
-                        new_space.dimensions.degeneracies = new_space.dimensions.degeneracies(keep);
-                        
+                        keep = ~ismember(new_space.charges, addcharge.charges);
+                        new_space.charges = new_space.charges(keep);
+                        new_space.degeneracies = new_space.degeneracies(keep);
                     end
                     
-                    new_spaces(d, w) = new_space;
-                    
+                    new_spaces(d, w) = old_space.new(new_space, isdual(old_space));
                 end
             end
         end
