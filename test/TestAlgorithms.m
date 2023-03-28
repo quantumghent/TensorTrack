@@ -3,7 +3,7 @@ classdef TestAlgorithms < matlab.unittest.TestCase
     
     properties (TestParameter)
         alg = {Vumps('which', 'smallestreal', 'maxiter', 5), ...
-            ...IDmrg('which', 'smallestreal', 'maxiter', 5), ...
+            IDmrg('which', 'smallestreal', 'maxiter', 5), ...
             Vumps2('which', 'smallestreal', 'maxiter', 6), ...
             IDmrg2('which', 'smallestreal', 'maxiter', 5) ...
             }
@@ -35,6 +35,10 @@ classdef TestAlgorithms < matlab.unittest.TestCase
                 
                 [gs, lambda] = fixedpoint(alg, mpo, mps);
                 tc.verifyEqual(expectation_value(gs, mpo, gs), E0, 'RelTol', 1e-2);
+                
+                alg_expand = Expand('which', alg.which, 'schmidtcut', 1e-7, 'finalize', Vomps('maxiter', 5));
+                gs2 = changebonds(alg_expand, mpo, mps);
+                tc.verifyGreaterThan(abs(fidelity(gs, gs2)), 0.9^unitcell)
             end
         end
         
