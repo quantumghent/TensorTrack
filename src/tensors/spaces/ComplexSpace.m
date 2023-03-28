@@ -122,23 +122,6 @@ classdef ComplexSpace < AbstractSpace
             
             d = [spaces.dimensions];
         end
-         
-        function trees = fusiontrees(~, ~)
-            % Compute all allowed fusiontrees that connect domain and codomain. Only the
-            % trivial fusion tree is allowed, so this returns empty.
-            %
-            % Arguments
-            % ---------
-            % codomain, domain : :class:`ComplexSpace`
-            %   input spaces.
-            %
-            % Returns
-            % -------
-            % trees : :class:`FusionTree`
-            %   only the trivial tree is allowed.
-            
-            trees = FusionTree();
-        end
         
         function style = braidingstyle(~, ~)
             % Determine the braiding style of the internal structure of a space.

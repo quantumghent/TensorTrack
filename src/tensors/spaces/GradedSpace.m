@@ -199,33 +199,6 @@ classdef GradedSpace < AbstractSpace
             end
         end
         
-        function trees = fusiontrees(codomain, domain)
-            % Compute all allowed fusiontrees that connect domain and codomain. Only the
-            % trivial fusion tree is allowed, so this returns empty.
-            %
-            % Arguments
-            % ---------
-            % codomain, domain : :class:`GradedSpace`
-            %   input spaces.
-            %
-            % Returns
-            % -------
-            % trees : :class:`FusionTree`
-            %   list of all allowed fusion trees.
-            
-            rank = [length(codomain) length(domain)];
-            spaces = [codomain flip(domain)];
-            
-            args = cell(2, sum(rank));
-            for i = 1:size(args, 2)
-                args{1, i} = charges(spaces(i));
-                args{2, i} = spaces(i).dual;
-            end
-            
-            trees = FusionTree.new(rank, args{:});
-        end
-        
-        
         %% Space manipulations
         function space = mtimes(space1, space2)
             % Fuse two spaces to a single space.
