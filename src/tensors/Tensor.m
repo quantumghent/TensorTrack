@@ -2304,12 +2304,13 @@ classdef Tensor < AbstractTensor
             % -------
             % a : double
             
-            trees = fusiontrees(t);
-            blocks = tensorblocks(t);
-            if isempty(trees)
+            if isa(t.var, 'TrivialBlock')
+                blocks = tensorblocks(t);
                 a = blocks{1};
                 return
             end
+            
+            [blocks, trees] = tensorblocks(t);
             
             % Initialize output
             a = zeros(dims(t));

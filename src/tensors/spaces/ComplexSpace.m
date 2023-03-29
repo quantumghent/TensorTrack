@@ -74,13 +74,13 @@ classdef ComplexSpace < AbstractSpace
     
     %% Structure
     methods
-        function c = charges(~)
+        function c = charges(spaces)
             % Compute all charge combinations of a space. No internal structure is present, 
             % this yields an empty result.
             %
             % Arguments
             % ---------
-            % spaces : (1, :) :class:`ComplexSpace`
+            % spaces : (1, :) :class:`CartesianSpace`
             %   input spaces.
             %
             % Returns
@@ -88,7 +88,7 @@ classdef ComplexSpace < AbstractSpace
             % c : []
             %   empty result.
             
-            c = Z1;
+            c = repmat(Z1, length(spaces), 1);
         end
         
         function d = degeneracies(spaces)
