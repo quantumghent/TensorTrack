@@ -120,20 +120,29 @@ classdef (Abstract) AbstractSpace
         end
         
         function trees = fusiontrees(codomain, domain)
-            % Compute all allowed fusiontrees that connect domain and codomain. If the
-            % spaces have no internal structure than this returns `[]`.
+            % Compute all allowed fusiontrees that connect domain and codomain. Only the
+            % trivial fusion tree is allowed, so this returns empty.
             %
             % Arguments
             % ---------
-            % codomain, domain : :class:`AbstractSpace`
+            % codomain, domain : :class:`GradedSpace`
             %   input spaces.
             %
             % Returns
             % -------
             % trees : :class:`FusionTree`
-            %   list of fusiontrees that are allowed.
+            %   list of all allowed fusion trees.
             
-            error('tensors:AbstractMethod', 'This method should be overloaded.');
+            rank = [length(codomain) length(domain)];
+            spaces = [codomain flip(domain)];
+            
+            args = cell(2, sum(rank));
+            for i = 1:size(args, 2)
+                args{1, i} = charges(spaces(i));
+                args{2, i} = isdual(spaces(i));
+            end
+            
+            trees = FusionTree.new(rank, args{:});
         end
         
         function style = braidingstyle(codomain, domain)

@@ -83,7 +83,7 @@ classdef CartesianSpace < AbstractSpace
     
     %% Structure
     methods
-        function c = charges(~)
+        function c = charges(spaces)
             % Compute all charge combinations of a space. No internal structure is present, 
             % this yields an empty result.
             %
@@ -97,7 +97,7 @@ classdef CartesianSpace < AbstractSpace
             % c : []
             %   empty result.
             
-            c = Z1;
+            c = repmat(Z1, length(spaces), 1);
         end
         
         function d = degeneracies(spaces)
@@ -130,23 +130,6 @@ classdef CartesianSpace < AbstractSpace
             %   total dimension of each of the input spaces.
             
             d = [spaces.dimensions];
-        end
-        
-        function trees = fusiontrees(~, ~)
-            % Compute all allowed fusiontrees that connect domain and codomain. Only the
-            % trivial fusion tree is allowed, so this returns empty.
-            %
-            % Arguments
-            % ---------
-            % codomain, domain : :class:`CartesianSpace`
-            %   input spaces.
-            %
-            % Returns
-            % -------
-            % trees : :class:`FusionTree`
-            %   only the trivial tree is allowed.
-            
-            trees = FusionTree();
         end
         
         function style = braidingstyle(~, ~)

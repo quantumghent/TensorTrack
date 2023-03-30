@@ -533,16 +533,21 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
             end
         end
         
-        function A = expand(A, addspace)
-            NOISE_FACTOR = 1e-3;
+        function A = expand(A, addspace, noisefactor)
+            arguments
+                A
+                addspace
+                noisefactor = 1e-3
+            end
+            
             for i = length(A):-1:1
                 spaces = space(A(i));
-                spaces(1) = addspace(i);
-                spaces(nspaces(A(i)) - A(i).alegs) = conj(addspace(next(i, length(A))));
+                spaces(nspaces(A(i)) - A(i).alegs) = addspace(i);
+                spaces(1) = conj(addspace(prev(i, length(A))));
                 r = rank(A(i));
-                A(i) = embed(A(i), ...
-                    NOISE_FACTOR * ...
-                    normalize(A.randnc(spaces(1:r(1)), spaces(r(1)+1:end)')));
+                A(i).var = embed(A(i).var, ...
+                    noisefactor * ...
+                    normalize(A(i).var.randnc(spaces(1:r(1)), spaces(r(1)+1:end)')));
             end
         end
         

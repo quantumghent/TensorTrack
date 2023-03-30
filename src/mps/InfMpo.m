@@ -234,8 +234,8 @@ classdef InfMpo
             arguments
                 mpo
                 mps
-                GL = fixedpoint(transfermatrix(mpo, mps, 'Type', 'LL'))
-                GR = fixedpoint(transfermatrix(mpo, mps, 'Type', 'RR').')
+                GL = fixedpoint(transfermatrix(mpo, mps, 'Type', 'LL')) % BROKEN
+                GR = fixedpoint(transfermatrix(mpo, mps, 'Type', 'RR').') % BROKEN
                 sites = 1:period(mps)
             end
             
