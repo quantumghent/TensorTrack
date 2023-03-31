@@ -68,6 +68,10 @@ classdef InfMpo
             s = rightvspace(mpo.O{w});
         end
         
+        function mpo = repmat(mpo, varargin)
+            mpo.O = repmat(mpo.O, varargin{:});
+        end
+        
         function mpo = horzcat(mpo, varargin)
             Os = cellfun(@(x) x.O, varargin, 'UniformOutput', false);
             mpo.O = horzcat(mpo.O, Os{:});
@@ -101,6 +105,11 @@ classdef InfMpo
             end
             
             pspaces = arrayfun(@(x) subspaces(pspace(mpo, x)), 1:period(mpo), 'UniformOutput', false);
+            if length(vspaces) ~= length(pspaces)
+                assert(length(vspaces) == 1, 'ArgError', ...
+                    'Invalid length of input spaces')
+                vspaces = repmat(vspaces, size(pspaces));
+            end
             args = [pspaces; vspaces];
             mps = UniformMps.randnc(args{:});
         end

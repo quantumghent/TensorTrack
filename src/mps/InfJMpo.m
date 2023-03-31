@@ -302,7 +302,7 @@ classdef InfJMpo < InfMpo
                 case 'l'
                     fp = insert_onespace(fp, 2, ~isdual(leftvspace(operator, w)));
                 case 'r'
-                    fp = insert_onespace(fp, 2, isdual(rightvspace(operator, w)));
+                    fp = insert_onespace(fp, 2, ~isdual(rightvspace(operator, w)));
                 otherwise
                     error('invalid fixedpoint type (%s)', type);
             end

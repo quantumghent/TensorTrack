@@ -1,7 +1,7 @@
 function mpo = quantum1dIsing(kwargs)
 arguments
     kwargs.J = 1
-    kwargs.h = 1
+    kwargs.h = 0.5
     kwargs.L = Inf     % size of system
     kwargs.Symmetry {mustBeMember(kwargs.Symmetry, {'Z1', 'Z2'})} = 'Z1'
 end
