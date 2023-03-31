@@ -455,7 +455,7 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
             auxlegs_r = R.alegs;
             assert(R.plegs == L.plegs);
             plegs = L.plegs; %#ok<PROPLC>
-            newrank = [2 auxlegs_l + auxlegs_r];
+            newrank = [1 1 + auxlegs_l + auxlegs_r];
             
             v = contract(...
                 L, [-1 1:(plegs + 1) (-(1:auxlegs_l) - 2)], ...
