@@ -72,7 +72,11 @@ classdef TestAlgorithms < matlab.unittest.TestCase
                     
                     %% Excitations
                     for i = 1:length(momenta)
-                        qp = InfQP.randnc(gs, gs, momenta(i));
+                        if strcmp(symm, 'Z1')
+                            qp = InfQP.randnc(gs, gs, momenta(i));
+                        else
+                            qp = InfQP.randnc(gs, gs, momenta(i), Z2(1));
+                        end
                         [qp, mu] = excitations(QPAnsatz(), H, qp);
                         tc.verifyEqual(mu, Delta0(i), 'RelTol', 1e-3);
                     end

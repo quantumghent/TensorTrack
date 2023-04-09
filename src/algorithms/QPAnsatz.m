@@ -2,8 +2,7 @@ classdef QPAnsatz
     % Quasi-Particle excitation ansatz
     
     properties
-        alg_eigs = struct('MaxIter', 100, 'KrylovDim', 30, 'Tol', 1e-8, ...
-            'Verbosity', Verbosity.diagnostics)
+        alg_eigs = struct('MaxIter', 100, 'KrylovDim', 30, 'Tol', 1e-8)
         alg_environments = struct('Tol', 1e-10);
         howmany = 1
         which = 'smallestreal'
