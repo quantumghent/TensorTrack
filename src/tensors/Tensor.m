@@ -1574,7 +1574,8 @@ classdef Tensor < AbstractTensor
             V = t.codomain.new(dims, false);
             
             if strcmp(alg, 'polar')
-                assert(isequal(V, prod(t.domain)));
+                assert(isequal(V, prod(t.domain)), ...
+                    'linalg:polar', 'polar decomposition should lead to square R.');
                 W = V;
             elseif length(p1) == 1 && V == t.codomain
                 W = t.codomain;
@@ -2200,7 +2201,7 @@ classdef Tensor < AbstractTensor
         end
         
         function bool = iszero(t)
-            bool = isempty(t.var);
+            bool = isempty(t.var) || iszero(t.var);
         end
         
         function r = cond(t, p)

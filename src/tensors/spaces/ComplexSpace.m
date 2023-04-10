@@ -180,7 +180,7 @@ classdef ComplexSpace < AbstractSpace
             space.dual = false;
         end
         
-        function space = prod(spaces)
+        function space = prod(spaces, isdual)
             % Fuse a product space to a single space.
             %
             % Arguments
@@ -192,8 +192,11 @@ classdef ComplexSpace < AbstractSpace
             % -------
             % space : (1, 1) :class:`ComplexSpace`
             %   Fused space which is isomorphic to the input product space.
-            
-            space = ComplexSpace(prod(dims(spaces)), false);
+            arguments
+                spaces
+                isdual = false
+            end
+            space = ComplexSpace(prod(dims(spaces)), isdual);
         end
         
         function space1 = infimum(space1, space2)

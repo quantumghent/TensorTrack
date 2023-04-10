@@ -35,14 +35,17 @@ classdef ProductCharge < AbstractCharge
             prodcharge.charges = charges;
         end
         
-        function a = cat(dim, a, varargin)
+        function a = cat(dim, varargin)
             % Concatenate charges.
             mask = cellfun(@isempty, varargin);
-            if isempty(a)
-                firstnonempty = find(~mask, 1);
-                a = varargin{firstnonempty};
-                mask(firstnonempty) = true;
+            firstnonempty = find(~mask, 1);
+            if isempty(firstnonempty)
+                a = varargin{1};
+                return
             end
+
+            a = varargin{firstnonempty};
+            mask(firstnonempty) = true;
             
             for i = 1:length(a.charges)
                 catcharges = cellfun(@(x) x.charges{i}, varargin(~mask), 'UniformOutput', false);

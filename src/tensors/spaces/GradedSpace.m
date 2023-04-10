@@ -109,6 +109,9 @@ classdef GradedSpace < AbstractSpace
             
             if isstruct(varargin{1})    % default 
                 assert(mod(nargin, 2) == 0);
+                for i = 1:2:nargin
+                    if varargin{i+1}, varargin{i}.charges = conj(varargin{i}.charges); end
+                end
                 spaces = GradedSpace(varargin{:});
                 return
             end
@@ -121,7 +124,7 @@ classdef GradedSpace < AbstractSpace
                         'degeneracies', varargin{3 * i - 1});
                     args{2, i} = varargin{3 * i};
                 end
-                spaces = GradedSpace(args{:});
+                spaces = GradedSpace.new(args{:});
                 return
             end
             
@@ -216,7 +219,7 @@ classdef GradedSpace < AbstractSpace
             space = prod([space1, space2]);
         end
         
-        function space = prod(spaces)
+        function space = prod(spaces, isdual)
             % Fuse a product space to a single space.
             %
             % Arguments
@@ -228,7 +231,10 @@ classdef GradedSpace < AbstractSpace
             % -------
             % space : (1, 1) :class:`GradedSpace`
             %   Fused space which is isomorphic to the input product space.
-            
+            arguments
+                spaces
+                isdual = false
+            end
             if fusionstyle(spaces) == FusionStyle.Unique
                 c = prod(charges(spaces), 1);
                 d = prod(degeneracies(spaces), 1);
@@ -253,7 +259,7 @@ classdef GradedSpace < AbstractSpace
                 newdimensions.degeneracies(i) = sum(d(idx));
             end
             
-            space = GradedSpace(newdimensions, false);
+            space = GradedSpace.new(newdimensions, isdual);
         end
         
         
