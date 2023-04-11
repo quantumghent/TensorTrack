@@ -58,6 +58,8 @@ classdef FiniteMpo
         end
         
         function v = initialize_fixedpoint(mpo)
+            % Initialize a dense tensor for the fixedpoint of a :class:`FiniteMPO`.
+            
             N = prod(cellfun(@(x) size(x, 4), mpo.O));
             for i = N:-1:1
                 v(i) = Tensor.randnc(domain(slice(mpo, i, 1:N)), []);
