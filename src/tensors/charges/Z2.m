@@ -1,13 +1,25 @@
 classdef Z2 < AbstractCharge & logical
-    % Z2 - Irreducible representations of Z2.
-    %   This class represents the trivial or sign representations of Z2, represented using
-    %   {false, true} with multiplication table given by xor:
-    %             | false | true
-    %       ---------------------
-    %       false | false | true
-    %       true  | true  | false
+    % Irreducible representations of :math:`Z_2`.
     %
-    %   See also AbstractCharge
+    % This class implements the trivial or sign representations of :math:`Z_2`, represented
+    % using {:code:`false`, :code:`true`} where multiplication is given by
+    % :math:`\mathrm{XOR}`, giving the multiplication table:
+    %
+    % .. list-table::
+    %
+    %   * - 
+    %     - :code:`false`
+    %     - :code:`true`
+    %   * - :code:`false`
+    %     - :code:`false`
+    %     - :code:`true`
+    %   * - :code:`true`
+    %     - :code:`true`
+    %     - :code:`false`
+    %
+    % See Also
+    % --------
+    % :class:`AbstractCharge`
     
     methods
         function A = Asymbol(a, b, c)

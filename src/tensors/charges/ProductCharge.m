@@ -239,26 +239,28 @@ classdef ProductCharge < AbstractCharge
             %
             % Usage
             % -----
-            % a = subsasgn(a, substruct('()', subs), b)
-            % a(subs{:}) = b
+            % :code:`a = subsasgn(a, substruct('()', subs), b)`
+            %
+            % :code:`a(subs{:}) = b`
             %   assign array slices.
             %
-            % a = subsasgn(a, substruct('{}', subs), c)
-            % a{i} = c
+            % :code:`a = subsasgn(a, substruct('{}', subs), c)`
+            %
+            % :code:`a{i} = c`
             %   assign to a factor slice.
             %
             % Arguments
             % ---------
-            % a : ProductCharge
+            % a : :class:`ProductCharge`
             %   array of charges to assign to.
             %
-            % s : substruct
+            % s : :class:`struct`
             %   structure containing indexing data.
             %
-            % b : ProductCharge
+            % b : :class:`ProductCharge`
             %   slice to assign.
             %
-            % c : AbstractCharge
+            % c : :class:`AbstractCharge`
             %   factor to assign.
             %
             % Returns

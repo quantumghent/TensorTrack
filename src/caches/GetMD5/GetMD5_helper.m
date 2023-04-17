@@ -5,19 +5,25 @@ function S = GetMD5_helper(V)
 % applied processing can depend on the needs of the users, therefore it is
 % implemented as an M-function, which is easier to modify than the C-code.
 %
-% INPUT:
-%   V: Array of any type, which is not handled in the C-Mex.
-% OUTPUT:
-%   S: Array or struct containing elementary types only.
-%      The implementation migth be changed by the user!
-%      Default:
-%      - Sparse arrays:   Struct containing the indices and values.
-%      - Function handle: The reply of FUNCTIONS and the size and date of the
-%        file.
-%      - User defined and java objects: V.hashCode if existing, else: struct(V).
+% Arguments
+% ---------
+% V
+%   array of any type, which is not handled in the C-Mex.
 %
-% NOTE:
-%   For objects the function getByteStreamFromArray() might be exhaustive and
+% Returns
+% -------
+% S
+%   array or struct containing elementary types only.
+%   The implementation migth be changed by the user!
+%   Default:
+%
+%   - Sparse arrays:   Struct containing the indices and values.
+%   - Function handle: The reply of FUNCTIONS and the size and date of the file.
+%   - User defined and java objects: :code:`V.hashCode` if existing, else: :code:`struct(V)`.
+%
+% Note
+% ----
+%   For objects the function :code:`getByteStreamFromArray()` might be exhaustive and
 %   efficient, but unfortunately it is not documented.
 %
 % Tested: Matlab/64 7.8, 7.13, 8.6, 9.1, Win7/64
