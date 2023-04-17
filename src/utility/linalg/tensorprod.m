@@ -1,18 +1,21 @@
 function C = tensorprod(A, B, dimA, dimB, cA, cB, options)
-% tensorprod - Tensor products between two tensors.
-%   C = tensorprod(A, B, dimA, dimB)
-%       returns the tensor product of tensors A and B. The arguments dimA and dimB are
-%       vectors that specify which dimensions to contract in A and B. The size of the
-%       output tensor is the size of the uncontracted dimensions of A followed by the size
-%       of the uncontracted dimensions of B.
+% Tensor products between two tensors.
 %
-%   C = tensorprod(A, B)
-%       returns the outer product of tensors A and B. This is equivalent to the previous
-%       syntax with dimA = dimB = [].
+% Usage
+% -----
+% :code:`C = tensorprod(A, B, dimA, dimB)`
+%	returns the tensor product of tensors A and B. The arguments dimA and dimB are
+%	vectors that specify which dimensions to contract in A and B. The size of the
+%	output tensor is the size of the uncontracted dimensions of A followed by the size
+%	of the uncontracted dimensions of B.
 %
-%   C = tensorprod(_, NumDimensionsA=ndimsA)
-%       optionally specifies the number of dimensions in tensor A in addition to combat the
-%       removal of trailing singleton dimensions.
+% :code:`C = tensorprod(A, B)`
+%	returns the outer product of tensors A and B. This is equivalent to the previous
+% 	syntax with dimA = dimB = [].
+%
+% :code:`C = tensorprod(_, NumDimensionsA=ndimsA)`
+% 	optionally specifies the number of dimensions in tensor A in addition to combat the
+% 	removal of trailing singleton dimensions.
 
 arguments
     A

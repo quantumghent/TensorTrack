@@ -10,7 +10,7 @@ function GetMD5(varargin)
 % Data
 %   input data on which the checksum is computed.
 %
-% Mode : char
+% Mode : :code:`char`
 %   optional declaration of the type of the input data.
 %
 %   - 'File' : `data` is a file name as a `char`.
@@ -54,10 +54,10 @@ function GetMD5(varargin)
 %
 % See also
 % --------
-% Other methods for checksums can be found: :code:`CalcCRC32`, :code:`DataHash`, ...
+% Other methods for checksums can be found: :code:`CalcCRC32`, :code:`DataHash`, etc.
 %
-% For more checksum methods see:
-%   http://www.mathworks.com/matlabcentral/fileexchange/31272-datahash
+% For more checksum methods see
+% `here <http://www.mathworks.com/matlabcentral/fileexchange/31272-datahash>`_.
 
 % Dummy code, which calls the auto-compilation only: ---------------------------
 % This M-function is not called, if the compiled MEX function is in the path.
