@@ -55,7 +55,7 @@ classdef Expand
             end
 
             [new_spaces, flag] = determine_new_spaces(alg, mpo, mps1);
-            
+            new_spaces = fix_injectivity(alg, mps1, new_spaces);
             mps2 = expand_mps(alg, mps1, new_spaces);
             
             % finalize
@@ -90,6 +90,10 @@ classdef Expand
                     new_space.charges = charges(old_space);
                     new_space.degeneracies = degeneracies(old_space) + addbond;
                     
+                    if addcharge.flag && isdual(old_space)
+                        addcharge.charges = conj(addcharge.charges);
+                    end
+                    
                     if addcharge.flag == +1          % add charges
                         new_space.charges = [new_space.charges, addcharge.charges];
                         new_space.degeneracies = [new_space.degeneracies, addcharge.bonds];
@@ -104,6 +108,27 @@ classdef Expand
             end
         end
 
+        function spaces = fix_injectivity(alg, mps, spaces)
+            % attempt to ensure injectivity
+            for d = 1:depth(mps)
+                flag = false(1, period(mps));
+                while ~all(flag)
+                    for w = period(mps):-1:1
+                        ww = next(w, period(mps));
+                        www = prev(w, period(mps));
+                        rhs1 = prod([spaces(d, www) pspace(mps, w)'], ...
+                            isdual(spaces(d, w)));
+                        rhs2 = prod([spaces(d, ww) pspace(mps, ww)], ...
+                            isdual(spaces(d, w)));
+                        tmp = spaces(d, w);
+                        spaces(d, w) = infimum(spaces(d, w), rhs1);
+                        spaces(d, w) = infimum(spaces(d, w), rhs2);
+                        assert(dims(spaces(d, w)) > 0, 'no fusion channels left');
+                        flag(w) = tmp == spaces(d, w);
+                    end
+                end
+            end
+        end
         
         function [addbond, addcharge] = expand_twosite(alg, mpo, mps, d, w)
             % Does a twosite update and adds/removes charges that are above/under the cut
@@ -141,7 +166,7 @@ classdef Expand
                 addcharge.charges = added_charges;
                 addcharge.bonds = ones(size(added_charges));
                 for ii = 1:size(added_charges)
-                    addcharge.bonds(ii) = length(svals2{added_charges(ii) == charges2}); % TODO: will this work for product charges?
+                    addcharge.bonds(ii) = length(svals2{added_charges(ii) == charges2});
                 end
             else
                 % do nothing

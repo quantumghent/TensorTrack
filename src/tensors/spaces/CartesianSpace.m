@@ -212,7 +212,7 @@ classdef CartesianSpace < AbstractSpace
             space.dimensions = space.dimensions * space2.dimensions;
         end
         
-        function space = prod(spaces)
+        function space = prod(spaces, ~)
             % Fuse a product space to a single space.
             %
             % Arguments

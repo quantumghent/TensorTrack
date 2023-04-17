@@ -361,5 +361,9 @@ classdef (Abstract) AbstractBlock
             
             error('tensors:AbstractMethod', 'This method should be overloaded.');
         end
+        
+        function bool = iszero(X)
+            bool = isempty(X.var);
+        end
     end
 end
