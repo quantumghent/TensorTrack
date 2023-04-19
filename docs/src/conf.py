@@ -49,7 +49,6 @@ extensions = [
     'sphinx-prompt',
     'sphinxcontrib.matlab',
     'nbsphinx',
-    'myst_parser',
     'sphinx_gallery.load_style'
 ]
 
@@ -75,7 +74,7 @@ pygments_style = 'default'
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This patterns also effect to html_static_path and html_extra_path
-exclude_patterns = ['_build', '**.ipynb_checkpoints', 'lib/tensors.rst']
+exclude_patterns = ['_build', '**.ipynb_checkpoints']
 
 
 # -- Options for HTML output -----------------------------------------------
@@ -231,24 +230,6 @@ napoleon_custom_sections = [
     'Usage',
     ('Syntax', 'returns_style')
     ]
-
-
-# -- myst_parser -----------------------------------------------
-# extensions for markdown parser
-# myst_enable_extensions = [
-#     "colon_fence",
-#     "deflist",
-#     "dollarmath",
-#     "fieldlist",
-#     "html_admonition",
-#     "html_image",
-#     "linkify",
-#     "replacements",
-#     "smartquotes",
-#     "strikethrough",
-#     "substitution",
-#     "tasklist",
-# ]
 
 
 # -- sphinx.ext.mathjax configuration -----------------------------------------------
