@@ -132,7 +132,7 @@ classdef FiniteMpo
         end
         
         function d = depth(mpo)
-            d = size(mpo, 1);
+            d = builtin('length', mpo);
         end
         
         function l = length(mpo)
@@ -145,7 +145,7 @@ classdef FiniteMpo
         
         function mpo = ctranspose(mpo)
             if depth(mpo) > 1
-                mpo = flip(mpo, 1);
+                mpo = flip(mpo);
             end
             
             for d = 1:depth(mpo)
@@ -160,7 +160,7 @@ classdef FiniteMpo
         
         function mpo = transpose(mpo)
             if depth(mpo) > 1
-                mpo = flip(mpo, 1);
+                mpo = flip(mpo);
             end
             
             for d = 1:depth(mpo)
@@ -272,16 +272,19 @@ classdef FiniteMpo
                 Abot    % bottom mps tensors (unconjugated)
             end
             
+            assert(length(Atop) == length(O) && length(O) == length(Abot), ...
+                'FiniteMpo:argerror', 'unmatching sizes');
+            
             for i = numel(Atop):-1:1
-                atop = Atop(i);
+                atop = Atop{i};
                 o = rot90(O{i});
-                twistinds = 1 + find(isdual(space(Atop(i), 2:nspaces(Atop(i)) - 1)));
-                abot = twist(Abot(i)', twistinds);
+                twistinds = 1 + find(isdual(space(atop, 2:nspaces(atop) - 1)));
+                abot = twist(Abot{i}', twistinds);
                 
                 assert(isequal(pspace(abot)', leftvspace(o)));
                 assert(isequal(rightvspace(o)', pspace(atop)));
                 
-                T(i, 1) = FiniteMpo(abot, {o}, atop);
+                T(i) = FiniteMpo(abot, {o}, atop);
             end
         end
     end

@@ -50,15 +50,17 @@ classdef TestAlgorithms < matlab.unittest.TestCase
             D = 12;
             momenta = [0 pi 0.5];
             
-            for L = 3
+            for L = 1:3
                 %% No symmetry
                 H = repmat(quantum1dIsing('h', h, 'J', J), 1, L);
                 
-                vspace = CartesianSpace.new(D, D+1, D+2);
-                gs = initialize_mps(H, vspace);
+                vspace = arrayfun(@(w) CartesianSpace.new(D + w), 1:L, ...
+                    'UniformOutput', false);
+                gs = initialize_mps(H, vspace{:});
                 
                 % Groundstate algorithms
-                gs = fixedpoint(Vumps('which', 'smallestreal', 'maxiter', 5), ...
+                gs = fixedpoint(Vumps('which', 'smallestreal', 'maxiter', 5, ...
+                    'alg_eigs', Arnoldi('maxiter', 100, 'krylovdim', 20)), ...
                     H, gs);
                 tc.assertEqual(expectation_value(gs, H), e0 * L, 'RelTol', 1e-2);
                 

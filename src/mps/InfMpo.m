@@ -118,6 +118,40 @@ classdef InfMpo
     
     %% Environments
     methods
+        function fp = fixedpoint(operator, state, type, w)
+            arguments
+                operator
+                state
+                type
+                w = 1
+            end
+            
+            fp = fixedpoint(state, type(1:4), w);
+            
+            % add leg to fit operator
+            switch type(1)
+                case 'l'
+                    fp = insert_onespace(fp, 2, ~isdual(leftvspace(operator, w)));
+                case 'r'
+                    fp = insert_onespace(fp, 2, ~isdual(rightvspace(operator, w)));
+                otherwise
+                    error('invalid fixedpoint type (%s)', type);
+            end
+            
+            % add leg to fit quasiparticle auxiliary leg
+            if isa(state, 'InfQP')
+                switch type(6)
+                    case '0'
+                        dual = isdual(auxspace(state, w));
+                    case '1'
+                        dual = ~isdual(auxspace(state, w));
+                    otherwise
+                        error('invalid type (%s)', type);
+                end
+                fp = MpsTensor(insert_onespace(fp, nspaces(fp) + 1, dual), 1);
+            end
+        end
+        
         function [GL, lambda] = leftenvironment(mpo, mps1, mps2, GL, eigopts)
             arguments
                 mpo
@@ -140,6 +174,7 @@ classdef InfMpo
                 T = transfermatrix(mpo, mps1, mps2, i-1, 'Type', 'LL');
                 GL{i} = apply(T, GL{i-1}) ./ lambda^(1/N);
             end
+            GL = cellfun(@MpsTensor, GL, 'UniformOutput', false);
         end
         
         function [GR, lambda] = rightenvironment(mpo, mps1, mps2, GR, eigopts)
@@ -164,6 +199,7 @@ classdef InfMpo
                 T = transfermatrix(mpo, mps1, mps2, i, 'Type', 'RR').';
                 GR{i} = apply(T, GR{next(i, N)}) ./ lambda^(1/N);
             end
+            GR = cellfun(@MpsTensor, GR, 'UniformOutput', false);
         end
         
         function GBL = leftquasienvironment(mpo, qp, GL, GR, GBL, linopts)
@@ -184,9 +220,10 @@ classdef InfMpo
             linkwargs = namedargs2cell(linopts);
             
             expP = exp(-1i * qp.p);
+            L = period(mpo);
             
             rho = GL{1};
-            for pos = 1:period(mpo)
+            for pos = 1:L
                 T_B = transfermatrix(mpo, qp, qp, pos, 'Type', 'BL');
                 if pos == 1
                     rho = apply(T_B, GL{pos});
@@ -198,21 +235,24 @@ classdef InfMpo
             
             T_R = transfermatrix(mpo, qp, qp, 1:period(mpo), 'Type', 'RL');
             if istrivial(qp)
-                C = qp.mpsleft.C(1);
-                FL = insert_onespace(multiplyright(MpsTensor(GL{1}), C), ...
-                    nspaces(GL{1}) + 1, isdual(auxspace(qp, 1)));
-                FR = insert_onespace(multiplyright(MpsTensor(GR{1}), C'), ...
-                    1, ~isdual(auxspace(qp, 1)));
+                fp_left  = fixedpoint(mpo, qp, 'l_RL_0', 1);
+                fp_right = fixedpoint(mpo, qp, 'r_RL_1', L);
+%                 C = qp.mpsleft.C(1);
+%                 FL = insert_onespace(multiplyright(MpsTensor(GL{1}), C), ...
+%                     nspaces(GL{1}) + 1, isdual(auxspace(qp, 1)));
+%                 FR = insert_onespace(multiplyright(MpsTensor(GR{1}), C'), ...
+%                     1, ~isdual(auxspace(qp, 1)));
                 
-                rho = rho - overlap(rho, FR) * FL;
-                GBL{1} = linsolve(@(x) x - expP * apply_regularized(T_R, FL, FR, x), ...
+                rho = rho - overlap(rho, fp_right) * fp_left;
+                GBL{1} = linsolve(@(x) x - expP * apply_regularized(T_R, fp_left, fp_right, x), ...
                     expP * rho, [], linkwargs{:});
             else
                 GBL{1} = expP * linsolve(@(x) x - expP * apply(T_R, x), ...
                     rho, [], linkwargs{:});
             end
             
-            for i = 2:period(mpo)
+            GBL{1} = MpsTensor(GBL{1}, 1);
+            for i = 2:L
                 T_R = transfermatrix(mpo, qp, qp, i-1, 'Type', 'RL');
                 T_B = transfermatrix(mpo, qp, qp, i-1, 'Type', 'BL');
                 GBL{i} = apply(T_R, GBL{i-1}) + apply(T_B, GL{w-1});
@@ -266,6 +306,7 @@ classdef InfMpo
             end
             
             N = period(mpo);
+            GBR{1} = MpsTensor(GBR{1}, 1);
             for i = N:-1:2
                 T_L = transfermatrix(mpo, qp, qp, i, 'Type', 'LR').';
                 T_B = transfermatrix(mpo, qp, qp, i, 'Type', 'BR').';
@@ -297,8 +338,8 @@ classdef InfMpo
             
             for w = 1:period(mps1)
                 overlap = sqrt(contract(GL{w}, [1, 3:nspaces(GL{w}), 2], ...
-                    mps1.C(prev(w, period(mps1))), [2, nspaces(GL{w})+1], ...
-                    mps2.C(prev(w, period(mps1)))', [nspaces(GL{w})+2, 1], ...
+                    mps1.C{prev(w, period(mps1))}, [2, nspaces(GL{w})+1], ...
+                    mps2.C{prev(w, period(mps1))}', [nspaces(GL{w})+2, 1], ...
                     GR{w}, [nspaces(GL{w})+1, flip(3:nspaces(GL{w})), nspaces(GL{w})+2]));
                 GL{w} = GL{w} ./ overlap;
                 GR{w} = GR{w} ./ overlap;
@@ -366,8 +407,10 @@ classdef InfMpo
                     gl = twistdual(GL{d, sites(i)}, 1);
                     gr = GR{d, next(sites(i), period(mpo))};
                     gr = twistdual(gr, nspaces(gr));
-                    gr_better = tpermute(gr, [1, flip(2:nspaces(gr)-1), nspaces(gr)]);
-                    gl_better = tpermute(gl, [1, flip(2:nspaces(gl)-1), nspaces(gl)]);
+                    gr_better = tpermute(gr, [1, flip(2:nspaces(gr)-1-gr.alegs), ...
+                        nspaces(gr) + (0:gr.alegs)]);
+                    gl_better = tpermute(gl, [1, flip(2:nspaces(gl)-1-gl.alegs), ...
+                        nspaces(gl) + (0:gl.alegs)]);
                     H{i}(d, 1) = FiniteMpo(gl_better, mpo.O(d, sites(i)), gr_better);
                 end
             end

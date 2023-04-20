@@ -252,6 +252,10 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
             [A.var] = twist([A.var], varargin{:});
         end
         
+        function A = twistdual(A, varargin)
+            [A.var] = twistdual([A.var], varargin{:});
+        end
+        
         function t = ctranspose(t)
             % Compute the adjoint of a tensor. This is defined as swapping the codomain and
             % domain, while computing the adjoint of the matrix blocks.
@@ -291,128 +295,8 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
             C = tensorprod(varargin{:});
         end
         
-        function [AL, CL, lambda, eta] = uniform_leftorth(A, CL, kwargs)
-            arguments
-                A
-                CL = []
-                kwargs.Tol = eps(underlyingType(A))^(3/4)
-                kwargs.MaxIter = 500
-                kwargs.Method = 'polar'
-                kwargs.Verbosity = 0
-                kwargs.Normalize = true
-                kwargs.EigsInit = 3
-                kwargs.EigsFrequence = 2
-            end
-%             
-            % constants
-            EIG_TOLFACTOR = 1/50;
-            EIG_MAXTOL = 1e-4;
-            MINKRYLOVDIM = 8;
-            MAXKRYLOVDIM = 30;
-            
-            % initialization
-            N = size(A, 2);
-            if isempty(CL), CL = initializeC(A, A); end
-            if kwargs.Normalize, CL(1) = normalize(CL(1)); end
-            for i = 1:numel(A)
-                A(i).var = repartition(A(i).var, [nspaces(A(i).var) - 1, 1]);
-            end
-            AL = A;
-            
-            eta_best = Inf;
-            ctr_best = 0;
-            AL_best = AL;
-            C_best = CL;
-            lambda_best = 0;
-            
-            for ctr = 1:kwargs.MaxIter
-                if ctr > kwargs.EigsInit && mod(ctr, kwargs.EigsFrequence) == 0
-                    C_ = repartition(CL(end), [2 0]);
-                    T = transfermatrix(A, AL);
-                    [C_, ~] = eigsolve(T, C_, ...
-                        1, 'largestabs', ...
-                        'Tol', min(eta * EIG_TOLFACTOR, EIG_MAXTOL), ...
-                        'KrylovDim', between(MINKRYLOVDIM, ...
-                            MAXKRYLOVDIM - ctr / 2 + 4, ...
-                            MAXKRYLOVDIM), ...
-                        'NoBuild', 4, ...
-                        'Verbosity', kwargs.Verbosity - 1);
-                    [~, CL(end)] = leftorth(C_, 1, 2, kwargs.Method);
-                    if isdual(space(CL(end), 2)) == isdual(space(CL(end), 1))
-                        CL(end).codomain = conj(CL(end).codomain);
-                        CL(end) = twist(CL(end), 1);
-                    end
-                end
-                
-                C_ = CL(end);
-                lambdas = ones(1, N);
-                for w = 1:N
-                    ww = prev(w, N);
-                    CA = multiplyleft(A(w), CL(ww));
-                    [AL(w), CL(w)] = leftorth(CA, kwargs.Method);
-                    lambdas(w) = norm(CL(w));
-                    if kwargs.Normalize, CL(w) = CL(w) ./ lambdas(w); end
-                end
-                lambda = prod(lambdas);
-                eta = norm(C_ - CL(end), Inf);
-                if eta < kwargs.Tol
-                    if kwargs.Verbosity >= Verbosity.conv
-                        fprintf('Conv %2d:\terror = %0.4e\n', ctr, eta);
-                    end
-                    break;
-                elseif eta < eta_best
-                    eta_best = eta;
-                    ctr_best = ctr;
-                    AL_best = AL;
-                    C_best = CL;
-                    lambda_best = lambda;
-                elseif ctr > 40 && ctr - ctr_best > 5
-                    warning('uniform_orthright:stagnate', 'Algorithm stagnated');
-                    eta = eta_best;
-                    AL = AL_best;
-                    CL = C_best;
-                    lambda = lambda_best;
-                    break;
-                end
-                
-                if kwargs.Verbosity >= Verbosity.iter
-                    fprintf('Iter %2d:\terror = %0.4e\n', ctr, eta);
-                end
-            end
-            
-            if kwargs.Verbosity >= Verbosity.warn && eta > kwargs.Tol
-                fprintf('Not converged %2d:\terror = %0.4e\n', ctr, eta);
-            end
-        end
         
-        function [AR, CR, lambda, eta] = uniform_rightorth(A, CR, kwargs)
-            arguments
-                A
-                CR = []
-                kwargs.Tol = eps(underlyingType(A))^(3/4)
-                kwargs.MaxIter = 500
-                kwargs.Method = 'polar'
-                kwargs.Verbosity = 0
-                kwargs.Normalize = true
-                kwargs.EigsInit = 3
-                kwargs.EigsFrequence = 2
-            end
-            
-            opts = namedargs2cell(kwargs);
-            
-            Ad = flip(arrayfun(@ctranspose, A));
-            if isempty(CR)
-                Cd = [];
-            else
-                Cd = circshift(flip(arrayfun(@ctranspose, CR)), -1);
-            end
-            
-            [ARd, CRd, lambda, eta] = uniform_leftorth(Ad, Cd, opts{:});
-            
-            AR = flip(arrayfun(@ctranspose, ARd));
-            CR  = circshift(flip(arrayfun(@ctranspose, CRd)), -1);
-            lambda = conj(lambda);
-        end
+        
         
         function T = transfermatrix(A, B)
             arguments
@@ -420,10 +304,8 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
                 B MpsTensor = A
             end
             
-            for i = length(A):-1:1
-                B(i).var = twist(B(i).var, [isdual(space(B(i), 1:2)) ~isdual(space(B(i), 3))]);
-                T(i, 1) = FiniteMpo(B(i).var', {}, A(i));
-            end
+            B = twist(B, [isdual(space(B, 1:2)) ~isdual(space(B, 3))]);
+            T = FiniteMpo(B', {}, A);
         end
         
         function v = applytransfer(L, R, v)
@@ -590,13 +472,21 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
         end
         
         function A = multiplyright(A, C)
+            r = rank(A);
+            r(2) = r(2) + nspaces(C) - 2;
+            
             [A.var] = contract([A.var], [-(1:A.plegs+1) 1 -((1:A.alegs)+A.plegs+2)], ...
-                C, [1 -(2+A.plegs)], 'Rank', rank(A));
+                C, [1 -(2 + A.plegs + (1:(nspaces(C) - 1)))], 'Rank', r);
         end
         
-        function C = initializeC(AL, AR)
-            for i = length(AL):-1:1
-                C(i) = AL(i).var.eye(rightvspace(AL(i))', leftvspace(AR(next(i, length(AR)))));
+        function C = initializeC(A)
+            arguments (Repeating)
+                A
+            end
+            C = cell(size(A));
+            
+            for i = length(A):-1:1
+                C{i} = A{i}.var.eye(rightvspace(A{i})', leftvspace(A{next(i, length(A))}));
             end
         end
         
@@ -623,11 +513,20 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
         end
         
         function disp(t)
-            builtin('disp', t);
+            fprintf('%s with %d plegs and %d alegs:\n', class(t), t.plegs, t.alegs);
+            disp(t.var);
         end
         
         function n = nnz(t)
             n = nnz(t.var);
+        end
+    end
+    
+    
+    %%
+    methods
+        function bool = isisometry(t, varargin)
+            bool = isisometry(t.var, varargin{:});
         end
     end
     
@@ -740,6 +639,28 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
                 local_tensors{i} = multiplyright(MpsTensor(u), s);
             end
             local_tensors{end} = MpsTensor(repartition(psi, [2 1]));
+        end
+        
+        function A = new(varargin, kwargs)
+            arguments (Repeating)
+                varargin
+            end
+            arguments
+                kwargs.alegs = 0
+            end
+            
+            A = MpsTensor(Tensor.new(varargin{:}), kwargs.alegs);
+        end
+        
+        function A = randnc(varargin, kwargs)
+            arguments (Repeating)
+                varargin
+            end
+            arguments
+                kwargs.alegs = 0
+            end
+            
+            A = MpsTensor(Tensor.randnc(varargin{:}), kwargs.alegs);
         end
     end
 end

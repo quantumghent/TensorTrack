@@ -128,8 +128,8 @@ classdef Vumps2 < handle
             end
             H_AC2 = AC2_hamiltonian(mpo, mps, GL, GR, sites);
             for i = length(sites):-1:1
-                AC2 = MpsTensor(contract(mps.AC(sites(i)), [-1 -2 1], ...
-                    mps.AR(next(sites(i), period(mps))), [1 -3 -4], ...
+                AC2 = MpsTensor(contract(mps.AC{sites(i)}, [-1 -2 1], ...
+                    mps.AR{next(sites(i), period(mps))}, [1 -3 -4], ...
                     'Rank', [2 2]));
                 [AC2.var, ~] = eigsolve(H_AC2{i}, AC2.var, 1, alg.which, ...
                     kwargs{:});
@@ -147,7 +147,7 @@ classdef Vumps2 < handle
             sites = next(sites, period(mps));
             H_C = C_hamiltonian(mpo, mps, GL, GR, sites);
             for i = length(sites):-1:1
-                [C(i), ~] = eigsolve(H_C{i}, mps.C(sites(i)), 1, alg.which, ...
+                [C{i}, ~] = eigsolve(H_C{i}, mps.C{sites(i)}, 1, alg.which, ...
                     kwargs{:});
             end
         end
@@ -160,23 +160,23 @@ classdef Vumps2 < handle
                 sites = sites(mod(sites, 2) == mod(iter, 2));
             end
             for i = length(AC2):-1:1
-                [Q_AC, ~] = leftorth(AC2(i), 'polar');
-                [Q_C, ~]  = leftorth(C(i), 1, 2, 'polar');
+                [Q_AC, ~] = leftorth(AC2{i}, 'polar');
+                [Q_C, ~]  = leftorth(C{i}, 1, 2, 'polar');
                 AL = multiplyright(Q_AC, Q_C');
                 if alg.notrunc
                     assert(isempty(alg.trunc) || strcmp(alg.trunc{1}, 'TruncTotalDim'), 'tba', 'notrunc only defined in combination with TruncTotalDim');
                     alg.trunc{2} = max(alg.trunc{2}, dims(rightvspace(mps, sites(i))));
                 end
                 [AL1, C, AL2] = tsvd(AL.var, [1 2], [3 4], alg.trunc{:});
-                mps.AL(sites(i)) = multiplyright(MpsTensor(AL1), C);
-                mps.AL(next(sites(i), period(mps))) = AL2;
+                mps.AL{sites(i)} = multiplyright(MpsTensor(AL1), C);
+                mps.AL{next(sites(i), period(mps))} = AL2;
             end
             
             kwargs = namedargs2cell(alg.alg_canonical);
 %             mps.C = [];
             newAL = cell(size(mps.AL));
             for i = 1:numel(newAL)
-                newAL{i} = mps.AL(i);
+                newAL{i} = mps.AL{i};
             end
             mps = UniformMps(newAL);
         end
@@ -200,17 +200,17 @@ classdef Vumps2 < handle
             H_C  = C_hamiltonian(mpo, mps, GL, GR);
             eta = zeros(1, period(mps));
             for w = 1:period(mps)
-                AC_ = apply(H_AC{w}, mps.AC(w));
-                lambda_AC = dot(AC_, mps.AC(w));
+                AC_ = apply(H_AC{w}, mps.AC{w});
+                lambda_AC = dot(AC_, mps.AC{w});
                 AC_ = normalize(AC_ ./ lambda_AC);
                 
                 ww = prev(w, period(mps));
-                C_ = apply(H_C{ww}, mps.C(ww));
-                lambda_C = dot(C_, mps.C(ww));
+                C_ = apply(H_C{ww}, mps.C{ww});
+                lambda_C = dot(C_, mps.C{ww});
                 C_ = normalize(C_ ./ lambda_C);
             
                 eta(w) = distance(AC_ , ...
-                    repartition(multiplyleft(mps.AR(w), C_), rank(AC_)));
+                    repartition(multiplyleft(mps.AR{w}, C_), rank(AC_)));
             end
             eta = max(eta, [], 'all');
         end

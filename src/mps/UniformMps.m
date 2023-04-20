@@ -19,10 +19,10 @@ classdef UniformMps
     %   center-gauged mps tensors.
     
     properties
-        AL (1,:) MpsTensor
-        AR (1,:) MpsTensor
-        C  (1,:) Tensor
-        AC (1,:) MpsTensor
+        AL (1,:) cell
+        AR (1,:) cell
+        C  (1,:) cell
+        AC (1,:) cell
     end
     
     
@@ -37,19 +37,21 @@ classdef UniformMps
             %
             % Arguments
             % ---------
-            % A : :class:`MpsTensor` or :class:`PeriodicCell`
+            % A : :class:`cell` of :class:`MpsTensor`
             %   set of tensors per site that define an MPS to be gauged.
             %
-            % AL, AR, AC : :class:`MpsTensor` or :class:`PeriodicCell`
+            % AL, AR, AC : :class:`cell` of :class:`MpsTensor`
             %   set of gauged MpsTensors.
             %
-            % C : :class:`Tensor`
+            % C : :class:`cell` of :class:`Tensor`
             %   gauge tensor.
             %
             % Returns
             % -------
             % mps : :class:`UniformMps`
             %   gauged uniform MPS.
+            
+            narginchk(0, 4);
             
             if nargin == 0, return; end % default empty constructor
             
@@ -63,7 +65,14 @@ classdef UniformMps
                     end
                     mps = reshape(mps, size(mps));
                     
-                elseif isa(varargin{1}, 'Tensor') || isa(varargin{1}, 'MpsTensor')
+                elseif isa(varargin{1}, 'Tensor')
+                    for i = height(varargin{1}):-1:1
+                        mps.AR = MpsTensor(varargin{1});
+                        mps.AL = MpsTensor(varargin{1});
+                    end
+                    mps = canonicalize(mps);
+                    
+                elseif isa(varargin{1}, 'MpsTensor')
                     % by default we take the input as AR, as canonicalize right
                     % orthogonalizes before left orthogonalization
                     for i = height(varargin{1}):-1:1
@@ -73,31 +82,29 @@ classdef UniformMps
                     mps = canonicalize(mps);
                     
                 elseif iscell(varargin{1})
-                    for i = flip(1:width(varargin{1}))
-                        for j = 1:height(varargin{1})
-                            mps(j).AR(i) = varargin{1}{j, i};
-                            mps(j).AL(i) = varargin{1}{j, i};
-                        end
+                    for j = height(varargin{1}):-1:1
+                        mps(j).AR = varargin{1}(j, :);
+                        mps(j).AL = varargin{1}(j, :);
                     end
                     mps = canonicalize(mps);
                 else
                     error('Invalid constructor for UniformMps.')
                 end
                 
-            elseif nargin == 3
-                mps.AL = varargin{1};
-                mps.AR = varargin{2};
-                mps.C  = varargin{3};
-                
-            elseif nargin == 4
-                mps.AL = varargin{1};
-                mps.AR = varargin{2};
-                mps.C  = varargin{3};
-                mps.AC = varargin{4};
-                
             else
-                error('Invalid constructor for UniformMps.')
+                if iscell(varargin{1}), mps.AL = varargin{1}; else, mps.AL = varargin(1); end
+                if iscell(varargin{2}), mps.AR = varargin{2}; else, mps.AR = varargin(2); end
+                if iscell(varargin{3}), mps.C = varargin{3};  else, mps.C = varargin(3); end
+                if nargout == 4
+                    if iscell(varargin{4})
+                        mps.AC = varargin{4};
+                    else
+                        mps.AC = varargin(4);
+                    end
+                end
             end
+            
+            
         end
     end
     
@@ -142,8 +149,8 @@ classdef UniformMps
                         'Cannot create a full rank mps with given spaces.');
                 end
                 
-                A{w} = Tensor.new(fun, [vspaces{w} pspaces{w}], ...
-                    vspaces{next(w, L)});
+                A{w} = MpsTensor(Tensor.new(fun, [vspaces{w} pspaces{w}], ...
+                    vspaces{next(w, L)}), 0);
             end
             
             mps = UniformMps(A);
@@ -178,12 +185,14 @@ classdef UniformMps
             d = size(mps, 1);
         end
         
-        function mps = horzcat(varargin)
-            ALs = cellfun(@(x) x.AL, varargin, 'UniformOutput', false);
-            ARs = cellfun(@(x) x.AR, varargin, 'UniformOutput', false);
-            Cs =  cellfun(@(x) x.C, varargin, 'UniformOutput', false);
-            ACs = cellfun(@(x) x.AC, varargin, 'UniformOutput', false);
-            mps = UniformMps([ALs{:}], [ARs{:}], [Cs{:}], [ACs{:}]);
+        function mps = horzcat(mps, mps2, varargin)
+            mps.AL = horzcat(mps.AL, mps2.AL);
+            mps.AR = horzcat(mps.AR, mps2.AR);
+            mps.C  = horzcat(mps.C, mps2.C);
+            mps.AC = horzcat(mps.AC, mps2.AC);
+            if nargin > 2
+                mps = horzcat(mps, varargin{:});
+            end
         end
         
         function mps = vertcat(varargin)
@@ -197,22 +206,22 @@ classdef UniformMps
         function s = leftvspace(mps, w)
             % return the virtual space to the left of site w.
             if nargin == 1 || isempty(w), w = 1:period(mps); end
-            s = arrayfun(@leftvspace, mps.AL(w));
+            s = arrayfun(@leftvspace, mps.AL{w});
         end
         
         function s = pspace(mps, w)
             % return the physical space at site w.
-            s = pspace(mps.AL(w));
+            s = pspace(mps.AL{w});
         end
         
         function s = rightvspace(mps, w)
             % return the virtual space to the right of site w.
             if nargin == 1 || isempty(w), w = 1:period(mps); end
-            s = arrayfun(@rightvspace, mps.AL(w));
+            s = arrayfun(@rightvspace, mps.AL{w});
         end
         
         function type = underlyingType(mps)
-            type = underlyingType(mps(1).AR(1));
+            type = underlyingType(mps(1).AR{1});
         end
     end
     
@@ -272,20 +281,22 @@ classdef UniformMps
             for i = 1:depth(mps)
                 if strcmp(kwargs.Order, 'rl')
                     [mps(i).AR, ~, ~, eta1]             = uniform_rightorth(...
-                        mps(i).AR, [], ...
+                        mps(i), [], ...
                         'Tol', kwargs.Tol, 'MaxIter', kwargs.MaxIter, ...
                         'Method', kwargs.Method, 'Verbosity', kwargs.Verbosity);
+                    mps(i).AL = mps(i).AR;
                     [mps(i).AL, mps(i).C, lambda, eta2] = uniform_leftorth(...
-                        mps(i).AR, mps(i).C, ...
+                        mps(i), mps(i).C, ...
                         'Tol', kwargs.Tol, 'MaxIter', kwargs.MaxIter, ...
                         'Method', kwargs.Method, 'Verbosity', kwargs.Verbosity);
                 else
                     [mps(i).AL, ~, ~, eta1]             = uniform_leftorth(...
-                        mps(i).AL, [], ...
+                        mps(i), {}, ...
                         'Tol', kwargs.Tol, 'MaxIter', kwargs.MaxIter, ...
                         'Method', kwargs.Method, 'Verbosity', kwargs.Verbosity);
+                    mps(i).AR = mps(i).AL;
                     [mps(i).AR, mps(i).C, lambda, eta2] = uniform_rightorth(...
-                        mps(i).AL, mps(i).C, ...
+                        mps(i), mps(i).C, ...
                         'Tol', kwargs.Tol, 'MaxIter', kwargs.MaxIter, ...
                         'Method', kwargs.Method, 'Verbosity', kwargs.Verbosity);
                 end
@@ -298,8 +309,8 @@ classdef UniformMps
             if kwargs.ComputeAC
                 for i = 1:depth(mps)
                     for w = period(mps(i)):-1:1
-                        mps(i).AC(w) = multiplyright(mps(i).AL(w), ...
-                            mps(i).C(w));
+                        mps(i).AC{w} = multiplyright(mps(i).AL{w}, ...
+                            mps(i).C{w});
                     end
                 end
             end
@@ -310,7 +321,7 @@ classdef UniformMps
             
             for i = 1:depth(mps)
                 for w = 1:period(mps(i))
-                    C_iw = mps(i).C(w);
+                    C_iw = mps(i).C{w};
                     [U, S, V] = tsvd(C_iw, 1, 2);
                     
                     if isdual(C_iw.codomain) ~= isdual(S.codomain)
@@ -326,13 +337,13 @@ classdef UniformMps
                     end
                     
                     ww = next(w, period(mps(i)));
-                    mps(i).C(w) = S;
+                    mps(i).C{w} = S;
                     
-                    mps(i).AL(ww) = multiplyleft(mps(i).AL(ww), U');
-                    mps(i).AL(w)  = multiplyright(mps(i).AL(w), U);
+                    mps(i).AL{ww} = multiplyleft(mps(i).AL{ww}, U');
+                    mps(i).AL{w}  = multiplyright(mps(i).AL{w}, U);
                     
-                    mps(i).AR(ww) = multiplyleft(mps(i).AR(ww), V);
-                    mps(i).AR(w)  = multiplyright(mps(i).AR(w), V');
+                    mps(i).AR{ww} = multiplyleft(mps(i).AR{ww}, V);
+                    mps(i).AR{w}  = multiplyright(mps(i).AR{w}, V');
                 end
             end
         end
@@ -395,7 +406,7 @@ classdef UniformMps
                 A2 = mps2.AR(sites);
             end
             
-            T = transfermatrix(A1, A2);
+            T = cellfun(@transfermatrix, A1, A2);
         end
         
         function rho = fixedpoint(mps, type, w)
@@ -429,29 +440,29 @@ classdef UniformMps
             ww = prev(w, period(mps));
             switch type
                 case 'l_RR'
-                    rho = contract(mps.C(ww)', [-1 1], mps.C(ww), [1 -2], 'Rank', [1 1]);
+                    rho = contract(mps.C{ww}', [-1 1], mps.C{ww}, [1 -2], 'Rank', [1 1]);
 %                     if isdual(space(rho, 1)), rho = twist(rho, 1); end
                 case 'l_RL'
-                    rho = mps.C(ww);
+                    rho = mps.C{ww};
 %                     if isdual(space(rho, 1)), rho = twist(rho, 1); end
                 case 'l_LR'
-                    rho = mps.C(ww)';
+                    rho = mps.C{ww}';
 %                     if isdual(space(rho, 1)), rho = twist(rho, 1); end
                 case 'l_LL'
-                    rho = mps.C.eye(leftvspace(mps, w), leftvspace(mps, w));
+                    rho = mps.C{w}.eye(leftvspace(mps, w), leftvspace(mps, w));
                     if isdual(space(rho, 1)), rho = twist(rho, 1); end
                     
                 case 'r_RR'
-                    rho = mps.C.eye(rightvspace(mps, w)', rightvspace(mps, w)');
+                    rho = mps.C{w}.eye(rightvspace(mps, w)', rightvspace(mps, w)');
                     if isdual(space(rho, 2)), rho = twist(rho, 2); end
                 case 'r_RL'
-                    rho = twist(mps.C(w)', 2);
+                    rho = twist(mps.C{w}', 2);
 %                     if isdual(space(rho, 1)), rho = twist(rho, 2); end
                 case 'r_LR'
-                    rho = twist(mps.C(w), 2);
+                    rho = twist(mps.C{w}, 2);
 %                     if ~isdual(space(rho, 2)), rho = twist(rho, 2); end
                 case 'r_LL'
-                    rho = contract(mps.C(w), [-1 1], mps.C(w)', [1 -2], 'Rank', [1 1]);
+                    rho = contract(mps.C{w}, [-1 1], mps.C{w}', [1 -2], 'Rank', [1 1]);
                     rho = twist(rho, 2);
             end
         end
@@ -556,16 +567,16 @@ classdef UniformMps
                 N = size(H.R.var, 2);
                 H.R.var = H.R.var(1, N, 1);
                 H.O{1} = H.O{1}(:, :, N, :);
-                AC_ = apply(H, mps1.AC(end));
-                E = dot(AC_, mps2.AC(end));
+                AC_ = apply(H, mps1.AC{end});
+                E = dot(AC_, mps2.AC{end});
                 
             elseif isa(O, 'InfMpo')
                 [GL, GR] = environments(O, mps1, mps2); % should be normalized
                 Hs = AC_hamiltonian(O, mps1, GL, GR);
                 E = zeros(size(Hs));
                 for i = 1:length(Hs)
-                    AC_ = apply(Hs{i}, mps1.AC(i));
-                    E(i) = dot(AC_, mps2.AC(i));
+                    AC_ = apply(Hs{i}, mps1.AC{i});
+                    E(i) = dot(AC_, mps2.AC{i});
                 end
                 E = prod(E);
                 
@@ -603,7 +614,7 @@ classdef UniformMps
                 w = 1
             end
             
-            [svals, charges] = matrixblocks(tsvd(mps.C(w)));
+            [svals, charges] = matrixblocks(tsvd(mps.C{w}));
             svals = cellfun(@diag, svals, 'UniformOutput', false);
         end
         
@@ -847,6 +858,142 @@ classdef UniformMps
         n = Inner(x, eta, xi)
         
         
+    end
+    
+    %% Subroutines
+    methods (Access = protected)
+        function [AL, CL, lambda, eta] = uniform_leftorth(mps, CL, kwargs)
+            arguments
+                mps
+                CL = {}
+                kwargs.Tol = eps(underlyingType(mps))^(3/4)
+                kwargs.MaxIter = 500
+                kwargs.Method = 'polar'
+                kwargs.Verbosity = Verbosity.off
+                kwargs.Normalize = true
+                kwargs.EigsInit = 3
+                kwargs.EigsFrequence = 2
+            end
+            
+            A = mps.AL;
+%             
+            % constants
+            EIG_TOLFACTOR = 1/50;
+            EIG_MAXTOL = 1e-4;
+            MINKRYLOVDIM = 8;
+            MAXKRYLOVDIM = 30;
+            
+            
+            
+            % initialization
+            N = period(mps);
+            if isempty(CL)
+                CL = initializeC(A{:});
+            end
+            
+            if kwargs.Normalize, CL{1} = normalize(CL{1}); end
+            
+            for i = 1:numel(A)
+                A{i} = repartition(A{i}, [nspaces(A{i}) - 1, 1]);
+            end
+            AL = A;
+            
+            eta_best = Inf;
+            ctr_best = 0;
+            AL_best = AL;
+            C_best = CL;
+            lambda_best = 0;
+            
+            for ctr = 1:kwargs.MaxIter
+                if ctr > kwargs.EigsInit && mod(ctr, kwargs.EigsFrequence) == 0
+                    C_ = repartition(CL{end}, [2 0]);
+                    T = cellfun(@transfermatrix, A, AL);
+                    
+                    eigalg = Arnoldi('Tol', min(eta * EIG_TOLFACTOR, EIG_MAXTOL), ...
+                        'KrylovDim', between(MINKRYLOVDIM, ...
+                            MAXKRYLOVDIM - ctr / 2 + 4, ...
+                            MAXKRYLOVDIM), ...
+                        'NoBuild', 4, ...
+                        'Verbosity', kwargs.Verbosity - 1);
+                    
+                    [C_, ~] = eigsolve(eigalg, @(x) T.apply(x), C_, 1, 'largestabs');
+                    [~, CL{end}] = leftorth(C_, 1, 2, kwargs.Method);
+                    if isdual(space(CL{end}, 2)) == isdual(space(CL{end}, 1))
+                        CL{end}.codomain = conj(CL{end}.codomain);
+                        CL{end} = twist(CL{end}, 1);
+                    end
+                end
+                
+                C_ = CL{end};
+                lambdas = ones(1, N);
+                for w = 1:N
+                    ww = prev(w, N);
+                    CA = multiplyleft(A{w}, CL{ww});
+                    [AL{w}, CL{w}] = leftorth(CA, kwargs.Method);
+                    lambdas(w) = norm(CL{w});
+                    if kwargs.Normalize, CL{w} = CL{w} ./ lambdas(w); end
+                end
+                lambda = prod(lambdas);
+                eta = norm(C_ - CL{end}, Inf);
+                if eta < kwargs.Tol
+                    if kwargs.Verbosity >= Verbosity.conv
+                        fprintf('Conv %2d:\terror = %0.4e\n', ctr, eta);
+                    end
+                    break;
+                elseif eta < eta_best
+                    eta_best = eta;
+                    ctr_best = ctr;
+                    AL_best = AL;
+                    C_best = CL;
+                    lambda_best = lambda;
+                elseif ctr > 40 && ctr - ctr_best > 5
+                    warning('uniform_orthright:stagnate', 'Algorithm stagnated');
+                    eta = eta_best;
+                    AL = AL_best;
+                    CL = C_best;
+                    lambda = lambda_best;
+                    break;
+                end
+                
+                if kwargs.Verbosity >= Verbosity.iter
+                    fprintf('Iter %2d:\terror = %0.4e\n', ctr, eta);
+                end
+            end
+            
+            if kwargs.Verbosity >= Verbosity.warn && eta > kwargs.Tol
+                fprintf('Not converged %2d:\terror = %0.4e\n', ctr, eta);
+            end
+        end
+        
+        function [AR, CR, lambda, eta] = uniform_rightorth(mps, CR, kwargs)
+            arguments
+                mps
+                CR = mps.C
+                kwargs.Tol = eps(underlyingType(mps))^(3/4)
+                kwargs.MaxIter = 500
+                kwargs.Method = 'polar'
+                kwargs.Verbosity = 0
+                kwargs.Normalize = true
+                kwargs.EigsInit = 3
+                kwargs.EigsFrequence = 2
+            end
+            
+            opts = namedargs2cell(kwargs);
+            mps_d = mps;
+            mps_d.AL = flip(cellfun(@ctranspose, mps.AR, 'UniformOutput', false));
+            
+            if isempty(CR)
+                Cd = {};
+            else
+                Cd = circshift(flip(cellfun(@ctranspose, CR, 'UniformOutput', false)), -1);
+            end
+            
+            [ARd, CRd, lambda, eta] = uniform_leftorth(mps_d, Cd, opts{:});
+            
+            AR = flip(cellfun(@ctranspose, ARd, 'UniformOutput', false));
+            CR  = circshift(flip(cellfun(@ctranspose, CRd, 'UniformOutput', false)), -1);
+            lambda = conj(lambda);
+        end
     end
 end
 

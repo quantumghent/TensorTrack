@@ -126,7 +126,7 @@ classdef Arnoldi
                     
                     if conv > alg.tol
                         if invariantsubspace
-                            fprintf('Found invariant subspace.\n');
+                            fprintf('Found invariant subspace (error = %.5e).\n', conv);
                             flag = 1;
                         else
                             fprintf('Reached maxiter without convergence.\n');

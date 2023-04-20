@@ -66,6 +66,7 @@ classdef InfJMpo < InfMpo
                 GL{1} = full(GL{1});
             end
             
+%             GL{1} = MpsTensor(GL{1}, 0);
             for w = 1:period(mps1)-1
                 T = transfermatrix(mpo, mps1, mps2, w, 'Type', 'LL');
                 GL{next(w, period(mps1))} = apply(T, GL{w});
@@ -126,6 +127,7 @@ classdef InfJMpo < InfMpo
                 GR{1} = full(GR{1});
             end
             
+%             GR{1} = MpsTensor(GR{1}, 0);
             for w = period(mps1):-1:2
                 T = transfermatrix(mpo, mps1, mps2, w, 'Type', 'RR').';
                 GR{w} = apply(T, GR{next(w, period(mps1))});
@@ -175,8 +177,9 @@ classdef InfJMpo < InfMpo
                     GBL{1}(i) = rhs;
                 else
                     if needsRegularization && iseye(T, i)
+                        lambda = overlap(rhs, fp_right);
                         fp_left = repartition(fp_left, rank(rhs));
-                        rhs = rhs - overlap(rhs, fp_right) * fp_left;
+                        rhs = rhs - lambda * fp_left;
                         H_effective = @(x) x - expP * ...
                             apply_regularized(Tdiag, fp_left, fp_right, x);
                     else
@@ -191,6 +194,7 @@ classdef InfJMpo < InfMpo
                 GBL{1} = full(GBL{1});
             end
             
+            GBL{1} = MpsTensor(GBL{1}, 1);
             for w = 1:L-1
                 GBL{next(w, L)} = expP^(1 / L) * ...
                     (apply(TB(w), GL{w}) + apply(T(w), GBL{w}));
@@ -245,8 +249,9 @@ classdef InfJMpo < InfMpo
                     GBR{1}(i) = rhs;
                 else
                     if needsRegularization && iseye(T, i)
+                        lambda = overlap(rhs, fp_left);
                         fp_right = repartition(fp_right, rank(rhs));
-                        rhs = rhs - overlap(rhs, fp_left) * fp_right;
+                        rhs = rhs - lambda * fp_right;
                         H_effective = @(x) x - expP * ...
                             apply_regularized(Tdiag, fp_right, fp_left, x);
                     else
@@ -261,6 +266,7 @@ classdef InfJMpo < InfMpo
                 GBR{1} = full(GBR{1});
             end
             
+            GBR{1} = MpsTensor(GBR{1}, 1);
             for w = L:-1:2
                 ww = next(w, L);
                 TB_w = transfermatrix(mpo, qp, qp, w, 'Type', 'BR').';
@@ -290,41 +296,6 @@ classdef InfJMpo < InfMpo
                 warning('lambdas disagree (%e, %e)', lambdaL, lambdaR);
             end
         end
-        
-        function fp = fixedpoint(operator, state, type, w)
-            arguments
-                operator
-                state
-                type
-                w = 1
-            end
-            
-            fp = fixedpoint(state, type(1:4), w);
-            
-            % add leg to fit operator
-            switch type(1)
-                case 'l'
-                    fp = insert_onespace(fp, 2, ~isdual(leftvspace(operator, w)));
-                case 'r'
-                    fp = insert_onespace(fp, 2, ~isdual(rightvspace(operator, w)));
-                otherwise
-                    error('invalid fixedpoint type (%s)', type);
-            end
-            
-            % add leg to fit quasiparticle auxiliary leg
-            if isa(state, 'InfQP')
-                switch type(6)
-                    case '0'
-                        dual = isdual(auxspace(state, w));
-                    case '1'
-                        dual = ~isdual(auxspace(state, w));
-                    otherwise
-                        error('invalid type (%s)', type);
-                end
-                fp = MpsTensor(insert_onespace(fp, nspaces(fp) + 1, dual), 1);
-            end
-        end
-        
         
         function mpo = renormalize(mpo, lambda)
             mpo = mpo - lambda;

@@ -84,7 +84,7 @@ classdef Expand
                     end
                     flag = addcharge.flag ~= 0 || nnz(addbond) > 0;
                     
-                    old_space = rightvspace(mps(d).AR(w));
+                    old_space = rightvspace(mps(d).AR{w});
                     
                     new_space = struct;
                     new_space.charges = charges(old_space);
@@ -339,7 +339,12 @@ classdef Expand
             
             for d  = 1:depth(mps)
                 % expand tensors and convert to UniformMps
-                mps(d) = UniformMps(expand(mps(d).AR, new_spaces(d, :), alg.noisefactor));
+                AR = mps(d).AR;
+                for w = 1:period(mps)
+                    AR{w} = expand(AR{w}, new_spaces(d, w), alg.noisefactor);
+                end
+                
+                mps(d) = UniformMps(AR);
             end
         end
         
