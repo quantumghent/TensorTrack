@@ -145,7 +145,7 @@ classdef InfJMpo < InfMpo
             end
             
             linkwargs = namedargs2cell(linopts);
-            expP = exp(-1i*qp.p);
+            expP = exp(-1i * qp.p);
             L = period(mpo);
             
             needsRegularization = istrivial(qp);
@@ -226,7 +226,9 @@ classdef InfJMpo < InfMpo
             GBR{1} = SparseTensor.zeros(domain(T), auxspace(qp, 1));
             for w = L:-1:1
                 ww = next(w, L);
-                GBR{w} = expP^(1/L) * (apply(TB(ww), GR{ww}) + apply(T(ww), GBR{ww}));
+                TB_w = transfermatrix(mpo, qp, qp, w, 'Type', 'BR').';
+                T_w = transfermatrix(mpo, qp, qp, w, 'Type', 'LR').';
+                GBR{w} = expP^(1/L) * (apply(TB_w, GR{ww}) + apply(T_w, GBR{ww}));
             end
             
             N = size(GBR{1}, 2);
@@ -261,7 +263,9 @@ classdef InfJMpo < InfMpo
             
             for w = L:-1:2
                 ww = next(w, L);
-                GBR{w} = expP^(1/L) * (apply(TB(ww), GR{ww}) + apply(T(ww), GBR{ww}));
+                TB_w = transfermatrix(mpo, qp, qp, w, 'Type', 'BR').';
+                T_w = transfermatrix(mpo, qp, qp, w, 'Type', 'LR').';
+                GBR{w} = expP^(1/L) * (apply(TB_w, GR{ww}) + apply(T_w, GBR{ww}));
             end
         end
         

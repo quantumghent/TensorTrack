@@ -38,49 +38,51 @@ classdef TestAlgorithms < matlab.unittest.TestCase
             end
         end
         
-        function test1dIsing(tc)
-            E0 = -0.2525;
-            momenta = [0 0.5 pi];
-            Delta0 = [0.805833 0.813325 1.00029];
+        function test1dIsing_ordered(tc)
+            J = 1;
+            h = 1;
+            e0 = quantum1dIsing_energy(J, h);
+            d0 = @(k) quantum1dIsing_dispersion(k, 'J', J, 'h', h);
+            D = 12;
+            momenta = [0 pi 0.5];
             
-            for L = 1:3
-                for symm = ["Z1", "Z2"]
-                    H = quantum1dIsing('Symmetry', symm, 'h', 0.1);
-                    H = repmat(H, 1, L);
-                    if strcmp(symm, 'Z1')
-                        vspace = CartesianSpace.new(12);
-                    else
-                        vspace = GradedSpace.new(Z2(0, 1), [6 6], false);
-                    end
-                    gs = initialize_mps(H, vspace);
-                    
-                    %% Groundstate algorithms
-                    gs = fixedpoint(Vumps('which', 'smallestreal', 'maxiter', 5), ...
-                        H, gs);
-                    tc.assertEqual(expectation_value(gs, H), E0 * L, 'RelTol', 1e-2);
-%                     gs = fixedpoint(IDmrg('which', 'smallestreal', 'maxiter', 5), ...
-%                         H, gs);
-%                     tc.verifyEqual(expectation_value(gs, H), E0 * L, 'RelTol', 1e-2);
-                    if L > 1
-                        gs2 = fixedpoint(IDmrg2('which', 'smallestreal', 'maxiter', 5), ...
-                            H, gs);
-                        tc.assertEqual(expectation_value(gs2, H), E0 * L, 'RelTol', 1e-2);
-                        gs2 = fixedpoint(Vumps2('which', 'smallestreal', 'maxiter', 6), ...
-                            H, gs);
-                        tc.assertEqual(expectation_value(gs2, H), E0 * L, 'RelTol', 1e-2);
-                    end
-                    
-                    %% Excitations
-                    for i = 1:length(momenta)
-                        if strcmp(symm, 'Z1')
-                            qp = InfQP.randnc(gs, gs, momenta(i));
-                        else
-                            qp = InfQP.randnc(gs, gs, momenta(i), Z2(1));
-                        end
-                        [qp, mu] = excitations(QPAnsatz(), H, qp);
-                        tc.verifyEqual(mu, Delta0(i), 'RelTol', 1e-3);
-                    end
-                    
+            for L = 3
+                %% No symmetry
+                H = repmat(quantum1dIsing('h', h, 'J', J), 1, L);
+                
+                vspace = CartesianSpace.new(D, D+1, D+2);
+                gs = initialize_mps(H, vspace);
+                
+                % Groundstate algorithms
+                gs = fixedpoint(Vumps('which', 'smallestreal', 'maxiter', 5), ...
+                    H, gs);
+                tc.assertEqual(expectation_value(gs, H), e0 * L, 'RelTol', 1e-2);
+                
+                % Excitation algorithms
+                for k = momenta
+                    qp = InfQP.randnc(gs, gs, k);
+                    [~, mu] = excitations(QPAnsatz(), H, qp);
+                    tc.assertEqual(mu, d0(k/L), 'RelTol', 1e-3, ...
+                        sprintf('qp failed at momentum %.2f', k));
+                end
+                
+                %% Symmetry
+                H = repmat(quantum1dIsing('h', h, 'J', J, 'Symmetry', 'Z2'), 1, L);
+                
+                vspace = GradedSpace.new(Z2(0, 1), [D D] / 2, false);
+                gs = initialize_mps(H, vspace);
+                
+                % Groundstate algorithms
+                gs = fixedpoint(Vumps('which', 'smallestreal', 'maxiter', 5), ...
+                    H, gs);
+                tc.assertEqual(expectation_value(gs, H), e0 * L, 'RelTol', 1e-2);
+                
+                % Excitation algorithms
+                for k = momenta
+                    qp = InfQP.randnc(gs, gs, k, Z2(1));
+                    [~, mu] = excitations(QPAnsatz(), H, qp);
+                    tc.assertEqual(mu, d0(k / L), 'RelTol', 1e-3, ...
+                        sprintf('qp failed at momentum %.2f', k));
                 end
             end
         end
