@@ -32,10 +32,6 @@ Additionally, for tensors which are invariant under general global symmetries, v
    :caption: Library
    :maxdepth: 2
 
+   lib/tensors
    lib/utility
    lib/caches
-   
-..
-   lib/tensors
-
-   
