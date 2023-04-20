@@ -66,7 +66,7 @@ classdef InfJMpo < InfMpo
                 GL{1} = full(GL{1});
             end
             
-%             GL{1} = MpsTensor(GL{1}, 0);
+            GL{1} = MpsTensor(GL{1}, 0);
             for w = 1:period(mps1)-1
                 T = transfermatrix(mpo, mps1, mps2, w, 'Type', 'LL');
                 GL{next(w, period(mps1))} = apply(T, GL{w});
@@ -127,7 +127,7 @@ classdef InfJMpo < InfMpo
                 GR{1} = full(GR{1});
             end
             
-%             GR{1} = MpsTensor(GR{1}, 0);
+            GR{1} = MpsTensor(GR{1}, 0);
             for w = period(mps1):-1:2
                 T = transfermatrix(mpo, mps1, mps2, w, 'Type', 'RR').';
                 GR{w} = apply(T, GR{next(w, period(mps1))});

@@ -66,7 +66,7 @@ classdef IDmrg2
             for iter = 1:alg.maxiter
                 t_iter = tic;
                 
-                C_ = mps.C(end);
+                C_ = mps.C{end};
                 kwargs = {};
                 lambdas = zeros(1, period(mps));
                 

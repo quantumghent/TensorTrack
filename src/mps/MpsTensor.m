@@ -34,6 +34,10 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
     
     %% Properties
     methods
+        function varargout = size(A, varargin)
+            [varargout{1:nargout}] = size(A.var, varargin{:});
+        end
+        
         function s = space(A, varargin)
             s = space(A.var, varargin{:});
         end
