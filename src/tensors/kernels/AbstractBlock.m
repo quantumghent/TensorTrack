@@ -60,9 +60,6 @@ classdef (Abstract) AbstractBlock
                     med = MatrixBlock(codomain, domain);
                 end
             end
-%             if ~strcmp(class(charges(codomain)), class(med(1).charge))
-%                 bla
-%             end
             X = med;
         end
     end
@@ -363,6 +360,10 @@ classdef (Abstract) AbstractBlock
             %   - 'uint8', 'uint16', 'uint32' or 'uint64'
             
             error('tensors:AbstractMethod', 'This method should be overloaded.');
+        end
+        
+        function bool = iszero(X)
+            bool = isempty(X.var);
         end
     end
 end

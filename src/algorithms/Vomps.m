@@ -3,9 +3,9 @@ classdef Vomps
     
     %% Options
     properties
-        tol = 1e-10
+        tol = 1e-5
         miniter = 2
-        maxiter = 100
+        maxiter = 10
         verbosity = Verbosity.iter
         which = 'largestabs'
         
@@ -70,18 +70,18 @@ classdef Vomps
                 C  = updateC (alg, iter, mpo, mps1, GL, GR);
                 mps2 = updatemps(alg, iter, mps2, AC, C);
                 
-                [GL, GR] = environments(alg, mpo, mps1, mps2, GL, GR);
+                [GL, GR, lambda] = environments(alg, mpo, mps1, mps2, GL, GR);
                 eta = convergence(alg, mpo, mps1, mps2, GL, GR);
                 
                 if iter > alg.miniter && eta < alg.tol
-                    disp_conv(alg, iter, eta, toc(t_total));
+                    disp_conv(alg, iter, lambda, eta, toc(t_total));
                     return
                 end
                 alg = updatetols(alg, iter, eta);
-                disp_iter(alg, iter, eta, toc(t_iter));
+                disp_iter(alg, iter, lambda, eta, toc(t_iter));
             end
             
-            disp_maxiter(alg, iter, eta, toc(t_total));
+            disp_maxiter(alg, iter, lambda, eta, toc(t_total));
         end
     end
     
@@ -89,42 +89,51 @@ classdef Vomps
     methods
         function AC = updateAC(alg, iter, mpo, mps, GL, GR)
             if strcmp(alg.multiAC, 'sequential')
-                sites = mod(iter, period(mps)) + 1;
+                sites = mod1(iter, period(mps));
             else
                 sites = 1:period(mps);
             end
             
             H_AC = AC_hamiltonian(mpo, mps, GL, GR, sites);
+            ACs = arrayfun(@(x) x.AC(sites), mps, 'UniformOutput', false);
+            AC = vertcat(ACs{:});
             for i = length(sites):-1:1
-                AC(i) = MpsTensor(apply(H_AC{sites(i)}, mps.AC(sites(i))), ...
-                    mps.AC(sites(i)).alegs);
+                for d = 1:depth(mpo)
+                    AC(d, i).var = H_AC{i}(d).apply(AC(prev(d, depth(mpo)), i).var);
+                end
             end
         end
         
         function C = updateC(alg, iter, mpo, mps, GL, GR)
             if strcmp(alg.multiAC, 'sequential')
-                sites = mod(iter, period(mps)) + 1;
+                sites = mod1(iter, period(mps));
             else
                 sites = 1:period(mps);
             end
             
             H_C = C_hamiltonian(mpo, mps, GL, GR, sites);
+            Cs = arrayfun(@(x) x.C(sites), mps, 'UniformOutput', false);
+            C = vertcat(Cs{:});
             for i = length(sites):-1:1
-                C(i) = apply(H_C{sites(i)}, mps.C(sites(i)));
+                for d = 1:depth(mpo)
+                    C(d, i) = H_C{i}(d).apply(C(prev(d, depth(mpo)), i));
+                end
             end
         end
         
         function mps = updatemps(alg, iter, mps, AC, C)
             if strcmp(alg.multiAC, 'sequential')
-                sites = mod(iter, period(mps)) + 1;
+                sites = mod1(iter, period(mps));
             else
                 sites = 1:period(mps);
             end
             
-            for i = length(AC):-1:1
-                [Q_AC, ~] = leftorth(AC(i));
-                [Q_C, ~]  = leftorth(C(i), 1, 2);
-                mps.AL(sites(i)) = multiplyright(Q_AC, Q_C');
+            for d = size(AC, 1):-1:1
+                for i = length(AC):-1:1
+                    [Q_AC, ~] = leftorth(AC(d, i), 'polar');
+                    [Q_C, ~]  = leftorth(C(d, i), 1, 2, 'polar');
+                    mps(d).AL(sites(i)) = multiplyright(Q_AC, Q_C');
+                end
             end
             
             kwargs = namedargs2cell(alg.alg_canonical);
@@ -199,22 +208,34 @@ classdef Vomps
             fprintf('---- VOMPS ----\n');
         end
         
-        function disp_iter(alg, iter, eta, t)
+        function disp_iter(alg, iter, lambda, eta, t)
             if alg.verbosity < Verbosity.iter, return; end
             
             s = settings;
-            switch s.matlab.commandwindow.NumericFormat.ActiveValue
-                case 'short'
-                    fprintf('Vomps %2d:\terror = %0.1e\t(%s)\n', ...
-                        iter, eta, time2str(t));
-                otherwise
-                    fprintf('Vomps %4d:\terror = %0.4e\t(%s)\n', ...
-                        iter, eta, time2str(t));
-                    
+            if abs(imag(lambda)) < eps(lambda)^(3/4) * abs(lambda)
+                switch s.matlab.commandwindow.NumericFormat.ActiveValue
+                    case 'short'
+                        fprintf('Vomps %2d:\tE = %-0.4f\terror = %0.1e\t(%s)\n', ...
+                            iter, real(lambda), eta, time2str(t));
+                    otherwise
+                        fprintf('Vomps %4d:\tE = %-0.15f\terror = %0.4e\t(%s)\n', ...
+                            iter, real(lambda), eta, time2str(t, 's'));
+                        
+                end
+            else
+                switch s.matlab.commandwindow.NumericFormat.ActiveValue
+                    case 'short'
+                        fprintf('Vomps %2d:\tE = %-0.4f %+0.4fi\terror = %0.1e\t(%s)\n', ...
+                            iter, real(lambda), imag(lambda), eta, time2str(t));
+                    otherwise
+                        fprintf('Vomps %4d:\tE = %-0.15f %+0.15fi\terror = %0.4e\t(%s)\n', ...
+                            iter, real(lambda), imag(lambda), eta, time2str(t));
+                        
+                end
             end
         end
         
-        function disp_conv(alg, iter, eta, t)
+        function disp_conv(alg, iter, lambda, eta, t)
             if alg.verbosity < Verbosity.conv, return; end
             s = settings;
             switch s.matlab.commandwindow.NumericFormat.ActiveValue
@@ -229,7 +250,7 @@ classdef Vomps
             fprintf('---------------\n');
         end
         
-        function disp_maxiter(alg, iter, eta, t)
+        function disp_maxiter(alg, iter, lambda, eta, t)
             if alg.verbosity < Verbosity.warn, return; end
             s = settings;
             switch s.matlab.commandwindow.NumericFormat.ActiveValue

@@ -1,18 +1,34 @@
 function [sequence, cost] = netcon(legLinks,verbosity,costType,muCap,allowOPs,legCosts)
-% function [sequence cost] = netcon(legLinks,verbosity,costType,muCap,allowOPs,legCosts)
 % Finds most efficient way to contract a tensor network
 % v2.00 by Robert N. C. Pfeifer 2014
 % Contact: rpfeifer.public@gmail.com, robert.pfeifer@mq.edu.au
 %
-% Parameters: (defaults)
-% - legLinks: Labelling of tensor indices. (required)
-% - verbosity: 0: Quiet. 1: State final result. 2: State intermediate and final results. 3: Also display object sizes during pairwise contractions. (2)
-% - costType: 1: Absolute value. 2: Multiple and power of chi. (2)
-% - muCap: Initially restrict search to sequences having a cost of muCap (if costType==1) or O(X^muCap) (if costType==2). This value will increment
-%          automatically if required, and it is recommended that it be left at the default value of 1. (1)
-% - allowOPs: Allow contraction sequences including outer products: 0/false: No. 1/true: Yes. (true)
-% - legCosts: For costType==1: nx2 table. A row reading [a b] assigns a dimension of b to index a. Default: 2 for all legs.
-%             For costType==2: nx3 table. A row reading [a b c] assigns a dimension of bX^c to index a, for unspecified X. Default: 1X^1 for all legs.
+% Usage
+% -----
+% :code:`[sequence, cost] = netcon(legLinks, verbosity, costType, muCap, allowOPs, legCosts)`
+%
+% Arguments
+% ---------
+% legLinks
+%   abelling of tensor indices.
+%
+% Optional Arguments
+% ------------------
+% verbosity
+%   0: Quiet. 1: State final result. 2: State intermediate and final results. 3: Also display object sizes during pairwise contractions. (2)
+% costType
+%   1: Absolute value. 2: Multiple and power of chi. (2)
+% muCap
+%   Initially restrict search to sequences having a cost of muCap (if costType==1) or
+%   O(X^muCap) (if costType==2). This value will increment automatically if required, and it
+%   is recommended that it be left at the default value of 1. (1)
+% allowOPs
+%   Allow contraction sequences including outer products: 0/false: No. 1/true: Yes. (true)
+% legCosts
+%   For costType==1: nx2 table. A row reading [a b] assigns a dimension of b to index a.
+%   Default: 2 for all legs. For costType==2: nx3 table. A row reading [a b c] assigns a
+%   dimension of bX^c to index a, for unspecified X. Default: 1X^1 for all legs.
+
 arguments
     legLinks
     verbosity   = 2 % 0: No displayed output. 1: Display final result. 2: Display progress reports.

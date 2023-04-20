@@ -355,7 +355,8 @@ classdef Tensor < AbstractTensor
                     spaces = CartesianSpace.new(varargin{1});
                 elseif isnumeric(varargin{2}) || islogical(varargin{2})
                     assert(length(varargin{1}) == length(varargin{2}))
-                    spaces = ComplexSpace.new(varargin{1}, varargin{2});
+                    args = [num2cell(varargin{1}); num2cell(varargin{2})];
+                    spaces = ComplexSpace.new(args{:});
                 end
                 
                 if ~isfield(kwargs, 'Rank')
@@ -516,11 +517,13 @@ classdef Tensor < AbstractTensor
         end
         
         function tdst = embed(tsrc, tdst)
+            % embed a tensor in a different tensor.
             
-            bsrc = tensorblocks(tsrc);
-            fsrc = fusiontrees(tsrc);
-            bdst = tensorblocks(tdst);
-            fdst = fusiontrees(tdst);
+            assert(isequal(rank(tsrc), rank(tdst)), 'tensors:argerror', ...
+                'tensors must have the same rank');
+            
+            [bsrc, fsrc] = tensorblocks(tsrc);
+            [bdst, fdst] = tensorblocks(tdst);
             
             [lia, locb] = ismember(fsrc, fdst);
             nsp = nspaces(tdst);
@@ -1577,7 +1580,8 @@ classdef Tensor < AbstractTensor
             V = t.codomain.new(dims, false);
             
             if strcmp(alg, 'polar')
-                assert(isequal(V, prod(t.domain)));
+                assert(isequal(V, prod(t.domain)), ...
+                    'linalg:polar', 'polar decomposition should lead to square R.');
                 W = V;
             elseif length(p1) == 1 && V == t.codomain
                 W = t.codomain;
@@ -2235,10 +2239,11 @@ classdef Tensor < AbstractTensor
                     return
                 end
             end
+            bool = true;
         end
         
         function bool = iszero(t)
-            bool = isempty(t.var);
+            bool = isempty(t.var) || iszero(t.var);
         end
         
         function r = cond(t, p)
@@ -2350,12 +2355,13 @@ classdef Tensor < AbstractTensor
             % -------
             % a : double
             
-            trees = fusiontrees(t);
-            blocks = tensorblocks(t);
-            if isempty(trees)
+            if isa(t.var, 'TrivialBlock')
+                blocks = tensorblocks(t);
                 a = blocks{1};
                 return
             end
+            
+            [blocks, trees] = tensorblocks(t);
             
             % Initialize output
             a = zeros(dims(t));

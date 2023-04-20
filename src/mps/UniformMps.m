@@ -63,7 +63,7 @@ classdef UniformMps
                     end
                     mps = reshape(mps, size(mps));
                     
-                elseif isa(varargin{1}, 'Tensor')
+                elseif isa(varargin{1}, 'Tensor') || isa(varargin{1}, 'MpsTensor')
                     % by default we take the input as AR, as canonicalize right
                     % orthogonalizes before left orthogonalization
                     for i = height(varargin{1}):-1:1
@@ -135,8 +135,8 @@ classdef UniformMps
             L = length(pspaces);
             
             for w = length(pspaces):-1:1
-                rankdeficient = vspaces{w} * pspaces{w} < vspaces{next(w, L)} || ...
-                        vspaces{w} > pspaces{w}' * vspaces{next(w, L)};
+                rankdeficient = vspaces{w} * prod(pspaces{w}) < vspaces{next(w, L)} || ...
+                        vspaces{w} > prod(pspaces{w})' * vspaces{next(w, L)};
                 if rankdeficient
                     error('mps:rank', ...
                         'Cannot create a full rank mps with given spaces.');
@@ -269,7 +269,7 @@ classdef UniformMps
                 kwargs.Order {mustBeMember(kwargs.Order, {'lr', 'rl'})} = 'lr'
             end
             
-            for i = 1:length(mps)
+            for i = 1:depth(mps)
                 if strcmp(kwargs.Order, 'rl')
                     [mps(i).AR, ~, ~, eta1]             = uniform_rightorth(...
                         mps(i).AR, [], ...
@@ -296,7 +296,7 @@ classdef UniformMps
             end
             
             if kwargs.ComputeAC
-                for i = 1:height(mps)
+                for i = 1:depth(mps)
                     for w = period(mps(i)):-1:1
                         mps(i).AC(w) = multiplyright(mps(i).AL(w), ...
                             mps(i).C(w));
@@ -308,7 +308,7 @@ classdef UniformMps
         function mps = diagonalizeC(mps)
             % gauge transform an mps such that C is diagonal.
             
-            for i = 1:height(mps)
+            for i = 1:depth(mps)
                 for w = 1:period(mps(i))
                     C_iw = mps(i).C(w);
                     [U, S, V] = tsvd(C_iw, 1, 2);
@@ -524,7 +524,7 @@ classdef UniformMps
             [V, D] = eigsolve(T, v0, howmany, which, eigkwargs{:});
             
             if kwargs.Type(1) == 'r', V = V'; end
-            if nargout < 2, V = D; end
+            if nargout < 2, V = diag(D); end
         end
         
         function f = fidelity(mps1, mps2, kwargs)
@@ -607,12 +607,14 @@ classdef UniformMps
             svals = cellfun(@diag, svals, 'UniformOutput', false);
         end
         
-        function plot_entanglementspectrum(mps, d, w, ax)
+        function plot_entanglementspectrum(mps, d, w, ax, kwargs)
             arguments
                 mps
                 d = 1:depth(mps)
                 w = 1:period(mps)
                 ax = []
+                kwargs.SymmetrySort = true
+                kwargs.ExpandQdim = false
             end
             if isempty(ax)
                 figure;
@@ -623,35 +625,44 @@ classdef UniformMps
                     end
                 end
             end
-            
-            lim_y = 1;
             for dd = 1:length(d)
                 for ww = 1:length(w)
+                    hold(ax(dd,ww), 'off');
                     [svals, charges] = schmidt_values(mps(dd), w(ww));
+                    if kwargs.ExpandQdim
+                        for i = 1:length(svals)
+                            svals{i} = reshape(repmat(svals{i}, 1, qdim(charges(i))), [], 1);
+                        end
+                    end
                     ctr = 0;
-                    hold off;
-                    lim_x = 1;
-
-                    ticks = zeros(size(svals));
                     labels = arrayfun(@string, charges, 'UniformOutput', false);
                     lengths = cellfun(@length, svals);
                     ticks = cumsum(lengths);
-                    try
-                        semilogy(ax(dd, ww), 1:sum(lengths), vertcat(svals{:}).', '.', 'MarkerSize', 10);
-                    catch
-                        bla
+                    if kwargs.SymmetrySort
+                        for i = 1:length(svals)
+                            semilogy(ax(dd, ww), ctr+(1:lengths(i)), svals{i}, '.', 'MarkerSize', 10, 'Color', colors(i));
+                            if i == 1, hold(ax(dd,ww), 'on'); end
+                            ctr = ctr + lengths(i);
+                        end
+                        set(ax(dd, ww), 'Xtick', ticks, 'fontsize', 10, ...
+                            'XtickLabelRotation', 60, 'Xgrid', 'on');
+                    else
+                        [~, p] = sort(vertcat(svals{:}), 'descend');
+                        p = invperm(p);
+                        for i = 1:length(svals)
+                            semilogy(ax(dd, ww), p(ctr+(1:lengths(i))), svals{i}, '.', 'MarkerSize', 10, 'Color', colors(i));
+                            if i == 1, hold(ax(dd,ww), 'on'); end
+                            ctr = ctr + lengths(i);
+                        end
+                        
                     end
+                    legend(ax(dd, ww), labels)
                     set(ax(dd, ww), 'TickLabelInterpreter', 'latex');
-                    set(ax(dd, ww), 'Xtick', ticks, 'XTickLabel', labels, 'fontsize', 10, ...
-                        'XtickLabelRotation', 60, 'Xgrid', 'on');
                     xlim(ax(dd, ww), [1 - 1e-8 ticks(end) + 1e-8]);
-
                 end
             end
-                
-%             for ww = 1:length(w)
-%                 ylim(ax(1, ww), [10^(floor(log10(lim_y))) 1]);
-%             end
+            hold off
+            linkaxes(ax, 'y');
         end
         
         function mps = desymmetrize(mps)
@@ -665,8 +676,149 @@ classdef UniformMps
             mps.AC = desymmetrize(mps.AC);
         end
         
-        xi = CorrelationLength(mps, charge);
-        [epsilon, delta, spectrum] = MarekGap(mps, charge, angle, num)
+        function [xi, theta] = correlation_length(mps, charge)
+            % Compute the correlation length of an MPS in a given charge sector.
+            %
+            % Usage
+            % -----
+            % :code:`[xi, theta] = correlation_length(mps, charge)`
+            %
+            % Arguments
+            % ---------
+            % mps : :class:`UniformMps`
+            %   input mps.
+            %
+            % charge : :class:`AbstractCharge`
+            %   charge sector for correlation length to target.
+            %
+            % Returns
+            % -------
+            % xi : numeric
+            %   correlation length in the given charge sector.
+            %
+            % theta : numeric
+            %   angle of the corresponding oscillation period.
+            
+            arguments
+                mps
+                charge = []
+            end
+            
+            if isempty(charge) || charge == one(charge)
+                f = transfereigs(mps, mps, 5, 'KrylovDim', 30);
+                if abs(f(1) - 1) > 1e-12
+                    warning('mps:noninjective', ...
+                        'mps might be non-injective:\n%s', num2str(f));
+                end
+                epsilon = -log(abs(f(2)));
+                theta = angle(f(2));
+            else
+                f = transfereigs(mps, mps, 1, 'KrylovDim', 20, 'Charge', charge);
+                epsilon = -log(abs(f));
+                theta = angle(f);
+            end
+            
+            xi = 1 / epsilon;
+        end
+        
+        function [epsilon, delta, spectrum] = marek_gap(mps, charge, kwargs)
+            % Compute the Marek gap of an MPS in a given charge sector.
+            %
+            % Usage
+            % -----
+            % :code:`[epsilon, delta, spectrum] = marek_gap(mps, charge, kwargs)`
+            %
+            % Arguments
+            % ---------
+            % mps : :class:`UniformMps`
+            %   input mps.
+            %
+            % charge : :class:`AbstractCharge`
+            %   charge sector for correlation length to target.
+            %
+            % Keyword Arguments
+            % -----------------
+            % HowMany : int
+            %   amount of transfer matrix eigenvalues to compute.
+            %
+            % Angle : numeric
+            %   angle in radians around which the gap should be computed.
+            %
+            % AngleTol : numeric
+            %   tolerance in radians for angles to be considered equal.
+            %
+            % Returns
+            % -------
+            % epsilon : numeric
+            %   inverse correlation length in the given charge sector.
+            %
+            % delta : numeric
+            %   refinement parameter.
+            %
+            % spectrum : numeric
+            %   computed partial transfer matrix spectrum.
+            arguments
+                mps
+                charge = []
+                kwargs.Angle
+                kwargs.AngleTol = 1e-1
+                kwargs.HowMany = 20
+            end
+            
+            spectrum = transfereigs(mps, mps, kwargs.HowMany, 'largestabs', 'Charge', charge);
+            [d, p] = sort(abs(spectrum), 'descend');
+            inds = d > 1 - 1e-12;
+            
+            if ((isempty(charge) || charge == one(charge)) && sum(inds) > 1) || ...
+                    sum(inds) > 0
+                warning('mps:noninjective', ...
+                    'mps might be non-injective:\n%s', num2str(spectrum));
+            end
+            
+            d(inds) = [];
+            p(inds) = [];
+            
+            if abs(diff(unwrap(angle(spectrum(p(1:2)))))) > 1e-1
+                warning('comparing values with different angles:\n%s', num2str(spectrum));
+            end
+            if isfield('Angle', kwargs)
+                error('tba');
+            end
+            
+            epsilon = -log(d(1));
+            delta = log(d(1) / d(2));
+        end
+
+        function S = entanglement_entropy(mps, w)
+            arguments
+                mps
+                w = 1
+            end
+            
+            [svals, charges] = schmidt_values(mps, w);
+            
+            S = 0;
+            for i = 1:length(svals)
+                S = S - qdim(charges(i)) * sum(svals{i}.^2 .* log(svals{i}.^2));
+            end
+        end
+        
+        function S = renyi_entropy(mps, n, w)
+            arguments
+                mps
+                n
+                w = 1
+            end
+            
+            [svals, charges] = schmidt_values(mps, w);
+            
+            S = 0;
+            for i = 1:length(svals)
+                S = S + qdim(charges(i)) * sum(svals{i}.^(2 * n));
+            end
+            S = 1 / (1 - n) * log(S);
+        end
+        
         S = EntanglementEntropy(mps, loc);
         S = RenyiEntropy(mps,n, loc);
         E = ExpectationValue(mps, W, GL, GR)

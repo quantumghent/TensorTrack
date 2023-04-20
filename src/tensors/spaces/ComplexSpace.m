@@ -74,13 +74,13 @@ classdef ComplexSpace < AbstractSpace
     
     %% Structure
     methods
-        function c = charges(~)
+        function c = charges(spaces)
             % Compute all charge combinations of a space. No internal structure is present, 
             % this yields an empty result.
             %
             % Arguments
             % ---------
-            % spaces : (1, :) :class:`ComplexSpace`
+            % spaces : (1, :) :class:`CartesianSpace`
             %   input spaces.
             %
             % Returns
@@ -88,7 +88,7 @@ classdef ComplexSpace < AbstractSpace
             % c : []
             %   empty result.
             
-            c = Z1;
+            c = repmat(Z1, length(spaces), 1);
         end
         
         function d = degeneracies(spaces)
@@ -121,23 +121,6 @@ classdef ComplexSpace < AbstractSpace
             %   total dimension of each of the input spaces.
             
             d = [spaces.dimensions];
-        end
-         
-        function trees = fusiontrees(~, ~)
-            % Compute all allowed fusiontrees that connect domain and codomain. Only the
-            % trivial fusion tree is allowed, so this returns empty.
-            %
-            % Arguments
-            % ---------
-            % codomain, domain : :class:`ComplexSpace`
-            %   input spaces.
-            %
-            % Returns
-            % -------
-            % trees : :class:`FusionTree`
-            %   only the trivial tree is allowed.
-            
-            trees = FusionTree();
         end
         
         function style = braidingstyle(~, ~)
@@ -197,7 +180,7 @@ classdef ComplexSpace < AbstractSpace
             space.dual = false;
         end
         
-        function space = prod(spaces)
+        function space = prod(spaces, isdual)
             % Fuse a product space to a single space.
             %
             % Arguments
@@ -209,8 +192,11 @@ classdef ComplexSpace < AbstractSpace
             % -------
             % space : (1, 1) :class:`ComplexSpace`
             %   Fused space which is isomorphic to the input product space.
-            
-            space = ComplexSpace(prod(dims(spaces)), false);
+            arguments
+                spaces
+                isdual = false
+            end
+            space = ComplexSpace(prod(dims(spaces)), isdual);
         end
         
         function space1 = infimum(space1, space2)

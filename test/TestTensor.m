@@ -44,6 +44,7 @@ classdef TestTensor < matlab.unittest.TestCase
     end
     
     methods (Test)
+        %% General properties
         function basic_linear_algebra(tc, spaces)
             t1 = Tensor.rand(spaces(1:3), spaces(4:5));
             
@@ -76,6 +77,20 @@ classdef TestTensor < matlab.unittest.TestCase
                 'Dot should be sesquilinear.');
         end
         
+        function transpose_via_conversion(tc, spaces)
+            tc.assumeTrue(istwistless(braidingstyle(spaces)));
+            
+            t = Tensor.ones(spaces(1:3), spaces(4:5));
+            tdagger = t';
+            tc.assertTrue(isequal(t.domain, tdagger.codomain));
+            tc.assertTrue(isequal(t.codomain, tdagger.domain));
+            
+            tc.assertEqual(flip(dims(tdagger)), dims(t));
+            tc.assertEqual(conj(double(t)), double(conj(t)), ...
+                'AbsTol', tc.tol, 'RelTol', tc.tol, ...
+                sprintf('conj(double(t)) should be double(conj(t)). (%e)', distance(conj(double(t)), double(conj(t)))));
+        end
+        
         function matrix_functions(tc, spaces)
             for i = 1:3
                 t = Tensor.randnc(spaces(1:i), spaces(1:i));
@@ -101,6 +116,8 @@ classdef TestTensor < matlab.unittest.TestCase
             end
         end
         
+        
+        %% Contractions
         function permute_via_inner(tc, spaces)
             rng(213);
             t1 = Tensor.rand(spaces, []);
@@ -204,6 +221,13 @@ classdef TestTensor < matlab.unittest.TestCase
             t4 = contract(t1, [-1 1 2 2 1 -2], 'Rank', [1 1]);
             tc.assertTrue(isapprox(t3, t4, 'AbsTol', tc.tol, 'RelTol', tc.tol));
             
+            % issue with fermionic traces:
+            Nl = Tensor.randnc(spaces(1), spaces(1:2));
+            Nr = Tensor.randnc(spaces(1:2), spaces(1));
+            result1 = contract(Nl, [-1 1 2], Nr, [2 1 -2]);
+            result2 = contract(contract(Nl, [-1 1 -4], Nr, [-2 1 -3]), [-1 1 -2 1]);
+            tc.assertTrue(isapprox(result1, result2, 'AbsTol', tc.tol, 'RelTol', tc.tol));
+            
             t5 = contract(t1, [1 2 3 3 2 1]);
             t6 = contract(t4, [1 1]);
             tc.assertTrue(isapprox(t5, t6, 'AbsTol', tc.tol, 'RelTol', tc.tol));
@@ -228,6 +252,8 @@ classdef TestTensor < matlab.unittest.TestCase
             end
         end
         
+        
+        %% Factorizations
         function orthogonalize(tc, spaces)
             t = Tensor.randnc(spaces, []);
             

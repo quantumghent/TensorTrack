@@ -262,7 +262,7 @@ This is only possible if the contracted spaces are compatible, i.e. one is the d
 In general, all contractions will be performed pairwise, such that contracting ``A`` and ``B`` consists of permuting all uncontracted indices of ``A`` to its codomain, all contracted indices of ``A`` to its domain, and the reverse for ``B``.
 Then, contraction is just a composition of linear maps, hence the need for the contracted spaces to be compatible.
 
-The syntax for specifying tensor contractions is based on the ``NCon`` (network contraction) algorithm described here (https://arxiv.org/abs/1402.0939).
+The syntax for specifying tensor contractions is based on the ``NCon`` (network contraction) algorithm described here (:arxiv:`1402.0939`).
 The core principle is that contracted indices are indicated by incrementing positive integers, which are then pairwise contracted in ascending order.
 Uncontracted indices are specified with negative integers, which are sorted in descending order (ascending absolute value).
 It is also possible to specify the rank of the resulting tensor with a name-value argument ``'Rank'``, and use in-place conjugation with the name-value argument ``'Conj'``.

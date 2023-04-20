@@ -35,14 +35,17 @@ classdef ProductCharge < AbstractCharge
             prodcharge.charges = charges;
         end
         
-        function a = cat(dim, a, varargin)
+        function a = cat(dim, varargin)
             % Concatenate charges.
             mask = cellfun(@isempty, varargin);
-            if isempty(a)
-                firstnonempty = find(~mask, 1);
-                a = varargin{firstnonempty};
-                mask(firstnonempty) = true;
+            firstnonempty = find(~mask, 1);
+            if isempty(firstnonempty)
+                a = varargin{1};
+                return
             end
+
+            a = varargin{firstnonempty};
+            mask(firstnonempty) = true;
             
             for i = 1:length(a.charges)
                 catcharges = cellfun(@(x) x.charges{i}, varargin(~mask), 'UniformOutput', false);
@@ -236,26 +239,28 @@ classdef ProductCharge < AbstractCharge
             %
             % Usage
             % -----
-            % a = subsasgn(a, substruct('()', subs), b)
-            % a(subs{:}) = b
+            % :code:`a = subsasgn(a, substruct('()', subs), b)`
+            %
+            % :code:`a(subs{:}) = b`
             %   assign array slices.
             %
-            % a = subsasgn(a, substruct('{}', subs), c)
-            % a{i} = c
+            % :code:`a = subsasgn(a, substruct('{}', subs), c)`
+            %
+            % :code:`a{i} = c`
             %   assign to a factor slice.
             %
             % Arguments
             % ---------
-            % a : ProductCharge
+            % a : :class:`ProductCharge`
             %   array of charges to assign to.
             %
-            % s : substruct
+            % s : :class:`struct`
             %   structure containing indexing data.
             %
-            % b : ProductCharge
+            % b : :class:`ProductCharge`
             %   slice to assign.
             %
-            % c : AbstractCharge
+            % c : :class:`AbstractCharge`
             %   factor to assign.
             %
             % Returns

@@ -255,7 +255,10 @@ classdef AbstractTensor
             
             x0_vec = vectorize(x0);
             sz = size(x0_vec);
-            assert(sz(1) >= howmany);
+            if sz(1) < howmany
+                warning('requested %d out of %d eigenvalues.', howmany, sz(1));
+                howmany = min(howmany, sz(1));
+            end
 
             if isa(A, 'function_handle')
                 A_fun = @(x) vectorize(A(devectorize(x, x0)));
@@ -270,13 +273,13 @@ classdef AbstractTensor
                     'Tolerance', options.Tol, 'MaxIterations', options.MaxIter, ...
                     'IsFunctionSymmetric', ...
                     options.IsSymmetric, 'StartVector', x0_vec, ...
-                    'Display', options.Verbosity >= 3);
+                    'Display', options.Verbosity >= 3, 'FailureTreatment', 'keep');
             else
                 [V, D, flag] = eigs(A_fun, sz(1), howmany, sigma, ...
                     'Tolerance', options.Tol, 'MaxIterations', options.MaxIter, ...
                     'SubspaceDimension', options.KrylovDim, 'IsFunctionSymmetric', ...
                     options.IsSymmetric, 'StartVector', x0_vec, ...
-                    'Display', options.Verbosity >= 3);
+                    'Display', options.Verbosity >= 3, 'FailureTreatment', 'keep');
             end
             
             if nargout <= 1
@@ -294,9 +297,9 @@ classdef AbstractTensor
                 varargout{3} = flag;
             end
             
-            if flag && options.Verbosity > 0
-                warning('eigsolve did not converge.');
-            elseif ~flag && options.Verbosity > 1
+            if any(flag)
+                warning('eigsolve did not converge on eigenvalues %s.', num2str(find(flag)));
+            elseif ~any(flag) && options.Verbosity > 1
                 fprintf('eigsolve converged.\n');
             end
         end
@@ -506,7 +509,14 @@ classdef AbstractTensor
             if isempty(i1) && isempty(i2), B = A; return; end
             assert(length(i1) == length(i2), 'invalid indices');
             
-            E = A.eye(conj(space(A, i1)), space(A, i2));
+            firstspaces = conj(space(A, i1));
+            secondspaces = space(A, i2);
+            assert(isequal(firstspaces, secondspaces), 'Tensor:SpaceMismatch', ...
+                'Cannot trace spaces %s and %s', string(firstspaces), string(secondspaces));
+            
+            E = A.eye(firstspaces, secondspaces);
+            E = twistdual(E, 1:length(firstspaces));
+            
             iA = [i1 i2];
             iE = [1:length(i1) length(i1) + (length(i2):-1:1)];
             B = tensorprod(A, E, iA, iE);

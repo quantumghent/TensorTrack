@@ -998,7 +998,7 @@ classdef SparseArray
             % Find a few singular values and vectors.
             % See Also
             % --------
-            % `Documentation for builtin Matlab eig <https://mathworks.com/help/matlab/ref/svds.html>`_.
+            % `Documentation for builtin Matlab svds <https://mathworks.com/help/matlab/ref/svds.html>`_.
             assert(ismatrix(a), 'sparse:RankError', 'svds is only defined for 2D sparse arrays.');
             [varargout{1:nargout}] = svds(reshape(a.var, a.sz), varargin{:});
             varargout = cellfun(@maybesparse_, varargout, 'UniformOutput', false);

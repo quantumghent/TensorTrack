@@ -344,7 +344,7 @@ classdef FusionTree < matlab.mixin.CustomDisplay
                 
                 f.charges = vertcat(newcharges{:});
                 f.isdual(i:i + 1) = f.isdual([i + 1 i]);
-                c = sparse(blkdiag(blocks{ic2}));
+                c = spblkdiag(blocks{ic2}); % TODO: make sure this doesn't slow down
                 [f, p] = sort(f);
                 c = c(invperm(order), p);
                 return
