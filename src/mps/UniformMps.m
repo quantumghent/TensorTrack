@@ -307,12 +307,49 @@ classdef UniformMps
             end
             
             if kwargs.ComputeAC
-                for i = 1:depth(mps)
-                    for w = period(mps(i)):-1:1
-                        mps(i).AC{w} = multiplyright(mps(i).AL{w}, ...
-                            mps(i).C{w});
+                for d = 1:depth(mps)
+                    for w = 1:period(mps)
+                        mps(d).AC{w} = computeAC(mps, d, w);
                     end
                 end
+            end
+        end
+        
+        function AC = computeAC(mps, d, w, type)
+            arguments
+                mps
+                d
+                w
+                type = 'L'
+            end
+            if strcmp(type, 'L')
+                AC = multiplyright(mps(d).AL{w}, mps(d).C{w});
+            elseif strcmp(type, 'R')
+                AC = multiplyleft(mps(d).AR{w}, mps(d).C{prev(w, period(mps))});
+            else
+                error('mps:argerror', 'invalid type %s', type)
+            end 
+        end
+        
+        function AC2 = computeAC2(mps, d, w, type)
+            arguments
+                mps
+                d
+                w
+                type = 'R'
+            end
+            
+            ww = next(w, period(mps));
+            if strcmp(type, 'R')
+                assert(mps(d).AC{w}.plegs == 1 && mps(d).AC{w}.alegs == 0, 'tba');
+                AC2 = MpsTensor(contract(mps(d).AC{w}, [-1 -2 1], ...
+                            mps(d).AR{ww}, [1 -3 -4], 'Rank', [2 2]));
+            elseif strcmp(type, 'L')
+                assert(mps(d).AC{ww}.plegs == 1 && mps(d).AC{ww}.alegs == 0, 'tba');
+                AC2 = MpsTensor(contract(mps.AL{w}, [-1 -2 1], ...
+                        mps.AC{ww}, [1 -3 -4], 'Rank', [2 2]));
+            else
+                error('mps:argerror', 'invalid type %s', type)
             end
         end
         

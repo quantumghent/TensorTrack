@@ -122,6 +122,10 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
             end
         end
         
+        function varargout = tsvd(t, varargin)
+            [varargout{1:nargout}] = tsvd(t.var, varargin{:});
+        end
+        
         function A = leftnull(A, alg)
             arguments
                 A
@@ -481,7 +485,7 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
         
         function C = initializeC(A)
             arguments (Repeating)
-                A
+                A MpsTensor
             end
             C = cell(size(A));
             
@@ -490,22 +494,22 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
             end
         end
         
-        function A = expand(A, addspace, noisefactor)
+        function A = expand(A, addspace_left, addspace_right, noisefactor)
             arguments
                 A
-                addspace
+                addspace_left
+                addspace_right
                 noisefactor = 1e-3
             end
             
-            for i = length(A):-1:1
-                spaces = space(A(i));
-                spaces(nspaces(A(i)) - A(i).alegs) = addspace(i);
-                spaces(1) = conj(addspace(prev(i, length(A))));
-                r = rank(A(i));
-                A(i).var = embed(A(i).var, ...
+                spaces = space(A);
+                spaces(nspaces(A) - A.alegs) = addspace_right;
+                spaces(1) = conj(addspace_left);
+                r = rank(A);
+                A.var = embed(A.var, ...
                     noisefactor * ...
-                    normalize(A(i).var.randnc(spaces(1:r(1)), spaces(r(1)+1:end)')));
-            end
+                    normalize(A.var.randnc(spaces(1:r(1)), spaces(r(1)+1:end)')));
+            
         end
         
         function type = underlyingType(A)

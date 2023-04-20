@@ -72,17 +72,15 @@ classdef IDmrg2
                 
                 % sweep from left to right
                 for pos = 1:period(mps)-1
-                    AC2 = contract(mps.AC(pos), [-1 -2 1], ...
-                        mps.AR(pos + 1), [1 -3 -4], ...
-                        'Rank', [2 2]);
+                    AC2 = computeAC2(mps, 1, pos);
                     H = AC2_hamiltonian(mpo, mps, GL, GR, pos);
-                    [AC2, lambdas(pos)] = ...
-                        eigsolve(H{1}, AC2, 1, alg.which, kwargs{:});
-                    [mps.AL(pos), C, mps.AR(pos + 1), delta] = ...
-                        tsvd(AC2, [1 2], [3 4], alg.trunc{:});
+                    [AC2.var, lambdas(pos)] = ...
+                        eigsolve(H{1}, AC2.var, 1, alg.which, kwargs{:});
+                    [mps.AL{pos}.var, C, mps.AR{pos+1}.var] = ...
+                        tsvd(AC2.var, [1 2], [3 4], alg.trunc{:});
                     
-                    mps.C(pos) = normalize(C);
-                    mps.AC(pos + 1) = multiplyleft(mps.AR(pos + 1), mps.C(pos));
+                    mps.C{pos} = normalize(C);
+                    mps.AC{pos + 1} = computeAC(mps, 1, pos + 1, 'R');
                     
                     TL = transfermatrix(mpo, mps, mps, pos, 'Type', 'LL');
                     GL{pos + 1} = apply(TL, GL{pos});
@@ -91,17 +89,18 @@ classdef IDmrg2
                 end
                 
                 % update edge
-                AC2 = contract(mps.AC(end), [-1 -2 1], inv(mps.C(end)), [1 2], ...
-                    mps.AL(1), [2 -3 3], mps.C(1), [3 -4], 'Rank', [2 2]);
+                AC2 = contract(mps.AC{end}, [-1 -2 1], inv(mps.C{end}), [1 2], ...
+                    mps.AL{1}, [2 -3 3], mps.C{1}, [3 -4], 'Rank', [2 2]);
                 H = AC2_hamiltonian(mpo, mps, GL, GR, period(mps));
                 [AC2, lambdas(end)] = eigsolve(H{1}, AC2, 1, alg.which, kwargs{:});
                 
-                [mps.AL(end), C, mps.AR(1)] = ...
+                [mps.AL{end}.var, C, mps.AR{1}.var] = ...
                     tsvd(AC2, [1 2], [3 4], alg.trunc{:});
-                mps.C(end) = normalize(C);
-                mps.AC(end) = multiplyright(mps.AL(end), mps.C(end));
-                mps.AC(1) = multiplyleft(mps.AR(1), mps.C(end));
-                mps.AL(1) = multiplyright(mps.AC(1), inv(mps.C(1)));
+                
+                mps.C{end} = normalize(C);
+                mps.AC{end} = computeAC(mps, 1, period(mps), 'L');
+                mps.AC{1} = computeAC(mps, 1, 1, 'R');
+                mps.AL{1} = multiplyright(mps.AC{1}, inv(mps.C{1}));
                 
                 TL = transfermatrix(mpo, mps, mps, period(mps), 'Type', 'LL');
                 GL{1} = apply(TL, GL{end});
@@ -110,16 +109,15 @@ classdef IDmrg2
                 
                 % sweep from right to left
                 for pos = period(mps)-1:-1:1
-                    AC2 = contract(mps.AL(pos), [-1 -2 1], ...
-                        mps.AC(pos + 1), [1 -3 -4], 'Rank', [2 2]);
+                    AC2 = computeAC2(mps, 1, pos, 'L');
                     H = AC2_hamiltonian(mpo, mps, GL, GR, pos);
                     [AC2, lambdas(pos)] = eigsolve(H{1}, AC2, 1, alg.which, kwargs{:});
                     
-                    [mps.AL(pos), C, mps.AR(pos + 1)] = ...
-                        tsvd(AC2, [1 2], [3 4], alg.trunc{:});
-                    mps.C(pos) = normalize(C);
-                    mps.AC(pos) = multiplyright(mps.AL(pos), mps.C(pos));
-                    mps.AC(pos + 1) = multiplyleft(mps.AR(pos + 1), mps.C(pos));
+                    [mps.AL{pos}.var, C, mps.AR{pos + 1}.var] = ...
+                       tsvd(AC2, [1 2], [3 4], alg.trunc{:});
+                    mps.C{pos} = normalize(C);
+                    mps.AC{pos} = computeAC(mps, 1, pos, 'L');
+                    mps.AC{pos + 1} = computeAC(mps, 1, pos + 1, 'R');
                     
                     TL = transfermatrix(mpo, mps, mps, pos, 'Type', 'LL');
                     GL{pos + 1} = apply(TL, GL{pos});
@@ -128,18 +126,18 @@ classdef IDmrg2
                 end
                 
                 % update edge
-                AC2 = contract(mps.C(end-1), [-1 1], mps.AR(end), [1 -2 2], ...
-                    inv(mps.C(end)), [2 3], mps.AC(1), [3 -3 -4], 'Rank', [2 2]);
+                AC2 = contract(mps.C{end-1}, [-1 1], mps.AR{end}, [1 -2 2], ...
+                    inv(mps.C{end}), [2 3], mps.AC{1}, [3 -3 -4], 'Rank', [2 2]);
                 H = AC2_hamiltonian(mpo, mps, GL, GR, period(mps));
                 [AC2, lambdas(1)] = eigsolve(H{1}, AC2, 1, alg.which, kwargs{:});
                 
-                [mps.AL(end), C, mps.AR(1)] = ...
+                [mps.AL{end}.var, C, mps.AR{1}.var] = ...
                     tsvd(AC2, [1 2], [3 4], alg.trunc{:});
-                mps.C(end) = normalize(C);
-                mps.AC(1) = multiplyleft(mps.AR(1), mps.C(end));
+                mps.C{end} = normalize(C);
+                mps.AC{1} = computeAC(mps, 1, 1, 'R');
                 
-                mps.AR(end) = multiplyleft(multiplyright(mps.AL(end), mps.C(end)), ...
-                    inv(mps.C(end - 1)));
+                mps.AR{end} = multiplyleft(multiplyright(mps.AL{end}, mps.C{end}), ...
+                    inv(mps.C{end - 1}));
                 
                 
                 TL = transfermatrix(mpo, mps, mps, period(mps), 'Type', 'LL');
@@ -148,11 +146,11 @@ classdef IDmrg2
                 GR{1} = apply(TR.', GR{2});
                 
                 % error measure
-                infspace = infimum(space(C_, 1), space(mps.C(end), 1));
-                e1 = C_.eye(space(mps.C(end), 1), infspace);
+                infspace = infimum(space(C_, 1), space(mps.C{end}, 1));
+                e1 = C_.eye(space(mps.C{end}, 1), infspace);
                 e2 = C_.eye(space(C_, 1), infspace);
                 
-                eta = distance(e2' * C_ * e2, e1' * mps.C(end) * e1);
+                eta = distance(e2' * C_ * e2, e1' * mps.C{end} * e1);
                 lambda = prod(sqrt(lambdas));
                 
                 if iter > alg.miniter && eta < alg.tol

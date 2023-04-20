@@ -341,7 +341,8 @@ classdef Expand
                 % expand tensors and convert to UniformMps
                 AR = mps(d).AR;
                 for w = 1:period(mps)
-                    AR{w} = expand(AR{w}, new_spaces(d, w), alg.noisefactor);
+                    AR{w} = expand(AR{w}, new_spaces(d, prev(w, period(mps))), ...
+                        new_spaces(d, w), alg.noisefactor);
                 end
                 
                 mps(d) = UniformMps(AR);

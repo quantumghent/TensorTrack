@@ -128,10 +128,8 @@ classdef Vumps2 < handle
             end
             H_AC2 = AC2_hamiltonian(mpo, mps, GL, GR, sites);
             for i = length(sites):-1:1
-                AC2 = MpsTensor(contract(mps.AC{sites(i)}, [-1 -2 1], ...
-                    mps.AR{next(sites(i), period(mps))}, [1 -3 -4], ...
-                    'Rank', [2 2]));
-                [AC2.var, ~] = eigsolve(H_AC2{i}, AC2.var, 1, alg.which, ...
+                AC2{i} = computeAC2(mps, 1, sites(i));
+                [AC2{i}.var, ~] = eigsolve(H_AC2{i}, AC2{i}.var, 1, alg.which, ...
                     kwargs{:});
             end
         end
@@ -169,7 +167,7 @@ classdef Vumps2 < handle
                 end
                 [AL1, C, AL2] = tsvd(AL.var, [1 2], [3 4], alg.trunc{:});
                 mps.AL{sites(i)} = multiplyright(MpsTensor(AL1), C);
-                mps.AL{next(sites(i), period(mps))} = AL2;
+                mps.AL{next(sites(i), period(mps))} = MpsTensor(AL2);
             end
             
             kwargs = namedargs2cell(alg.alg_canonical);
