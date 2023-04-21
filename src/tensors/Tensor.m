@@ -1726,14 +1726,13 @@ classdef Tensor < AbstractTensor
                 ctr = ctr + 1;
                 u = Ublocks{i};
                 s = Sblocks{ctr};
-                if size(s, 2) == 1
+                if isvector(s)
                     diags = s(1);
                 else
                     diags = diag(s);
                 end
                 r = sum(diags > atol);
                 Ublocks{i} = u(:, (r + 1):size(u, 1));
-                
             end
             
             dims.degeneracies = cellfun(@(x) size(x, 2), Ublocks);
@@ -1747,27 +1746,6 @@ classdef Tensor < AbstractTensor
             W = t.codomain.new(dims, false);
             N = t.eye(U.codomain, W);
             N.var = fill_matrix_data(N.var, Ns, dims.charges);
-            
-%             t = tpermute(t, [p1 p2], [length(p1) length(p2)]);
-%             
-%             dims = struct;
-%             [mblocks, dims.charges] = matrixblocks(t);
-%             Ns = cell(size(mblocks));
-%             dims.degeneracies = zeros(size(mblocks));
-%             
-%             for i = 1:length(mblocks)
-%                 Ns{i} = leftnull(mblocks{i}, alg, atol);
-%                 dims.degeneracies(i) = size(Ns{i}, 2);
-%             end
-%             
-%             mask = dims.degeneracies > 0;
-%             dims.charges = dims.charges(mask);
-%             dims.degeneracies = dims.degeneracies(mask);
-%             Ns = Ns(mask);
-%             
-%             W = t.codomain.new(dims, false);
-%             N = t.eye(t.codomain, W);
-%             N.var = fill_matrix_data(N.var, Ns, dims.charges);
         end
         
         function N = rightnull(t, p1, p2, alg, atol)
@@ -1805,25 +1783,59 @@ classdef Tensor < AbstractTensor
             if isempty(p1), p1 = 1:rank(t, 1); end
             if isempty(p2), p2 = rank(t, 1) + (1:rank(t, 2)); end
             
-            t = tpermute(t, [p1 p2], [length(p1) length(p2)]);
+            [~, S, V] = tsvd(t, p1, p2);
             
             dims = struct;
-            [mblocks, dims.charges] = matrixblocks(t);
-            Ns = cell(size(mblocks));
-            dims.degeneracies = zeros(size(mblocks));
+            [Sblocks, c1] = matrixblocks(S);
+            [Vblocks, c2] = matrixblocks(V);
             
-            for i = 1:length(mblocks)
-                Ns{i} = rightnull(mblocks{i}, alg, atol);
-                dims.degeneracies(i) = size(Ns{i}, 1);
+            lia = ismember_sorted(c2, c1);
+            ctr = 0;
+            for i = 1:length(Vblocks)
+                if ~lia(i), continue; end
+                ctr = ctr + 1;
+                v = Vblocks{i};
+                s = Sblocks{ctr};
+                if isvector(s)
+                    diags = s(1);
+                else
+                    diags = diag(s);
+                end
+                r = sum(diags > atol);
+                Vblocks{i} = v((r + 1):size(v, 2), :);
             end
             
-            mask = dims.degeneracies > 0;
-            dims.charges = dims.charges(mask);
-            dims.degeneracies = dims.degeneracies(mask);
-            Ns = Ns(mask);
+            dims.degeneracies = cellfun(@(x) size(x, 1), Vblocks);
+            dims.charges = c2;
             
-            N = Tensor.eye(t.domain.new(dims, false), t.domain);
+            mask = dims.degeneracies > 0;
+            dims.charges = c2(mask);
+            dims.degeneracies = dims.degeneracies(mask);
+            Ns = Vblocks(mask);
+            
+            W = t.codomain.new(dims, false);
+            N = t.eye(W, V.domain);
             N.var = fill_matrix_data(N.var, Ns, dims.charges);
+%             
+%             [~, S, V] = tpermute(t, [p1 p2], [length(p1) length(p2)]);
+%             
+%             dims = struct;
+%             [mblocks, dims.charges] = matrixblocks(t);
+%             Ns = cell(size(mblocks));
+%             dims.degeneracies = zeros(size(mblocks));
+%             
+%             for i = 1:length(mblocks)
+%                 Ns{i} = rightnull(mblocks{i}, alg, atol);
+%                 dims.degeneracies(i) = size(Ns{i}, 1);
+%             end
+%             
+%             mask = dims.degeneracies > 0;
+%             dims.charges = dims.charges(mask);
+%             dims.degeneracies = dims.degeneracies(mask);
+%             Ns = Ns(mask);
+%             
+%             N = Tensor.eye(t.domain.new(dims, false), t.domain);
+%             N.var = fill_matrix_data(N.var, Ns, dims.charges);
         end
         
         function [U, S, V, eta] = tsvd(t, p1, p2, trunc)
