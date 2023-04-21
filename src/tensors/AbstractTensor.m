@@ -475,7 +475,7 @@ classdef AbstractTensor
             % -----------------
             % 'Trunc' : cell
             %   optional truncation method for the decomposition. See also
-            %   :method:`Tensor.tsvd`
+            %   :meth:`Tensor.tsvd`
             arguments
                 H
                 kwargs.Trunc = {'TruncBelow', 1e-14}

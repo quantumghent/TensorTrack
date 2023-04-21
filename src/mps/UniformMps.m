@@ -161,7 +161,7 @@ classdef UniformMps
             %
             % See Also
             % --------
-            % :method:`UniformMps.new`
+            % :meth:`UniformMps.new`
             
             arguments (Repeating)
                 pspaces
@@ -528,7 +528,7 @@ classdef UniformMps
             % Keyword Arguments
             % -----------------
             % eigopts
-            %   see keyword arguments for :method:`eigs`.
+            %   see keyword arguments for :meth:`eigs`.
             %
             % Verbosity : integer
             %   detail level for output.

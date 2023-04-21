@@ -631,7 +631,7 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
             % -----------------
             % 'Trunc' : cell
             %   optional truncation method for the decomposition. See also
-            %   :method:`Tensor.tsvd`
+            %   :meth:`Tensor.tsvd`
             arguments
                 psi
                 kwargs.Trunc = {'TruncBelow', 1e-14}
