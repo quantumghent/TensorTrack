@@ -865,6 +865,7 @@ classdef SparseArray
             %   >> a(2, :, :) %<-- returns a 1 x 4 x 4 sparse array
             %   >> a([0, 4, 0]) %<-- returns a 4 x 1 x 4 sparse array
             %   >> a([4, 4, 0]) %<-- returns a 1 x 1 x 4 sparse array
+            
             switch s(1).type
 
                 case '()' % regular subscript indexing
@@ -929,9 +930,9 @@ classdef SparseArray
                                 % order
                                 [~, ~, temp] = unique([A(:); subs(f, i)], 'stable');
                                 subs(f, i) = temp(length(A)+1:end);
-                                % adjust size in this dimension
-                                new_sz(i) = length(A);
                             end
+                            % adjust size in this dimension
+                            new_sz(i) = length(A);
                         end
                         if isempty(subs)
                             a_sub = SparseArray([], [], new_sz);
