@@ -405,12 +405,11 @@ classdef InfMpo
             for i = 1:length(sites)
                 for d = depth(mpo):-1:1
                     gl = twistdual(GL{d, sites(i)}, 1);
-                    gr = GR{d, next(sites(i), period(mpo))};
-                    gr = twistdual(gr, nspaces(gr));
-                    gr_better = tpermute(gr, [1, flip(2:nspaces(gr)-1-gr.alegs), ...
-                        nspaces(gr) + (0:gr.alegs)]);
                     gl_better = tpermute(gl, [1, flip(2:nspaces(gl)-1-gl.alegs), ...
-                        nspaces(gl) + (0:gl.alegs)]);
+                        nspaces(gl) + (0:gl.alegs)], rank(gl));
+                    gr = twistdual(GR{d, next(sites(i), period(mpo))};, nspaces(gr));
+                    gr_better = tpermute(gr, [1, flip(2:nspaces(gr)-1-gr.alegs), ...
+                        nspaces(gr) + (0:gr.alegs)], rank(gr));
                     H{i}(d, 1) = FiniteMpo(gl_better, mpo.O(d, sites(i)), gr_better);
                 end
             end

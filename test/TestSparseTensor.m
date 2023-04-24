@@ -7,13 +7,12 @@ classdef TestSparseTensor < matlab.unittest.TestCase
     
     methods (Test)
         function basic_linear_algebra(tc)
-            spaces = CartesianSpace.new([2 3 4 5]);
-            szs = cell(1, 4);
-            for i = 1:length(szs)
-                szs{i} = spaces(randperm(length(spaces), randi([2 3])));
+            smallspaces = CartesianSpace.new([2 3 4 5]);
+            for i = 4:-1:1
+                jointspaces(i) = SumSpace(smallspaces(randperm(length(smallspaces), randi([2 3]))));
             end
-            t1 = generatesparsetensor([2 2], szs, 0.3);
-            a = rand();
+            t1 = SparseTensor.randc(jointspaces(1:2), jointspaces(3:4), 'Density', 0.3);
+            a = randc();
             
             tc.verifyTrue(isapprox(norm(t1)^2, dot(t1, t1), ...
                 'AbsTol', tc.tol, 'RelTol', tc.tol), 'norm and dot incompatible.');
@@ -30,8 +29,8 @@ classdef TestSparseTensor < matlab.unittest.TestCase
             tc.verifyTrue(isapprox(norm(normalize(t1)), 1), ...
                 'normalize should result in unit norm.');
             
-            t2 = generatesparsetensor([2 2], szs, 0.3);
-            b = rand();
+            t2 = t1.randc(t1.codomain, t1.domain, 'Density', 0.3);
+            b = randc();
             
             tc.verifyTrue(isapprox(dot(b .* t2, a .* t1), conj(b) * a * dot(t2, t1), ...
                 'AbsTol', tc.tol, 'RelTol', tc.tol) && ...
@@ -41,13 +40,12 @@ classdef TestSparseTensor < matlab.unittest.TestCase
         end
         
         function permute_via_inner(tc)
-            spaces = CartesianSpace.new([2 3 4 5]);
-            szs = cell(1, 4);
-            for i = 1:length(szs)
-                szs{i} = spaces(randperm(length(spaces), randi([2 3])));
+            smallspaces = CartesianSpace.new([2 3 4 5]);
+            for i = 4:-1:1
+                jointspaces(i) = SumSpace(smallspaces(randperm(length(smallspaces), randi([2 3]))));
             end
-            t1 = generatesparsetensor([2 2], szs, 0.3);
-            t2 = generatesparsetensor([2 2], szs, 0.3);
+            t1 = SparseTensor.randc(jointspaces(1:2), jointspaces(3:4), 'Density', 0.3);
+            t2 = t1.randc(jointspaces(1:2), jointspaces(3:4), 'Density', 0.3);
             
             inner = dot(t1, t2);
             for i = 0:4
@@ -74,21 +72,4 @@ classdef TestSparseTensor < matlab.unittest.TestCase
             end
         end
     end
-end
-
-function t = generatesparsetensor(rank, spaces, sparsity)
-
-sz = cellfun(@length, spaces);
-ind = ind2sub_(sz, 1:prod(sz));
-
-for i = prod(sz):-1:1
-    for j = length(sz):-1:1
-        localsz(j) = spaces{j}(ind(i,j));
-    end
-    var(i) = Tensor.rand(localsz(1:rank(1)), localsz(rank(1)+1:end)', 'Rank', rank);
-end
-
-li1 = rand([1, length(var)]) < sparsity;
-t = SparseTensor(ind(li1, :), var(li1), sz);
-
 end
