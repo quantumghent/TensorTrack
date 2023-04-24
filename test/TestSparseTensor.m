@@ -9,7 +9,7 @@ classdef TestSparseTensor < matlab.unittest.TestCase
         function basic_linear_algebra(tc)
             smallspaces = CartesianSpace.new([2 3 4 5]);
             for i = 4:-1:1
-                jointspaces(i) = SumSpace(smallspaces(randperm(length(spaces), randi([2 3]))));
+                jointspaces(i) = SumSpace(smallspaces(randperm(length(smallspaces), randi([2 3]))));
             end
             t1 = SparseTensor.randc(jointspaces(1:2), jointspaces(3:4), 'Density', 0.3);
             a = randc();
@@ -42,7 +42,7 @@ classdef TestSparseTensor < matlab.unittest.TestCase
         function permute_via_inner(tc)
             smallspaces = CartesianSpace.new([2 3 4 5]);
             for i = 4:-1:1
-                jointspaces(i) = SumSpace(smallspaces(randperm(length(spaces), randi([2 3]))));
+                jointspaces(i) = SumSpace(smallspaces(randperm(length(smallspaces), randi([2 3]))));
             end
             t1 = SparseTensor.randc(jointspaces(1:2), jointspaces(3:4), 'Density', 0.3);
             t2 = t1.randc(jointspaces(1:2), jointspaces(3:4), 'Density', 0.3);
