@@ -113,7 +113,6 @@ classdef Vumps < handle
     %% Subroutines
     methods
         function AC = updateAC(alg, iter, mpo, mps, GL, GR)
-%             kwargs = namedargs2cell(alg.alg_eigs);
             if strcmp(alg.multiAC, 'sequential')
                 sites = mod1(iter, period(mps));
             else
@@ -132,7 +131,6 @@ classdef Vumps < handle
         end
         
         function C = updateC(alg, iter, mpo, mps, GL, GR)
-%             kwargs = namedargs2cell(alg.alg_eigs);
             if strcmp(alg.multiAC, 'sequential')
                 sites = mod1(iter, period(mps));
             else

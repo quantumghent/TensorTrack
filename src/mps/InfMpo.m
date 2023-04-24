@@ -450,18 +450,9 @@ classdef InfMpo
             for i = 1:length(sites)
                 for d = depth(mpo):-1:1
                     gl = GL{d, next(sites(i), period(mps))};
-                    for j = 1:numel(gl)
-                        if nnz(gl(j)) ~= 0
-                            gl(j) = twist(gl(j), find(isdual(space(gl(j), 1))));
-                        end
-                    end
+                    gl = twistdual(gl, 1);
                     gr = GR{d, next(sites(i), period(mps))};
-                    for j = 1:numel(gr)
-                        if nnz(gr(j)) ~= 0
-                            gr(j) = twist(gr(j), find(isdual(space(gr(j), nspaces(gr(j))))) + ...
-                                nspaces(gr(j)) - 1);
-                        end
-                    end
+                    gr = twistdual(gr, nspaces(gr));
                     H{i}(d, 1) = FiniteMpo(gl, {}, gr);
                 end
             end
