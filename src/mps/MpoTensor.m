@@ -106,24 +106,25 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) MpoTensor < Ab
             t.scalars = t.scalars / a;
         end
         
-        function v = applychannel(O, L, R, v)
+        function dst = applychannel(O, L, R, src)
             arguments
                 O MpoTensor
                 L MpsTensor
                 R MpsTensor
-                v
+                src MpsTensor
             end
             
-            auxlegs_v = nspaces(v) - 3;
+            auxlegs_v = nspaces(src) - 3;
             auxlegs_l = nspaces(L) - 3;
             auxlegs_r = nspaces(R) - 3;
-            newrank = rank(v); newrank(2) = newrank(2) + auxlegs_l + auxlegs_r;
+            newrank = rank(src); newrank(2) = newrank(2) + auxlegs_l + auxlegs_r;
             
-            v = contract(v, [1 3 5 (-(1:auxlegs_v) - 3 - auxlegs_l)], ...
+            dst = contract(src, [1 3 5 (-(1:auxlegs_v) - 3 - auxlegs_l)], ...
                 L, [-1 2 1 (-(1:auxlegs_l) - 3)], ...
                 O, [2 -2 4 3], ...
                 R, [5 4 -3 (-(1:auxlegs_r) - 3 - auxlegs_l - auxlegs_v)], ...
                 'Rank', newrank);
+            dst = MpsTensor(dst, auxlegs_v + auxlegs_l + auxlegs_r);
         end
         
         function v = applympo(varargin)

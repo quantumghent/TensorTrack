@@ -79,7 +79,7 @@ classdef Arnoldi
                     
                     % normalize
                     beta = norm(v, 'fro');
-                    v = v / beta;
+                    v = v ./ beta;
                     
                     if ctr_inner == alg.krylovdim, break; end
                     

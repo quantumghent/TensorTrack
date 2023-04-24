@@ -1561,7 +1561,7 @@ classdef Tensor < AbstractTensor
             end
             
             if isempty(p1), p1 = 1:rank(t, 1); end
-            if isempty(p2), p2 = rank(t, 1) + (1:rank(t,2)); end
+            if isempty(p2), p2 = rank(t, 1) + (1:rank(t, 2)); end
             
             t = tpermute(t, [p1 p2], [length(p1) length(p2)]);
             

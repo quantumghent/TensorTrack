@@ -12,6 +12,10 @@ classdef InfQP
         p
     end
     
+    properties (Dependent)
+        AL
+        AR
+    end
     
     %% Constructors
     methods
@@ -46,15 +50,15 @@ classdef InfQP
             
             AL = mpsleft.AL;
             for i = period(mpsleft):-1:1
-                VL(i) = leftnull(AL(i));
-                rVspace = rightvspace(VL(i));
+                VL{i} = leftnull(AL{i});
+                rVspace = rightvspace(VL{i});
                 lVspace = leftvspace(mpsright, next(i, period(mpsleft)));
                 if isempty(charge)
                     aspace = one(rVspace);
                 else
                     aspace = rVspace.new(dims, false);
                 end
-                X(i) = Tensor.new(fun, rVspace', [aspace lVspace]);
+                X{i} = Tensor.new(fun, rVspace', [aspace lVspace]);
             end
             
             qp = InfQP(mpsleft, mpsright, X, VL, [], p);
@@ -70,34 +74,26 @@ classdef InfQP
     %% Derived Properties
     methods
         function s = auxspace(qp, i)
-            s = space(qp.X(i), 3);
+            s = space(qp.X{i}, 3);
         end
         
-        function al = AL(qp, sites)
-            if nargin > 1
-                al = qp.mpsleft.AL(sites);
-            else
-                al = qp.mpsleft.AL;
-            end
+        function al = get.AL(qp)
+            al = qp.mpsleft.AL;
         end
         
-        function ar = AR(qp, sites)
-            if nargin > 1
-                ar = qp.mpsright.AR(sites);
-            else
-                ar = qp.mpsright.AR;
-            end
+        function ar = get.AR(qp)
+            ar = qp.mpsright.AR;
         end
         
         function B = computeB(qp)
             for w = period(qp):-1:1
-                B(w) = multiplyright(qp.VL(w), qp.X(w));
+                B{w} = multiplyright(qp.VL{w}, qp.X{w});
             end
         end
         
         function X = computeX(qp)
             for w = period(qp):-1:1
-                X(w) = tracetransfer(qp.VL(w)', qp.B(w));
+                X{w} = tracetransfer(qp.VL{w}', qp.B{w});
             end
         end
         
@@ -150,7 +146,7 @@ classdef InfQP
         end
         
         function type = underlyingType(qp)
-            type = underlyingType(qp.X);
+            type = underlyingType(qp.X{1});
         end
     end
 end

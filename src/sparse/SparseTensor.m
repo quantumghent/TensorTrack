@@ -107,6 +107,7 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor < AbstractTensor
                 domain SumSpace
                 kwargs.Density = 1
             end
+            
             sz = [nsubspaces(codomain) flip(nsubspaces(domain))];
             
             inds = sort(randperm(prod(sz), round(prod(sz) * kwargs.Density)));

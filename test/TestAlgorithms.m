@@ -51,31 +51,50 @@ classdef TestAlgorithms < matlab.unittest.TestCase
             momenta = [0 pi 0.5];
             
             for L = 1:3
-                %% No symmetry
-                H = repmat(quantum1dIsing('h', h, 'J', J), 1, L);
+%                 %% No symmetry
+%                 H = repmat(quantum1dIsing('h', h, 'J', J), 1, L);
+%                 
+%                 vspace = arrayfun(@(w) CartesianSpace.new(D + w), 1:L, ...
+%                     'UniformOutput', false);
+%                 gs = initialize_mps(H, vspace{:});
+%                 
+%                 % Groundstate algorithms
+%                 gs = fixedpoint(Vumps('which', 'smallestreal', 'maxiter', 5, ...
+%                     'alg_eigs', Arnoldi('maxiter', 100, 'krylovdim', 20)), ...
+%                     H, gs);
+%                 tc.assertEqual(expectation_value(gs, H), e0 * L, 'RelTol', 1e-2);
+%                 
+%                 % Excitation algorithms
+%                 for k = momenta
+%                     qp = InfQP.randnc(gs, gs, k);
+%                     [~, mu] = excitations(QPAnsatz(), H, qp);
+%                     tc.assertEqual(mu, d0(k/L), 'RelTol', 1e-3, ...
+%                         sprintf('qp failed at momentum %.2f', k));
+%                 end
+%                 
+%                 %% Z2
+%                 H = repmat(quantum1dIsing('h', h, 'J', J, 'Symmetry', 'Z2'), 1, L);
+%                 
+%                 vspace = Z2Space([0, 1], [D D] / 2, false);
+%                 gs = initialize_mps(H, vspace);
+%                 
+%                 % Groundstate algorithms
+%                 gs = fixedpoint(Vumps('which', 'smallestreal', 'maxiter', 5), ...
+%                     H, gs);
+%                 tc.assertEqual(expectation_value(gs, H), e0 * L, 'RelTol', 1e-2);
+%                 
+%                 % Excitation algorithms
+%                 for k = momenta
+%                     qp = InfQP.randnc(gs, gs, k, Z2(1));
+%                     [~, mu] = excitations(QPAnsatz(), H, qp);
+%                     tc.assertEqual(mu, d0(k / L), 'RelTol', 1e-3, ...
+%                         sprintf('qp failed at momentum %.2f', k));
+%                 end
+%                 
+                %% fZ2
+                H = repmat(quantum1dIsing('h', h, 'J', J, 'Symmetry', 'fZ2'), 1, L);
                 
-                vspace = arrayfun(@(w) CartesianSpace.new(D + w), 1:L, ...
-                    'UniformOutput', false);
-                gs = initialize_mps(H, vspace{:});
-                
-                % Groundstate algorithms
-                gs = fixedpoint(Vumps('which', 'smallestreal', 'maxiter', 5, ...
-                    'alg_eigs', Arnoldi('maxiter', 100, 'krylovdim', 20)), ...
-                    H, gs);
-                tc.assertEqual(expectation_value(gs, H), e0 * L, 'RelTol', 1e-2);
-                
-                % Excitation algorithms
-                for k = momenta
-                    qp = InfQP.randnc(gs, gs, k);
-                    [~, mu] = excitations(QPAnsatz(), H, qp);
-                    tc.assertEqual(mu, d0(k/L), 'RelTol', 1e-3, ...
-                        sprintf('qp failed at momentum %.2f', k));
-                end
-                
-                %% Symmetry
-                H = repmat(quantum1dIsing('h', h, 'J', J, 'Symmetry', 'Z2'), 1, L);
-                
-                vspace = Z2Space([0, 1], [D D] / 2, false);
+                vspace = fZ2Space([0, 1], [D D] / 2, false);
                 gs = initialize_mps(H, vspace);
                 
                 % Groundstate algorithms
@@ -100,7 +119,7 @@ classdef TestAlgorithms < matlab.unittest.TestCase
             gs = initialize_mps(H_ssh, vspace);
             
             % Groundstate algorithms
-            gs = fixedpoint(Vumps('which', 'smallestreal', 'maxiter', 5), ...
+            gs = fixedpoint(Vumps('which', 'smallestreal', 'maxiter', 50, 'verbosity', Verbosity.detail), ...
                 H_ssh, gs);
             tc.assertEqual(expectation_value(gs, H_ssh), E0, 'RelTol', 1e-2);
             

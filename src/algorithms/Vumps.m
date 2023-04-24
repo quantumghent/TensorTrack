@@ -26,7 +26,7 @@ classdef Vumps < handle
         saveMethod = 'full'
         name = 'VUMPS'
         
-        alg_eigs = KrylovSchur('MaxIter', 100, 'KrylovDim', 20)
+        alg_eigs = Arnoldi('MaxIter', 100, 'KrylovDim', 20)
     end
     
     properties (Access = private)
@@ -64,6 +64,10 @@ classdef Vumps < handle
             if ~isfield('alg_environments', kwargs)
                 alg.alg_environments.tol = sqrt(alg.tol_min * alg.tol_max);
                 alg.alg_environments.verbosity = alg.verbosity - 2;
+            end
+            
+            if isfield('verbosity', kwargs)
+                alg.alg_eigs.verbosity = alg.verbosity - 2;
             end
         end
         
@@ -122,6 +126,9 @@ classdef Vumps < handle
             ACs = arrayfun(@(x) x.AC(sites), mps, 'UniformOutput', false);
             AC = vertcat(ACs{:});
             for i = length(sites):-1:1
+                if alg.verbosity >= Verbosity.detail
+                    fprintf('\nAC{%d} eigenvalue solver:\n------------------------\n', sites(i));
+                end
                 [AC{1, i}.var, ~] = eigsolve(alg.alg_eigs, @(x) H_AC{i}.apply(x), AC{1, i}.var, ...
                     1, alg.which);
                 for d = 2:depth(mpo)
@@ -141,6 +148,9 @@ classdef Vumps < handle
             Cs = arrayfun(@(x) x.C(sites), mps, 'UniformOutput', false);
             C = vertcat(Cs{:});
             for i = length(sites):-1:1
+                if alg.verbosity >= Verbosity.detail
+                    fprintf('\nC{%d} eigenvalue solver:\n-----------------------\n', sites(i));
+                end
                 [C{1, i}, ~] = eigsolve(alg.alg_eigs, @(x) H_C{i}.apply(x), C{1, i}, 1, alg.which);
                 for d = 2:depth(mpo)
                     C{d, i} = H_C{i}(d).apply(C{d-1, i});
@@ -149,6 +159,10 @@ classdef Vumps < handle
         end
         
         function mps = updatemps(alg, iter, mps, AC, C)
+            if alg.verbosity >= Verbosity.detail
+                fprintf('\nCanonicalize:\n------------------\n');
+            end
+            
             if strcmp(alg.multiAC, 'sequential')
                 sites = mod1(iter, period(mps));
             else
@@ -175,7 +189,9 @@ classdef Vumps < handle
                 GL = cell(depth(mpo), period(mps))
                 GR = cell(depth(mpo), period(mps))
             end
-            
+            if alg.verbosity >= Verbosity.detail
+                fprintf('\nEnvironments:\n------------------\n');
+            end
             kwargs = namedargs2cell(alg.alg_environments);
             D = depth(mpo);
             lambda = zeros(D, 1);
@@ -226,7 +242,7 @@ classdef Vumps < handle
                 
                 if alg.verbosity > Verbosity.iter
                     fprintf('Updated subalgorithm tolerances: (%e,\t%e,\t%e)\n', ...
-                        alg.alg_eigs.Tol, alg.alg_canonical.Tol, alg.alg_environments.Tol);
+                        alg.alg_eigs.tol, alg.alg_canonical.Tol, alg.alg_environments.Tol);
                 end
             end
             

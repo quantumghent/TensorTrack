@@ -71,7 +71,7 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
         end
         
         function A = cat(dim, varargin)
-            ismpstensor = cellfun(@(x) isa(x, 'MpsTensor'));
+            ismpstensor = cellfun(@(x) isa(x, 'MpsTensor'), varargin);
             i = find(ismpstensor, 1);
             A = varargin{i};
             for j = 1:i-1
@@ -91,6 +91,15 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
         
         function A = vertcat(varargin)
             A = cat(1, varargin{:});
+        end
+        
+        function n = nnz(A)
+            n = nnz(A.var);
+        end
+        
+        function A = slice(A, varargin)
+            s = substruct('()', varargin);
+            A.var = subsref(A.var, s);
         end
         
         function tdst = insert_onespace(tsrc, varargin)
@@ -118,7 +127,7 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
         end
         
         function r = rank(A)
-            r = rank([A.var]);
+            r = rank(A.var);
         end
         
         function s = pspace(A)
@@ -181,9 +190,7 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
         end
         
         function A = repartition(A, varargin)
-            for i = 1:numel(A)
-                A(i).var = repartition(A(i).var, varargin{:});
-            end
+            A.var = repartition(A.var, varargin{:});
         end
         
         function A = plus(varargin)
@@ -226,20 +233,24 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
             A = MpsTensor(ldivide(varargin{:}), alegs);
         end
         
-        function n = norm(A)
-            n = norm([A.var]);
+        function n = norm(A, varargin)
+            n = norm(A.var, varargin{:});
+        end
+        
+        function [A, n] = normalize(A)
+            [A.var, n] = normalize(A.var);
         end
         
         function A = conj(A)
-            [A.var] = conj([A.var]);
+            A.var = conj(A.var);
         end
 
         function A = twist(A, varargin)
-            [A.var] = twist([A.var], varargin{:});
+            A.var = twist(A.var, varargin{:});
         end
         
         function A = twistdual(A, varargin)
-            [A.var] = twistdual([A.var], varargin{:});
+            A.var = twistdual(A.var, varargin{:});
         end
         
         function t = ctranspose(t)
@@ -330,10 +341,6 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
         function disp(t)
             fprintf('%s with %d plegs and %d alegs:\n', class(t), t.plegs, t.alegs);
             disp(t.var);
-        end
-        
-        function n = nnz(t)
-            n = nnz(t.var);
         end
     end
     
@@ -503,9 +510,7 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
     %% Converters
     methods
         function t = Tensor(A)
-            for i = numel(A):-1:1
-                t(i) = full(A(i).var);
-            end
+            t = full(A.var);
         end
         
         function t = SparseTensor(A)

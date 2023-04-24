@@ -28,45 +28,49 @@ classdef InfJMpo < InfMpo
             end
             
             linkwargs = namedargs2cell(linopts);
+            L = period(mps1);
             
             T = transfermatrix(mpo, mps1, mps2, 'Type', 'LL');
+            fp_left = fixedpoint(mpo, mps1, 'l_LL', 1);
+            fp_right = fixedpoint(mpo, mps1, 'r_LL', L);
             
-            if isempty(GL) || isempty(GL{1})
+            if isempty(GL) || isempty(GL{1}) % initialize environment
                 GL = cell(1, period(mps1));
-                GL{1} = SparseTensor.zeros(domain(T), []);
-                pSpace = space(T(1).O{1}(:,:,:,1), 4);
-                fp1 = insert_onespace(fixedpoint(mps1, 'l_LL'), ...
-                    2, ~isdual(pSpace(1)));
-                GL{1}(1) = repartition(fp1, [nspaces(fp1) 0]);
+                GL{1} = repartition(MpsTensor(SparseTensor.zeros(domain(T), [])), ...
+                    rank(fp_left));
+                GL{1}.var(1) = fp_left;
             end
             
             for i = 2:size(GL{1}, 2)
-                rhs = apply(slice(T, i, 1:i-1), GL{1}(1, 1:i-1, 1));
+                rhs = apply(slice(T, i, 1:i-1), slice(GL{1}, 1, 1:i-1, 1));
                 Tdiag = slice(T, i, i);
                 if iszero(Tdiag)
-                    GL{1}(i) = rhs;
-                elseif iseye(T, i)
-                    fp_left  = repartition(insert_onespace(fixedpoint(mps1, 'l_LL'), ...
-                        2, isdual(space(rhs, 2))), rank(rhs));
-                    fp_right = insert_onespace(fixedpoint(mps1, 'r_LL'), ...
-                        2, ~isdual(space(rhs, 2)));
-                    lambda = overlap(rhs, fp_right);
-                    
-                    rhs = rhs - lambda * fp_left;
-                    [GL{1}(i), ~] = linsolve(@(x) x - apply(Tdiag, x), rhs, GL{1}(i), ...
-                        linkwargs{:});
-                    GL{1}(i) = GL{1}(i) - overlap(GL{1}(i), fp_right) * fp_left;
+                    GL{1}.var(i) = rhs;
                 else
-                    [GL{1}(i), ~] = linsolve(@(x) x - apply(Tdiag, x), rhs, GL{1}(i), ...
+                    if iseye(T, i)
+                        lambda = overlap(rhs, fp_right);
+                        rhs = rhs - lambda * fp_left;
+                    end
+                    [GL{1}.var(i), flag, relres, iter] = linsolve(@(x) x - apply(Tdiag, x), rhs, GL{1}.var(i), ...
                         linkwargs{:});
+                    if iseye(T, i)
+                        GL{1}.var(i) = GL{1}.var(i) - overlap(GL{1}.var(i), fp_right) * fp_left;
+                    end
+                    
+                    if flag == 1 && linopts.Verbosity >= Verbosity.warn
+                        fprintf('GL(%d) reached maxiter, error = %3e\n', i, relres);
+                    elseif flag == 2 && linopts.Verbosity >= Verbosity.warn
+                        fprintf('GL(%d) stagnated, error = %3e\n', i, relres);
+                    elseif linopts.Verbosity >= Verbosity.conv
+                        fprintf('GL(%d) converged after %d iterations, error = %3e\n', i, iter, relres);
+                    end
                 end
             end
             
-            if nnz(GL{1}) == numel(GL{1})
-                GL{1} = full(GL{1});
+            if nnz(GL{1}.var) == numel(GL{1}.var)
+                GL{1}.var = full(GL{1}.var);
             end
             
-            GL{1} = MpsTensor(GL{1}, 0);
             for w = 1:period(mps1)-1
                 T = transfermatrix(mpo, mps1, mps2, w, 'Type', 'LL');
                 GL{next(w, period(mps1))} = apply(T, GL{w});
@@ -92,18 +96,18 @@ classdef InfJMpo < InfMpo
             
             if isempty(GR) || isempty(GR{1})
                 GR = cell(1, period(mps1));
-                GR{1} = SparseTensor.zeros(domain(T), []);
+                GR{1} = MpsTensor(SparseTensor.zeros(domain(T), []));
                 pSpace = space(T(1).O{1}(:, end, :, :), 2);
                 fp1 = insert_onespace(fixedpoint(mps1, 'r_RR'), ...
                     2, isdual(pSpace(end)));
-                GR{1}(1, N, 1) = repartition(fp1, [nspaces(fp1) 0]);
+                GR{1}.var(1, N, 1) = repartition(fp1, [nspaces(fp1) 0]);
             end
             
             for i = N-1:-1:1
-                rhs = apply(slice(T, i, i+1:N), GR{1}(1, i+1:N, 1));
+                rhs = apply(slice(T, i, i+1:N), slice(GR{1}, 1, i+1:N, 1));
                 Tdiag = slice(T, i, i);
                 if iszero(Tdiag)
-                    GR{1}(i) = rhs;
+                    GR{1}.var(i) = rhs;
                 elseif iseye(T, i)
                     fp_left  = insert_onespace(fixedpoint(mps1, 'l_RR'), ...
                         2, ~isdual(space(rhs, 2)));
@@ -112,22 +116,21 @@ classdef InfJMpo < InfMpo
                     lambda = contract(rhs, 1:3, fp_left, 3:-1:1);
                     
                     rhs = rhs - lambda * fp_right;
-                    [GR{1}(i), ~] = ...
-                        linsolve(@(x) x - apply(Tdiag, x), rhs, GR{1}(i), linkwargs{:});
+                    [GR{1}.var(i), ~] = ...
+                        linsolve(@(x) x - apply(Tdiag, x), rhs, GR{1}.var(i), linkwargs{:});
                     
-                    GR{1}(i) = GR{1}(i) - ...
-                        contract(GR{1}(i), 1:3, fp_left, 3:-1:1) * fp_right;
+                    GR{1}.var(i) = GR{1}.var(i) - ...
+                        overlap(GR{1}.var(i), fp_left) * fp_right;
                 else
-                    [GR{1}(i), ~] = linsolve(@(x) x - apply(Tdiag, x), rhs, GR{1}(i), ...
+                    [GR{1}.var(i), ~] = linsolve(@(x) x - apply(Tdiag, x), rhs, GR{1}.var(i), ...
                         linkwargs{:});
                 end
             end
             
-            if nnz(GR{1}) == numel(GR{1})
-                GR{1} = full(GR{1});
+            if nnz(GR{1}.var) == numel(GR{1}.var)
+                GR{1}.var = full(GR{1}.var);
             end
             
-            GR{1} = MpsTensor(GR{1}, 0);
             for w = period(mps1):-1:2
                 T = transfermatrix(mpo, mps1, mps2, w, 'Type', 'RR').';
                 GR{w} = apply(T, GR{next(w, period(mps1))});
@@ -161,7 +164,7 @@ classdef InfJMpo < InfMpo
             
             % initialize and precompute GL * TB
             GBL = cell(size(GL));
-            GBL{1} = SparseTensor.zeros(domain(T), auxspace(qp, 1));
+            GBL{1} = MpsTensor(SparseTensor.zeros(domain(T), auxspace(qp, 1)), 1);
             for w = 1:L
                 GBL{next(w, L)} = ...
                     (apply(TB(w), GL{w}) + apply(T(w), GBL{w})) * (expP^(1/L));
@@ -169,8 +172,8 @@ classdef InfJMpo < InfMpo
             
             N = size(GBL{1}, 2);
             for i = 2:N % GBL{1}(1) = 0 because of quasiparticle gauge
-                rhs = apply(slice(T, i, 1:i-1), GBL{1}(1, 1:i-1, 1, 1)) * expP;
-                rhs = rhs + GBL{1}(i);
+                rhs = apply(slice(T, i, 1:i-1), slice(GBL{1}, 1, 1:i-1, 1, 1)) * expP;
+                rhs = rhs + slice(GBL{1}, i);
                 
                 Tdiag = slice(T, i, i);
                 if iszero(Tdiag)
@@ -186,12 +189,12 @@ classdef InfJMpo < InfMpo
                         H_effective = @(x) x - expP * apply(Tdiag, x);
                     end
                     
-                    [GBL{1}(i), ~] = linsolve(H_effective, rhs, [], linkwargs{:});
+                    [GBL{1}.var(i), ~] = linsolve(H_effective, rhs, [], linkwargs{:});
                 end
             end
             
-            if nnz(GBL{1}) == numel(GBL{1})
-                GBL{1} = full(GBL{1});
+            if nnz(GBL{1}) == numel(GBL{1}.var)
+                GBL{1}.var = full(GBL{1}.var);
             end
             
             GBL{1} = MpsTensor(GBL{1}, 1);
@@ -227,7 +230,7 @@ classdef InfJMpo < InfMpo
             TB = transfermatrix(mpo, qp, qp, 'Type', 'BR').';
             
             GBR = cell(size(GR));
-            GBR{1} = SparseTensor.zeros(domain(T), auxspace(qp, 1));
+            GBR{1} = MpsTensor(SparseTensor.zeros(domain(T), auxspace(qp, 1)), 1);
             for w = L:-1:1
                 ww = next(w, L);
                 TB_w = transfermatrix(mpo, qp, qp, w, 'Type', 'BR').';
@@ -238,15 +241,15 @@ classdef InfJMpo < InfMpo
             N = size(GBR{1}, 2);
             for i = N:-1:1
                 if i == N
-                    rhs = GBR{1}(1, i, 1, 1);
+                    rhs = slice(GBR{1}, 1, i, 1, 1);
                 else
-                    rhs = apply(slice(T, i, i+1:N), GBR{1}(1, i+1:N, 1, 1)) * expP;
-                    rhs = rhs + GBR{1}(1, i, 1, 1);
+                    rhs = apply(slice(T, i, i+1:N), slice(GBR{1}, 1, i+1:N, 1, 1)) * expP;
+                    rhs = rhs + slice(GBR{1}, 1, i, 1, 1);
                 end
                 
                 Tdiag = slice(T, i, i);
                 if iszero(Tdiag)
-                    GBR{1}(i) = rhs;
+                    GBR{1}.var(i) = rhs;
                 else
                     if needsRegularization && iseye(T, i)
                         lambda = overlap(rhs, fp_left);
@@ -258,7 +261,7 @@ classdef InfJMpo < InfMpo
                         H_effective = @(x) x - expP * apply(Tdiag, x);
                     end
                     
-                    [GBR{1}(i), ~] = linsolve(H_effective, rhs, [], linkwargs{:});
+                    [GBR{1}.var(i), ~] = linsolve(H_effective, rhs, [], linkwargs{:});
                 end
             end
             
@@ -300,7 +303,7 @@ classdef InfJMpo < InfMpo
         function mpo = renormalize(mpo, lambda)
             mpo = mpo - lambda;
         end
-            
+        
         function mpo = plus(a, b)
             if isa(a, 'InfJMpo') && isnumeric(b)
                 if period(a) > 1 && isscalar(b)
@@ -358,11 +361,16 @@ classdef InfJMpo < InfMpo
             L = local_ops{1};
             R = local_ops{2};
             
-            assert(pspace(L) == pspace(R), 'operators:spacemismatch', ...
+            P = pspace(L);
+            assert(P == pspace(R), 'operators:spacemismatch', ...
                 sprintf('incompatible physical spaces %s and %s', pspace(L), pspace(R)));
             
-            cod = SumSpace([leftvspace(L), leftvspace(R), rightvspace(R)'], pspace(L));
-            dom = SumSpace(pspace(L), [leftvspace(L)', rightvspace(L), rightvspace(R)]);
+            total_leftvspace = [leftvspace(L) leftvspace(R) rightvspace(R)'];
+            total_rightvspace = [leftvspace(L)' rightvspace(L) rightvspace(R)];
+            assert(all(conj(total_rightvspace) == total_leftvspace))
+            
+            cod = SumSpace(total_leftvspace, P);
+            dom = SumSpace(P, conj(total_rightvspace));
             
             O = MpoTensor.zeros(cod, dom);
             O(1, 1, 1, 1) = 1;
@@ -374,7 +382,7 @@ classdef InfJMpo < InfMpo
                 local_op = MpoTensor.decompose_local_operator(Honesite, newkwargs{:});
                 assert(leftvspace(local_op{1}) == subspaces(leftvspace(O), 1) && ...
                     rightvspace(local_op{1}) == subspaces(rightvspace(O), 3) && ...
-                    pspace(local_op) == subspaces(pspace(O), 1), ...
+                    pspace(local_op{1}) == subspaces(pspace(O), 1), ...
                     'operators:spacemismatch', ...
                     'onesite operator incompatible with twosite operator.');
                 O(1, 1, 3, 1) = local_op{1};

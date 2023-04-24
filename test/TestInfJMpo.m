@@ -3,18 +3,20 @@ classdef TestInfJMpo < matlab.unittest.TestCase
     
     properties (TestParameter)
         mpo = struct(...
-            'trivial', quantum1dIsing() ...
+            'trivial', quantum1dIsing(), ...
+            'fermion', quantum1d_randomfermion() ...
             )
         mps = struct(...
-            'trivial', UniformMps.randnc(CartesianSpace.new(2), CartesianSpace.new(4)) ...
+            'trivial', UniformMps.randnc(CartesianSpace.new(2), CartesianSpace.new(4)), ...
+            'fermion', UniformMps.randnc(fZ2Space([0 1], [1 1], false), fZ2Space([0 1], [2 2], false)) ...
             )
     end
     
     methods (Test, ParameterCombination='sequential')
-        function testEnvironments(tc)
-            D = 16;
-            mpo = quantum1dIsing('Symmetry', 'Z2');
-            mps = initialize_mps(mpo, GradedSpace.new(Z2(0, 1), D ./ [2 2], false));
+        function testEnvironments(tc, mpo, mps)
+%             D = 16;
+%             mpo = quantum1dIsing('Symmetry', 'Z2');
+%             mps = initialize_mps(mpo, GradedSpace.new(Z2(0, 1), D ./ [2 2], false));
             
             [GL, GR, lambda] = environments(mpo, mps);
             
@@ -26,8 +28,8 @@ classdef TestInfJMpo < matlab.unittest.TestCase
             
             TL = transfermatrix(mpo, mps, mps, 'Type', 'LL');
             GL_2 = apply(TL, GL{1});
-            lambda2 = overlap(GL_2(end), fp_right);
-            GL_2(end) = GL_2(end) - lambda2 * fp_left;
+            lambda2 = overlap(slice(GL_2, length(GL_2)), fp_right);
+            GL_2.var(end) = GL_2.var(end) - lambda2 * fp_left;
             tc.assertTrue(isapprox(GL_2, GL{1}), ...
                 'left environment fixed point equation unfulfilled.');
             tc.assertEqual(lambda, lambda2, 'RelTol', 1e-10);
@@ -40,8 +42,8 @@ classdef TestInfJMpo < matlab.unittest.TestCase
             
             TR = transfermatrix(mpo, mps, mps, 'Type', 'RR').';
             GR_2 = apply(TR, GR{1});
-            lambda3 = overlap(GR_2(1), fp_left);
-            GR_2(1) = GR_2(1) - lambda3 * fp_right;
+            lambda3 = overlap(slice(GR_2, 1), fp_left);
+            GR_2.var(1) = GR_2.var(1) - lambda3 * fp_right;
             tc.assertTrue(isapprox(GR_2, GR{1}), ...
                 'right environment fixed point equation unfulfilled.');
             tc.assertEqual(lambda, lambda3, 'RelTol', 1e-10);
@@ -163,14 +165,14 @@ classdef TestInfJMpo < matlab.unittest.TestCase
             
             H_AC = AC_hamiltonian(mpo, mps, GL, GR);
             for i = 1:numel(H_AC)
-                AC_ = mps.AC(i);
-                [AC_.var, lambda] = eigsolve(H_AC{i}, mps.AC(i).var, 1, 'largestabs');
+                AC_ = mps.AC{i};
+                [AC_.var, lambda] = eigsolve(H_AC{i}, mps.AC{i}.var, 1, 'smallestreal');
                 tc.assertTrue(isapprox(apply(H_AC{i}, AC_), lambda * AC_.var));
             end
             
             H_C = C_hamiltonian(mpo, mps, GL, GR);
             for i = 1:numel(H_C)
-                [C_, lambda] = eigsolve(H_C{i}, mps.C(i), 1, 'largestabs');
+                [C_, lambda] = eigsolve(H_C{i}, mps.C{i}, 1, 'smallestreal');
                 tc.assertTrue(isapprox(apply(H_C{i}, C_), lambda * C_));
             end
         end
@@ -238,5 +240,15 @@ classdef TestInfJMpo < matlab.unittest.TestCase
             
         end
     end
+end
+
+function H = quantum1d_randomfermion()
+
+pspace = fZ2Space([0 1], [1 1], false);
+D = Tensor.randnc([pspace pspace], [pspace pspace]);
+D = normalize(D + D');
+
+H = InfJMpo.twosite(D);
+
 end
 

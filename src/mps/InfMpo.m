@@ -218,44 +218,59 @@ classdef InfMpo
             assert(period(qp) == period(mpo), 'quasiparticles have different period');
             
             linkwargs = namedargs2cell(linopts);
-            
             expP = exp(-1i * qp.p);
             L = period(mpo);
             
-            rho = GL{1};
-            for pos = 1:L
-                T_B = transfermatrix(mpo, qp, qp, pos, 'Type', 'BL');
-                if pos == 1
-                    rho = apply(T_B, GL{pos});
-                else
-                    T_R = transfermatrix(mpo, qp, qp, pos, 'Type', 'RL');
-                    rho = apply(T_B, GL{pos}) + apply(T_R, rho);
-                end
-            end
-            
-            T_R = transfermatrix(mpo, qp, qp, 1:period(mpo), 'Type', 'RL');
-            if istrivial(qp)
+            needsRegularization = istrivial(qp);
+            if needsRegularization || true
                 fp_left  = fixedpoint(mpo, qp, 'l_RL_0', 1);
                 fp_right = fixedpoint(mpo, qp, 'r_RL_1', L);
-%                 C = qp.mpsleft.C(1);
-%                 FL = insert_onespace(multiplyright(MpsTensor(GL{1}), C), ...
-%                     nspaces(GL{1}) + 1, isdual(auxspace(qp, 1)));
-%                 FR = insert_onespace(multiplyright(MpsTensor(GR{1}), C'), ...
-%                     1, ~isdual(auxspace(qp, 1)));
-                
-                rho = rho - overlap(rho, fp_right) * fp_left;
-                GBL{1} = linsolve(@(x) x - expP * apply_regularized(T_R, fp_left, fp_right, x), ...
-                    expP * rho, [], linkwargs{:});
-            else
-                GBL{1} = expP * linsolve(@(x) x - expP * apply(T_R, x), ...
-                    rho, [], linkwargs{:});
             end
             
-            GBL{1} = MpsTensor(GBL{1}, 1);
-            for i = 2:L
-                T_R = transfermatrix(mpo, qp, qp, i-1, 'Type', 'RL');
-                T_B = transfermatrix(mpo, qp, qp, i-1, 'Type', 'BL');
-                GBL{i} = apply(T_R, GBL{i-1}) + apply(T_B, GL{w-1});
+            T = transfermatrix(mpo, qp, qp, 'Type', 'RL');
+            TB = transfermatrix(mpo, qp, qp, 'Type', 'BL');
+            
+            % initialize and precompute GL * TB
+            GBL = cell(size(GL));
+            GBL{1} = MpsTensor(SparseTensor.zeros(domain(T), auxspace(qp, 1)), 1);
+            for w = 1:L
+                TB_w = transfermatrix(mpo, qp, qp, w, 'Type', 'BL');
+                T_w = transfermatrix(mpo, qp, qp, w, 'Type', 'RL');
+                GBL{next(w, L)} = ...
+                    (apply(TB_w, GL{w}) + apply(T_w, GBL{w})) * (expP^(1/L));
+            end
+            
+%             rho = GL{1};
+%             for pos = 1:L
+%                 T_B = transfermatrix(mpo, qp, qp, pos, 'Type', 'BL');
+%                 if pos == 1
+%                     rho = apply(T_B, GL{pos});
+%                 else
+%                     T_R = transfermatrix(mpo, qp, qp, pos, 'Type', 'RL');
+%                     rho = apply(T_B, GL{pos}) + apply(T_R, rho);
+%                 end
+%             end
+            T = transfermatrix(mpo, qp, qp, 'Type', 'RL');
+            TB = transfermatrix(mpo, qp, qp, 'Type', 'BL');
+            
+            
+            rhs = GBL{1};
+            if needsRegularization
+                lambda = overlap(rhs, fp_right);
+                rhs = rhs - lambda * fp_left;
+                GBL{1} = linsolve(@(x) x - expP * apply_regularized(T, fp_left, fp_right, x), ...
+                    rhs, [], linkwargs{:});
+            else
+                GBL{1} = expP * linsolve(@(x) x - expP * apply(T, x), ...
+                    rhs, [], linkwargs{:});
+            end
+            
+            if nnz(GBL{1}) == numel(GBL{1}.var)
+                GBL{1}.var = full(GBL{1}.var);
+            end
+            for w = 1:L-1
+                GBL{next(w, L)} = expP^(1 / L) * ...
+                    (apply(TB(w), GL{w}) + apply(T(w), GBL{w}));
             end
         end
         
@@ -405,12 +420,17 @@ classdef InfMpo
             for i = 1:length(sites)
                 for d = depth(mpo):-1:1
                     gl = twistdual(GL{d, sites(i)}, 1);
-                    gl_better = tpermute(gl, [1, flip(2:nspaces(gl)-1-gl.alegs), ...
-                        nspaces(gl) + (0:gl.alegs)], rank(gl));
-                    gr = twistdual(GR{d, next(sites(i), period(mpo))};, nspaces(gr));
-                    gr_better = tpermute(gr, [1, flip(2:nspaces(gr)-1-gr.alegs), ...
-                        nspaces(gr) + (0:gr.alegs)], rank(gr));
-                    H{i}(d, 1) = FiniteMpo(gl_better, mpo.O(d, sites(i)), gr_better);
+                    p = 1:nspaces(gl);
+                    p(2:(nspaces(gl)-1-gl.alegs)) = flip(p(2:(nspaces(gl)-1-gl.alegs)));
+                    gl = tpermute(gl, p, rank(gl));
+                    
+                    gr = GR{d, next(sites(i), period(mpo))};
+                    gr = twistdual(gr, nspaces(gr));
+                    p = 1:nspaces(gr);
+                    p(2:(nspaces(gr)-1-gr.alegs)) = flip(p(2:(nspaces(gr)-1-gr.alegs)));
+                    gr = tpermute(gr, p, rank(gr));
+                    
+                    H{i}(d, 1) = FiniteMpo(gl, mpo.O(d, sites(i)), gr);
                 end
             end
         end
