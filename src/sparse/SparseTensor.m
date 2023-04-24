@@ -694,6 +694,15 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor < AbstractTensor
         end
         
         function t = tpermute(t, p, r)
+            arguments
+                t
+                p = []
+                r = []
+            end
+            
+            if isempty(p), p = 1:nspaces(t); end
+            if isempty(r), r = rank(t); end
+
             for i = 1:numel(t.var)
                 t.var(i) = tpermute(t.var(i), p, r);
             end
