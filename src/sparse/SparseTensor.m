@@ -136,8 +136,13 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor < AbstractTensor
             t = SparseTensor.new(@randnc, varargin{:});
         end
         
-        function t = zeros(varargin)
-            t = SparseTensor.new(@zeros, varargin{:});
+        function t = zeros(codomain, domain, kwargs)
+            arguments
+                codomain
+                domain
+                kwargs.Density = 0
+            end
+            t = SparseTensor.new(@zeros, codomain, domain, 'Density', kwargs.Density);
         end
         
         function t = eye(codomain, domain)
