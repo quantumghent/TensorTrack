@@ -568,6 +568,11 @@ classdef SparseArray
             n = nnz(a.var);
         end
         
+        function nz = nonzeros(a)
+            % Returns a full column vector of the nonzero elements of :code:`a`.
+            [~, ~, nz] = find(a);
+        end
+        
         function nrm = norm(a)
             % Frobenius norm of a sparse array.
             nrm = norm(a.var);
@@ -705,13 +710,15 @@ classdef SparseArray
             %   >> 5 ./ a %<-- dense
             %   >> a ./ full(a) %<-- sparse
             %   >> full(a) ./ a %<-- dense
-            if isa(a, 'SparseArray') && isa(b, 'SparseArray')
+            if isa(a, 'SparseArray')
                 c = a;
-                c.var = c.var ./ b.var;
-            elseif isa(a, 'SparseArray')
-                c = a.var ./ b;
+                if isa(b, 'SparseArray')
+                    c.var = c.var ./ b.var;
+                else
+                    c.var = a.var ./ b(:);
+                end
             elseif isa(b, 'SparseArray')
-                c = a ./ b.var;
+                c = a ./ full(b);
             end
         end
         
@@ -801,10 +808,12 @@ classdef SparseArray
             %
             %   >> squeeze(SparseArray.random([2, 1, 3], 0.5)) %<-- returns a 2 x 3 SparseArray
             %   >> squeeze(SparseArray([1, 1, 1], 1, [1, 1, 1])) %<-- returns a scalar
+            
             if sum(a.sz > 1) == 0
                 a = full(a.var);
                 return
             end
+            
             % always give n x 1 SparseArray in case of only 1 non-singleton dimension,
             % consistent with class constructor
             a.sz = [a.size(a.size>1), ones(1, 2-sum(a.size>1))];
@@ -865,6 +874,7 @@ classdef SparseArray
             %   >> a(2, :, :) %<-- returns a 1 x 4 x 4 sparse array
             %   >> a([0, 4, 0]) %<-- returns a 4 x 1 x 4 sparse array
             %   >> a([4, 4, 0]) %<-- returns a 1 x 1 x 4 sparse array
+            
             switch s(1).type
 
                 case '()' % regular subscript indexing
@@ -929,9 +939,9 @@ classdef SparseArray
                                 % order
                                 [~, ~, temp] = unique([A(:); subs(f, i)], 'stable');
                                 subs(f, i) = temp(length(A)+1:end);
-                                % adjust size in this dimension
-                                new_sz(i) = length(A);
                             end
+                            % adjust size in this dimension
+                            new_sz(i) = length(A);
                         end
                         if isempty(subs)
                             a_sub = SparseArray([], [], new_sz);
@@ -1015,13 +1025,14 @@ classdef SparseArray
             % .. code-block:: matlab
             %
             %   >> a = SparseArray.random([4 3 2], .1);
+            %   >> b = SparseArray.random([4 3 2], .1);
             %   >> a .* b %<-- sparse
             %   >> a .* 5 %<-- sparse
             %   >> a .* 0 %<-- sparse
             %   >> a .* full(a) %<-- sparse
-            if isscalar(b) || ~isa(b,'SparseArray')
+            if isscalar(b) || ~isa(b, 'SparseArray')
                 c = SparseArray(a.var .* b(:), a.sz);
-            elseif isscalar(a) || ~isa(a,'SparseArray')
+            elseif isscalar(a) || ~isa(a, 'SparseArray')
                 c = SparseArray(b.var .* a(:), b.sz);
             else
                 c = SparseArray(b.var .* a.var, b.sz);

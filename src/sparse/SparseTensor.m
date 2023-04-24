@@ -128,6 +128,14 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor < AbstractTensor
             t = SparseTensor.new(@rand, varargin{:});
         end
         
+        function t = randc(varargin)
+            t = SparseTensor.new(@randc, varargin{:});
+        end
+        
+        function t = randnc(varargin)
+            t = SparseTensor.new(@randnc, varargin{:});
+        end
+        
         function t = zeros(codomain, domain, kwargs)
             arguments
                 codomain
@@ -764,7 +772,14 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor < AbstractTensor
         
         function bool = istriu(a)
             assert(ismatrix(a), 'sparse:matrix', 'istriu is only defined for matrices');
-            bool = all(a.ind(:, 1) <= a.ind(:, 2));
+            inds = a.ind;   vars = a.var;
+            for i = 1:size(inds, 1)
+                if inds(i, 1) > inds(i, 2) && norm(vars(i)) > 1e-10
+                    bool = false;
+                    return
+                end
+            end
+            bool = true;
         end
     end
     
@@ -999,4 +1014,3 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor < AbstractTensor
     
     
 end
-
