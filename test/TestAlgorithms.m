@@ -75,7 +75,7 @@ classdef TestAlgorithms < matlab.unittest.TestCase
                 %% Symmetry
                 H = repmat(quantum1dIsing('h', h, 'J', J, 'Symmetry', 'Z2'), 1, L);
                 
-                vspace = GradedSpace.new(Z2(0, 1), [D D] / 2, false);
+                vspace = Z2Space([0, 1], [D D] / 2, false);
                 gs = initialize_mps(H, vspace);
                 
                 % Groundstate algorithms
@@ -91,6 +91,25 @@ classdef TestAlgorithms < matlab.unittest.TestCase
                         sprintf('qp failed at momentum %.2f', k));
                 end
             end
+        end
+        
+        function test1dSSH(tc)
+            load('ssh.mat', 'E0', 'gap', 'H_ssh');
+            D = 16;
+            vspace = fZ2Space([0 1], [D D] / 2, false);
+            gs = initialize_mps(H_ssh, vspace);
+            
+            % Groundstate algorithms
+            gs = fixedpoint(Vumps('which', 'smallestreal', 'maxiter', 5), ...
+                H_ssh, gs);
+            tc.assertEqual(expectation_value(gs, H_ssh), E0, 'RelTol', 1e-2);
+            
+            % Excitation algorithms
+            k = 0;
+            qp = InfQP.randnc(gs, gs, k, fZ2(0));
+            [~, mu] = excitations(QPAnsatz(), H, qp);
+            tc.assertEqual(mu, gap, 'RelTol', 1e-3, ...
+                sprintf('qp failed at momentum %.2f', k));
         end
     end
 end
