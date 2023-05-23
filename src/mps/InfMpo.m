@@ -223,8 +223,8 @@ classdef InfMpo
                     gl = twistdual(GL{d, sites(i)}, 1);
                     gr = GR{d, next(sites(i), period(mps))};
                     gr = twistdual(gr, nspaces(gr));
-                    gr_better = tpermute(gr, [1, flip(2:nspaces(gr)-1), nspaces(gr)], rank(gr));
-                    gl_better = tpermute(gl, [1, flip(2:nspaces(gl)-1), nspaces(gl)], rank(gl));
+                    gr_better = tpermute(gr, [1, flip(2:nspaces(gr)-1), nspaces(gr)], rank(gr)); % TODO: account for potential auxiliary legs
+                    gl_better = tpermute(gl, [1, flip(2:nspaces(gl)-1), nspaces(gl)], rank(gl)); % TODO: account for potential auxiliary legs
                     H{i}(d, 1) = FiniteMpo(gl_better, mpo.O(d, sites(i)), gr_better);
                 end
             end
@@ -243,15 +243,9 @@ classdef InfMpo
             for i = 1:length(sites)
                 for d = depth(mpo):-1:1
                     gl = twistdual(GL{d, sites(i)}, 1);
-                    p = 1:nspaces(gl);
-                    p(2:(nspaces(gl)-1-gl.alegs)) = flip(p(2:(nspaces(gl)-1-gl.alegs)));
-                    gl = tpermute(gl, p, rank(gl));
-                    
+                    gl = tpermute(gl, [1, flip(2:nspaces(gl)-1), nspaces(gl)], rank(gl)); % TODO: account for potential auxiliary legs
                     gr = twistdual(GR{d, mod1(sites(i) + 2, period(mps))}, nspaces(gr));
-                    p = 1:nspaces(gr);
-                    p(2:(nspaces(gr)-1-gr.alegs)) = flip(p(2:(nspaces(gr)-1-gr.alegs)));
-                    gr = tpermute(gr, p, rank(gr));
-                    
+                    gr = tpermute(gr, [1, flip(2:nspaces(gr)-1), nspaces(gr)], rank(gr)); % TODO: account for potential auxiliary legs
                     H{i}(d, 1) = FiniteMpo(gl, mpo.O(d, mod1(sites(i) + [0 1], period(mps))), gr);
                 end
             end
