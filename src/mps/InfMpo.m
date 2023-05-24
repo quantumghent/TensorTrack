@@ -244,7 +244,8 @@ classdef InfMpo
                 for d = depth(mpo):-1:1
                     gl = twistdual(GL{d, sites(i)}, 1);
                     gl = tpermute(gl, [1, flip(2:nspaces(gl)-1), nspaces(gl)], rank(gl)); % TODO: account for potential auxiliary legs
-                    gr = twistdual(GR{d, mod1(sites(i) + 2, period(mps))}, nspaces(gr));
+                    gr = GR{d, mod1(sites(i) + 2, period(mps))};
+                    gr = twistdual(gr, nspaces(gr));
                     gr = tpermute(gr, [1, flip(2:nspaces(gr)-1), nspaces(gr)], rank(gr)); % TODO: account for potential auxiliary legs
                     H{i}(d, 1) = FiniteMpo(gl, mpo.O(d, mod1(sites(i) + [0 1], period(mps))), gr);
                 end
