@@ -1,4 +1,4 @@
-function n = fnumber()
+function n = c_number()
 
 pspace = fZ2Space([0 1], [1 1], false);
 

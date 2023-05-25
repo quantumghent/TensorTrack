@@ -19,7 +19,7 @@ switch kwargs.Symmetry
         J = J(1);
         assert(h == 0, 'Magnetic field not invariant under SU2');
         
-        H2 = sigma_exchange(kwargs.Spin, 'SU2');
+        H2 = J * sigma_exchange(kwargs.Spin, 'SU2');
         H1 = [];
         
     case 'U1'

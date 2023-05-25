@@ -278,8 +278,8 @@ classdef FiniteMpo
             for i = numel(Atop):-1:1
                 atop = Atop{i};
                 o = rot90(O{i});
-                twistinds = 1 + find(isdual(space(atop, 2:nspaces(atop) - 1)));
-                abot = twist(Abot{i}', twistinds);
+                twistinds = find(isdual(space(atop, 2:(nspaces(atop) - 1 - atop.alegs))));
+                abot = twist(Abot{i}', flip(twistinds) + 1 + Abot{i}.alegs);
                 
                 assert(isequal(pspace(abot)', leftvspace(o)));
                 assert(isequal(rightvspace(o)', pspace(atop)));

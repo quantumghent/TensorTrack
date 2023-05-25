@@ -2,8 +2,8 @@ classdef QPAnsatz
     % Quasi-Particle excitation ansatz
     
     properties
-        alg_eigs = struct('MaxIter', 100, 'KrylovDim', 30, 'Tol', 1e-8)
-        alg_environments = struct('Tol', 1e-10);
+        alg_eigs = Arnoldi('MaxIter', 100, 'KrylovDim', 30, 'Tol', 1e-8, 'verbosity', Verbosity.diagnostics)
+        alg_environments = struct('Tol', 1e-10, 'Algorithm', 'bicgstabl');
         howmany = 1
         which = 'smallestreal'
     end
@@ -17,7 +17,13 @@ classdef QPAnsatz
             fields = fieldnames(kwargs);
             if ~isempty(fields)
                 for field = fields.'
-                    alg.(field{1}) = kwargs.(field{1});
+                    if isstruct(kwargs.(field{1}))
+                        for field2 = fieldnames(kwargs.(field{1})).'
+                            alg.(field{1}).(field2{1}) = kwargs.(field{1}).(field2{1});
+                        end
+                    else
+                        alg.(field{1}) = kwargs.(field{1});
+                    end
                 end
             end
         end
@@ -38,10 +44,8 @@ classdef QPAnsatz
             end
             
             % Algorithm
-            eigkwargs = namedargs2cell(alg.alg_eigs);
-            H_effective = @(x) updateX(alg, mpo, qp, GL, GR, x, offset);
-            [X, mu] = eigsolve(H_effective, [qp.X{:}], alg.howmany, alg.which, ...
-                eigkwargs{:});
+            H_effective = @(qp) updateX(alg, mpo, qp, GL, GR, offset);
+            [qp, mu] = eigsolve(alg.alg_eigs, H_effective, qp, alg.howmany, alg.which);
             
             for i = alg.howmany:-1:2
                 qp(i).X = X(i);
@@ -49,8 +53,7 @@ classdef QPAnsatz
             end
         end
         
-        function y = updateX(alg, mpo, qp, GL, GR, x, offset)
-            qp.X = num2cell(x);
+        function qp = updateX(alg, mpo, qp, GL, GR, offset)
             qp.B = computeB(qp);
             B = qp.B;
             
@@ -72,8 +75,7 @@ classdef QPAnsatz
             for i = 1:period(qp)
                 qp.B{i} = B{i} - qp.B{i} * offset(i);
             end
-            y = computeX(qp);
-            y = [y{:}];
+            qp.X = computeX(qp);
         end
     end
 end

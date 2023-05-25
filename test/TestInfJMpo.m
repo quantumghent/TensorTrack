@@ -122,15 +122,15 @@ classdef TestInfJMpo < matlab.unittest.TestCase
                     T_B = transfermatrix(mpo, qp, qp, 'Type', 'BL');
                     
                     for w = 1:period(mpo)
-                        tc.assertEqual(norm(GBL{w}(1)), 0, 'AbsTol', 1e-10, ...
+                        tc.assertEqual(norm(GBL{w}.var(1)), 0, 'AbsTol', 1e-10, ...
                             'left gauge quasiparticle violation.');
                         GBL2 = apply(T_R(w), GBL{w}) + apply(T_B(w), GL{w});
                         
                         if istrivial(qp) && w == prev(1, period(mpo))
-                            r = rank(GBL2(end));
+                            r = rank(GBL2);
                             fp_left = repartition(fixedpoint(mpo, qp, 'l_RL_0', next(w, period(mpo))), r);
                             fp_right = fixedpoint(mpo, qp, 'r_RL_1', w);
-                            GBL2(end) = GBL2(end) - overlap(GBL2(end), fp_right) * fp_left;
+                            GBL2.var(end) = GBL2.var(end) - overlap(GBL2.var(end), fp_right) * fp_left;
                         end
                         
                         tc.verifyTrue(isapprox(GBL2, GBL{next(w, period(mpo))} * exp(+1i*p/period(mpo))), ...
@@ -146,10 +146,10 @@ classdef TestInfJMpo < matlab.unittest.TestCase
                         GBR2 = apply(T_L(w), GBR{w}) + apply(T_B(w), GR{w});
                         
                         if istrivial(qp) && w == next(1, period(mpo))
-                            r = rank(GBR2(1));
+                            r = rank(GBR2);
                             fp_left = fixedpoint(mpo, qp, 'l_LR_1', prev(w, period(mpo)));
                             fp_right = repartition(fixedpoint(mpo, qp, 'r_LR_0', w), r);
-                            GBR2(1) = GBR2(1) - overlap(GBR2(1), fp_left) * fp_right;
+                            GBR2.var(1) = GBR2.var(1) - overlap(GBR2.var(1), fp_left) * fp_right;
                         end
                         
                         tc.verifyTrue(isapprox(GBR2, GBR{prev(w, period(mpo))} * exp(-1i*p/period(mpo))), ...

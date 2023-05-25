@@ -5,9 +5,9 @@ arguments
     kwargs.J = 1.0
     kwargs.h = 0.5
 end
-g = 2 * kwargs.h;
+g = kwargs.h;
 
-e = kwargs.J * sqrt(g^2 + 1 - 2 * g * cos(k)) / 2;
+e = kwargs.J * sqrt(g^2 + 1 - 2 * g * cos(k)) * 2;
 
 end
 

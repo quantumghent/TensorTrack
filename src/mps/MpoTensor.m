@@ -455,29 +455,7 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) MpoTensor < Ab
                 kwargs.Trunc = {'TruncBelow', 1e-14}
             end
             
-            assert(mod(nspaces(H), 2) == 0, ...
-                'MpoTensor:Argerror', 'local operator must have an even amount of legs.');
-            H = repartition(H, nspaces(H) ./ [2 2]);
-            assert(isequal(H.domain, H.codomain), ...
-                'MpoTensor:ArgError', 'local operator must be square.');
-            
-            N = indin(H);
-            local_operators = cell(1, N);
-            if N == 1
-                local_operators{1} = insert_onespace(insert_onespace(H, 1), 3, true);
-            else
-                [u, s, v] = tsvd(H, [1 N+1], [2:N N+2:2*N], kwargs.Trunc{:});
-                local_operators{1} = insert_onespace(tpermute(u * s, [1 3 2], [1 2]), 1);
-                
-                for i = 2:N-1
-                    [u, s, v] = tsvd(v, [1 2 N-i+3], [3:(N-i+2) (N-i+4):nspaces(v)], ...
-                        kwargs.Trunc{:});
-                    local_operators{i} = tpermute(u * s, [1 2 4 3], [2 2]);
-                end
-                
-                local_operators{N} = insert_onespace(repartition(v, [2 1]), 3, true);
-            end
-            
+            local_operators = decompose_local_operator(H, 'Trunc', kwargs.Trunc);
             local_operators = cellfun(@MpoTensor, local_operators, 'UniformOutput', false);
         end
     end

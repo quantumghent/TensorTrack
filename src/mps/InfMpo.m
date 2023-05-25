@@ -425,7 +425,7 @@ classdef InfMpo
                     gl = tpermute(gl, p, rank(gl));
                     
                     gr = GR{d, next(sites(i), period(mpo))};
-                    gr = twistdual(gr, nspaces(gr));
+                    gr = twistdual(gr, nspaces(gr)-gr.alegs);
                     p = 1:nspaces(gr);
                     p(2:(nspaces(gr)-1-gr.alegs)) = flip(p(2:(nspaces(gr)-1-gr.alegs)));
                     gr = tpermute(gr, p, rank(gr));

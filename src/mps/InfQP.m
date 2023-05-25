@@ -70,6 +70,144 @@ classdef InfQP
         end
     end
     
+    methods (Hidden)
+        function qp = zerosLike(qp, varargin)
+            qp = repmat(0 .* qp, varargin{:});
+        end
+    end
+    
+    
+    %% Linear Algebra
+    methods
+        function n = norm(qp, p)
+            arguments
+                qp
+                p = 'fro'
+            end
+            assert(isscalar(qp));
+            n = norm([qp.X{:}], p);
+%             n = sum(cellfun(@(x) norm(x, p), qp.X));
+        end
+        
+        function qp = mrdivide(qp, lambda)
+            assert(isscalar(qp));
+            qp.X = cellfun(@(x) x / lambda, qp.X, 'UniformOutput', false);
+        end
+        
+        function A = rdivide(A, B)
+            if isscalar(A) && ~isscalar(B)
+                A = repmat(A, size(B));
+            end
+            if isscalar(B) && ~isscalar(A)
+                B = repmat(B, size(B));
+            end
+            for i = 1:numel(A)
+                for j = 1:numel(A(i).X)
+                    A(i).X{j} = A(i).X{j} ./ B(i);
+                end
+            end
+        end
+        
+        function qp_out = mtimes(A, B)
+            for i = flip(1:size(A, 1))
+                for j = flip(1:size(B, 2))
+                    qp_out(i, j) = sum(A(i, :).' .* B(:, j), 'all');
+                end
+            end
+        end
+        
+        function qp_out = times(A, B)
+            if isscalar(A) && ~isscalar(B)
+                A = repmat(A, size(B));
+            end
+            if isscalar(B) && ~isscalar(A)
+                B = repmat(B, size(B));
+            end
+            
+            if isnumeric(A)
+                qp_out = B;
+                for i = 1:numel(A)
+                    qp_out(i).X = cellfun(@(x) A(i) * x, qp_out(i).X, 'UniformOutput', false);
+                end
+            else
+                qp_out = A;
+                for i = 1:numel(A)
+                    qp_out(i).X = cellfun(@(x) x * B(i), qp_out(i).X, 'UniformOutput', false);
+                end
+            end
+        end
+        
+        function d = dot(qp1, qp2)
+            assert(isscalar(qp1) && isscalar(qp2));
+            d = sum(cellfun(@dot, qp1.X, qp2.X));
+        end
+        
+        function C = sum(A, dim)
+            arguments
+                A
+                dim = []
+            end
+            
+            if isscalar(A), C = A; return; end
+            
+            if isempty(dim), dim = find(size(A) ~= 1, 1); end
+            
+            if strcmp(dim, 'all')
+                C = A(1);
+                for i = 2:numel(A)
+                    C = C + A(i);
+                end
+                return
+            end
+            
+            if ismatrix(A)
+                if dim == 1
+                    C = A(1, :);
+                    for i = 2:size(A, 1)
+                        C = C + A(i, :);
+                    end
+                    return
+                end
+                
+                if dim == 2
+                    C = A(:, 1);
+                    for i = 2:size(A, 2)
+                        C = C + A(:, i);
+                    end
+                    return
+                end
+            end
+            
+            error('TBA');
+        end
+        
+        function A = plus(A, B)
+            if isscalar(A) && ~isscalar(B)
+                A = repmat(A, size(B));
+            end
+            if isscalar(B) && ~isscalar(A)
+                B = repmat(B, size(B));
+            end
+            
+            for i = 1:numel(A)
+                A(i).X = cellfun(@plus, A(i).X, B(i).X, 'UniformOutput', false);
+            end
+        end
+        
+        function A = minus(A, B)
+            if isscalar(A) && ~isscalar(B)
+                A = repmat(A, size(B));
+            end
+            if isscalar(B) && ~isscalar(A)
+                B = repmat(B, size(B));
+            end
+            
+            for i = 1:numel(A)
+                A(i).X = cellfun(@minus, A(i).X, B(i).X, 'UniformOutput', false);
+            end
+        end
+    end
+    
     
     %% Derived Properties
     methods

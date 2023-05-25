@@ -478,7 +478,7 @@ classdef AbstractTensor
             %   :meth:`Tensor.tsvd`
             arguments
                 H
-                kwargs.Trunc = {'TruncBelow', 1e-14}
+                kwargs.Trunc = {'TruncBelow', 1e-12}
             end
             
             assert(mod(nspaces(H), 2) == 0, ...
@@ -490,18 +490,18 @@ classdef AbstractTensor
             N = indin(H);
             local_operators = cell(1, N);
             if N == 1
-                local_operators{1} = insert_onespace(insert_onespace(H, 1), 3);
+                local_operators{1} = insert_onespace(insert_onespace(H, 1), 3, true);
             else
-                [u, s, v] = tsvd(H, [1 N+1], [2:N N+2:2*N], kwargs.Trunc{:});
+                [u, s, v] = tsvd(H, [1 2*N], 2:(2*N-1), kwargs.Trunc{:});
                 local_operators{1} = insert_onespace(tpermute(u * s, [1 3 2], [1 2]), 1);
                 
                 for i = 2:N-1
-                    [u, s, v] = tsvd(v, [1 2 N-i+3], [3:(N-i+2) (N-i+4):nspaces(v)], ...
+                    [u, s, v] = tsvd(v, [1 2 nspaces(v)], 3:(nspaces(v) - 1), ...
                         kwargs.Trunc{:});
                     local_operators{i} = tpermute(u * s, [1 2 4 3], [2 2]);
                 end
                 
-                local_operators{N} = insert_onespace(repartition(v, [2 1]), 3);
+                local_operators{N} = insert_onespace(repartition(v, [2 1]), 3, true);
             end
         end
         

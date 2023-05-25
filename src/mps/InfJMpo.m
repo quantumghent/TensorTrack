@@ -90,6 +90,10 @@ classdef InfJMpo < InfMpo
             end
             
             linkwargs = namedargs2cell(linopts);
+            L = period(mpo);
+            
+            fp_left = fixedpoint(mpo, mps1, 'l_RR', 1);
+            fp_right = repartition(fixedpoint(mpo, mps1, 'r_RR', L), [3 0]);
             
             T = transfermatrix(mpo, mps1, mps2, 'Type', 'RR').';
             N = size(T(1).O{1}, 2);
@@ -97,10 +101,7 @@ classdef InfJMpo < InfMpo
             if isempty(GR) || isempty(GR{1})
                 GR = cell(1, period(mps1));
                 GR{1} = MpsTensor(SparseTensor.zeros(domain(T), []));
-                pSpace = space(T(1).O{1}(:, end, :, :), 2);
-                fp1 = insert_onespace(fixedpoint(mps1, 'r_RR'), ...
-                    2, isdual(pSpace(end)));
-                GR{1}.var(1, N, 1) = repartition(fp1, [nspaces(fp1) 0]);
+                GR{1}.var(1, N, 1) = fp_right;
             end
             
             for i = N-1:-1:1
@@ -108,22 +109,25 @@ classdef InfJMpo < InfMpo
                 Tdiag = slice(T, i, i);
                 if iszero(Tdiag)
                     GR{1}.var(i) = rhs;
-                elseif iseye(T, i)
-                    fp_left  = insert_onespace(fixedpoint(mps1, 'l_RR'), ...
-                        2, ~isdual(space(rhs, 2)));
-                    fp_right = repartition(insert_onespace(fixedpoint(mps1, 'r_RR'), ...
-                        2, isdual(space(rhs, 2))), rank(rhs));
-                    lambda = contract(rhs, 1:3, fp_left, 3:-1:1);
-                    
-                    rhs = rhs - lambda * fp_right;
-                    [GR{1}.var(i), ~] = ...
-                        linsolve(@(x) x - apply(Tdiag, x), rhs, GR{1}.var(i), linkwargs{:});
-                    
-                    GR{1}.var(i) = GR{1}.var(i) - ...
-                        overlap(GR{1}.var(i), fp_left) * fp_right;
                 else
-                    [GR{1}.var(i), ~] = linsolve(@(x) x - apply(Tdiag, x), rhs, GR{1}.var(i), ...
-                        linkwargs{:});
+                    if iseye(T, i)
+                        lambda = overlap(rhs, fp_left);
+                        rhs = rhs - lambda * fp_right;
+                    end
+                    [GR{1}.var(i), flag, relres, iter] = ...
+                        linsolve(@(x) x - apply(Tdiag, x), rhs, GR{1}.var(i), linkwargs{:});
+                    if iseye(T, i)
+                        GR{1}.var(i) = GR{1}.var(i) - ...
+                            overlap(GR{1}.var(i), fp_left) * fp_right;
+                    end
+                    
+                    if flag == 1 && linopts.Verbosity >= Verbosity.warn
+                        fprintf('GR(%d) reached maxiter, error = %3e\n', i, relres);
+                    elseif flag == 2 && linopts.Verbosity >= Verbosity.warn
+                        fprintf('GR(%d) stagnated, error = %3e\n', i, relres);
+                    elseif linopts.Verbosity >= Verbosity.conv
+                        fprintf('GR(%d) converged after %d iterations, error = %3e\n', i, iter, relres);
+                    end
                 end
             end
             
@@ -146,7 +150,7 @@ classdef InfJMpo < InfMpo
                 linopts.Algorithm = 'bicgstab'
                 linopts.MaxIter = 500
                 linopts.Verbosity = Verbosity.warn
-                linopts.Tol = eps(underlyingType(qp))^(3/4)
+                linopts.Tol = eps(underlyingType(qp))^(3/5)
             end
             
             linkwargs = namedargs2cell(linopts);
@@ -177,7 +181,7 @@ classdef InfJMpo < InfMpo
                 
                 Tdiag = slice(T, i, i);
                 if iszero(Tdiag)
-                    GBL{1}(i) = rhs;
+                    GBL{1}.var(i) = rhs;
                 else
                     if needsRegularization && iseye(T, i)
                         lambda = overlap(rhs, fp_right);
@@ -189,7 +193,16 @@ classdef InfJMpo < InfMpo
                         H_effective = @(x) x - expP * apply(Tdiag, x);
                     end
                     
-                    [GBL{1}.var(i), ~] = linsolve(H_effective, rhs, [], linkwargs{:});
+                    [GBL{1}.var(i), flag, relres, iter, resvec] = ...
+                        linsolve(H_effective, rhs, [], linkwargs{:});
+                    
+                    if flag == 1 && linopts.Verbosity >= Verbosity.warn
+                        fprintf('GBL(%d) reached maxiter, error = %3e\n', i, relres);
+                    elseif flag == 2 && linopts.Verbosity >= Verbosity.warn
+                        fprintf('GBL(%d) stagnated, error = %3e\n', i, relres);
+                    elseif linopts.Verbosity >= Verbosity.conv
+                        fprintf('GBL(%d) converged after %.1f iterations, error = %3e\n', i, iter, relres);
+                    end
                 end
             end
             
@@ -213,7 +226,7 @@ classdef InfJMpo < InfMpo
                 linopts.Algorithm = 'bicgstab'
                 linopts.MaxIter = 500
                 linopts.Verbosity = Verbosity.warn
-                linopts.Tol = eps(underlyingType(qp))^(3/4)
+                linopts.Tol = eps(underlyingType(qp))^(3/5)
             end
             
             linkwargs = namedargs2cell(linopts);
@@ -223,7 +236,7 @@ classdef InfJMpo < InfMpo
             needsRegularization = istrivial(qp);
             if needsRegularization || true
                 fp_left  = fixedpoint(mpo, qp, 'l_LR_1', 1);
-                fp_right = fixedpoint(mpo, qp, 'r_LR_0', L);
+                fp_right = repartition(fixedpoint(mpo, qp, 'r_LR_0', L), [3, 1]);
             end
             
             T = transfermatrix(mpo, qp, qp, 'Type', 'LR').';
@@ -261,7 +274,16 @@ classdef InfJMpo < InfMpo
                         H_effective = @(x) x - expP * apply(Tdiag, x);
                     end
                     
-                    [GBR{1}.var(i), ~] = linsolve(H_effective, rhs, [], linkwargs{:});
+                    [GBR{1}.var(i), flag, relres, iter, resvec] = ...
+                        linsolve(H_effective, rhs, [], linkwargs{:});
+                    
+                    if flag == 1 && linopts.Verbosity >= Verbosity.warn
+                        fprintf('GBR(%d) reached maxiter, error = %3e\n', i, relres);
+                    elseif flag == 2 && linopts.Verbosity >= Verbosity.warn
+                        fprintf('GBR(%d) stagnated, error = %3e\n', i, relres);
+                    elseif linopts.Verbosity >= Verbosity.conv
+                        fprintf('GBR(%d) converged after %.1f iterations, error = %3e\n', i, iter, relres);
+                    end
                 end
             end
             

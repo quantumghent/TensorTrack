@@ -68,6 +68,7 @@ classdef Vumps < handle
             
             if isfield('verbosity', kwargs)
                 alg.alg_eigs.verbosity = alg.verbosity - 2;
+                alg.alg_environments.verbosity = alg.verbosity - 2;
             end
         end
         

@@ -1,7 +1,7 @@
 function mpo = quantum1dIsing(kwargs)
 arguments
     kwargs.J = 1
-    kwargs.h = 0.5
+    kwargs.h = 1
     kwargs.L = Inf     % size of system
     kwargs.Symmetry {mustBeMember(kwargs.Symmetry, {'Z1', 'Z2', 'fZ2'})} = 'Z1'
 end
@@ -9,8 +9,8 @@ end
 J = kwargs.J;
 h = kwargs.h;
 
-sigma_x = [0 1; 1 0] / 2;
-sigma_z = [1 0; 0 -1] / 2;
+sigma_x = [0 1; 1 0];
+sigma_z = [1 0; 0 -1];
 
 switch kwargs.Symmetry
     case 'Z1'
@@ -36,9 +36,9 @@ switch kwargs.Symmetry
         vSpace = GradedSpace.new(Z2(1), 1, false);
         trivSpace = one(pSpace);
         
-        Sx_l = fill_matrix(Tensor([trivSpace pSpace], [pSpace vSpace]), {1 1}) / 2;
-        Sx_r = fill_matrix(Tensor([vSpace pSpace], [pSpace trivSpace]), {1 1}) / 2;
-        Sz = fill_matrix(Tensor([trivSpace pSpace], [pSpace trivSpace]), {1 -1}) / 2;
+        Sx_l = fill_matrix(Tensor([trivSpace pSpace], [pSpace vSpace]), {1 1});
+        Sx_r = fill_matrix(Tensor([vSpace pSpace], [pSpace trivSpace]), {1 1});
+        Sz = fill_matrix(Tensor([trivSpace pSpace], [pSpace trivSpace]), {1 -1});
         
         cod = SumSpace([one(vSpace) vSpace one(vSpace)], pSpace);
         dom = SumSpace(pSpace, [one(vSpace), vSpace, one(vSpace)]);
@@ -50,21 +50,21 @@ switch kwargs.Symmetry
         O(1, 1, 3, 1) = (-J * h) * Sz;
         
     case 'fZ2'
-        c_left = fannihilation('side', 'left');
-        c_right = fannihilation('side', 'right');
-        cdag_left = fcreation('side', 'left');
-        cdag_right = fcreation('side', 'right');
+        c_left = c_min('side', 'left');
+        c_right = c_min('side', 'right');
+        cdag_left = c_plus('side', 'left');
+        cdag_right = c_plus('side', 'right');
         
         % twosite terms
-        cdagc = contract(cdag_left, [-1 1 -3], c_right, [1 -2 -4], 'Rank', [2 2]);
-        ccdag = contract(c_left, [-1 1 -3], cdag_right, [1 -2 -4], 'Rank', [2 2]);
-        cc = contract(c_left, [-1 1 -3], c_right, [1 -2 -4], 'Rank', [2 2]);
-        cdagcdag = contract(cdag_left, [-1 1 -3], cdag_right, [1 -2 -4], 'Rank', [2 2]);
-        H_twosite = -J * (cdagc - ccdag + cdagcdag - cc);
+        cdagc = contract(cdag_left, [-1 1 -4], c_right, [1 -2 -3], 'Rank', [2 2]);
+        ccdag = contract(c_left, [-1 1 -4], cdag_right, [1 -2 -3], 'Rank', [2 2]);
+        cc = contract(c_left, [-1 1 -4], c_right, [1 -2 -3], 'Rank', [2 2]);
+        cdagcdag = contract(cdag_left, [-1 1 -4], cdag_right, [1 -2 -3], 'Rank', [2 2]);
+        H_twosite = -J * (cdagc + ccdag + cdagcdag + cc);
         
         % onesite terms
-        n = fnumber();
-        H_onesite = J * 2 * h * (n - 1 / 2 * n.eye(n.codomain, n.domain));
+        n = c_number();
+        H_onesite = -J * 2 * h * (n - 1 / 2 * n.eye(n.codomain, n.domain));
         
         mpo = InfJMpo.twosite(H_twosite, H_onesite);
         return

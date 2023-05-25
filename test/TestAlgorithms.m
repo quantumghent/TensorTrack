@@ -44,14 +44,14 @@ classdef TestAlgorithms < matlab.unittest.TestCase
         
         function test1dIsing_ordered(tc)
             J = 1;
-            h = 1;
+            h = 0.5;
             e0 = quantum1dIsing_energy(J, h);
             d0 = @(k) quantum1dIsing_dispersion(k, 'J', J, 'h', h);
-            D = 12;
+            D = 20;
             momenta = [0 pi 0.5];
             
             for L = 1:3
-%                 %% No symmetry
+                %% No symmetry
 %                 H = repmat(quantum1dIsing('h', h, 'J', J), 1, L);
 %                 
 %                 vspace = arrayfun(@(w) CartesianSpace.new(D + w), 1:L, ...
@@ -72,24 +72,25 @@ classdef TestAlgorithms < matlab.unittest.TestCase
 %                         sprintf('qp failed at momentum %.2f', k));
 %                 end
 %                 
-%                 %% Z2
-%                 H = repmat(quantum1dIsing('h', h, 'J', J, 'Symmetry', 'Z2'), 1, L);
-%                 
-%                 vspace = Z2Space([0, 1], [D D] / 2, false);
-%                 gs = initialize_mps(H, vspace);
-%                 
-%                 % Groundstate algorithms
-%                 gs = fixedpoint(Vumps('which', 'smallestreal', 'maxiter', 5), ...
-%                     H, gs);
-%                 tc.assertEqual(expectation_value(gs, H), e0 * L, 'RelTol', 1e-2);
-%                 
-%                 % Excitation algorithms
-%                 for k = momenta
-%                     qp = InfQP.randnc(gs, gs, k, Z2(1));
-%                     [~, mu] = excitations(QPAnsatz(), H, qp);
-%                     tc.assertEqual(mu, d0(k / L), 'RelTol', 1e-3, ...
-%                         sprintf('qp failed at momentum %.2f', k));
-%                 end
+                %% Z2
+                H = repmat(quantum1dIsing('h', h, 'J', J, 'Symmetry', 'Z2'), 1, L);
+                
+                vspace = Z2Space([0, 1], [D D] / 2, false);
+                gs = initialize_mps(H, vspace);
+                
+                % Groundstate algorithms
+                gs = fixedpoint(Vumps('which', 'smallestreal', 'maxiter', 5), ...
+                    H, gs);
+                tc.assertEqual(expectation_value(gs, H), e0 * L, 'RelTol', 1e-2);
+                
+                % Excitation algorithms
+                for k = momenta
+                    qp = InfQP.randnc(gs, gs, k, Z2(1));
+                    [~, mu] = excitations(QPAnsatz(), H, qp);
+                    tc.assertEqual(mu, d0(k / L), 'RelTol', 1e-3, ...
+                        sprintf('qp failed at momentum %.2f', k));
+                    fprintf('ok for %.2f\n', k);
+                end
 %                 
                 %% fZ2
                 H = repmat(quantum1dIsing('h', h, 'J', J, 'Symmetry', 'fZ2'), 1, L);
@@ -104,7 +105,7 @@ classdef TestAlgorithms < matlab.unittest.TestCase
                 
                 % Excitation algorithms
                 for k = momenta
-                    qp = InfQP.randnc(gs, gs, k, Z2(1));
+                    qp = InfQP.randnc(gs, gs, k, fZ2(1));
                     [~, mu] = excitations(QPAnsatz(), H, qp);
                     tc.assertEqual(mu, d0(k / L), 'RelTol', 1e-3, ...
                         sprintf('qp failed at momentum %.2f', k));
@@ -129,6 +130,25 @@ classdef TestAlgorithms < matlab.unittest.TestCase
             [~, mu] = excitations(QPAnsatz(), H, qp);
             tc.assertEqual(mu, gap, 'RelTol', 1e-3, ...
                 sprintf('qp failed at momentum %.2f', k));
+        end
+        
+        function test1dHeisenberg(tc)
+            alg = Vumps('which', 'smallestreal', 'maxiter', 100);
+            
+            mpo = quantum1dHeisenberg('Spin', 1, 'Symmetry', 'SU2');
+            vspace1 = GradedSpace.new(SU2(2:2:6), [5 5 1], false);
+            mps = initialize_mps(mpo, vspace1);
+            
+            [gs_mps] = fixedpoint(alg, mpo, mps);
+            lambda = expectation_value(gs_mps, mpo);
+            tc.verifyEqual(lambda, -1.401, 'RelTol', 1e-2);
+            
+            p = pi;
+            charge = SU2(3);
+            qp = InfQP.randnc(gs_mps, gs_mps, p, charge);
+            
+            [qp, mu] = excitations(QPAnsatz(), mpo, qp);
+            tc.verifyEqual(mu, 0.4104, 'AbsTol', 1e-2);
         end
     end
 end
