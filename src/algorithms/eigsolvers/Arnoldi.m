@@ -7,7 +7,7 @@ classdef Arnoldi
         krylovdim   = 20                % Krylov subspace dimension
         deflatedim  = 3                 % number of Krylov vectors to keep when deflating
         reorth      = 20                % reorthogonalize basis if larger than this number
-        nobuild     = 1                 % frequency of convergence check when building
+        nobuild     = 3                 % frequency of convergence check when building
         verbosity   = Verbosity.warn    % display information
     end
     
@@ -33,6 +33,8 @@ classdef Arnoldi
                 sigma = 'lm'
             end
             
+            t_total = tic;
+            
             if isempty(alg.nobuild), alg.nobuild = ceil(alg.krylovdim / 10); end
             if isempty(alg.deflatedim), alg.deflatedim = max(round(3/5 * alg.krylovdim), howmany); end
             
@@ -51,9 +53,11 @@ classdef Arnoldi
             flag = 0;
             
             while ctr_outer < alg.maxiter
+                t_outer = tic;
                 ctr_outer = ctr_outer + 1;
                 
                 while ctr_inner < alg.krylovdim  % build Krylov subspace
+                    t_inner = tic;
                     ctr_inner = ctr_inner + 1;
                     
                     V(:, ctr_inner) = v;
@@ -99,16 +103,19 @@ classdef Arnoldi
                                 V = V(:, 1:ctr_inner) * U(:, select);
                                 D = diag(lambda(select));
                                 if alg.verbosity >= Verbosity.conv
-                                    fprintf('Conv %2d (%2d/%2d): error = %.5e.\n', ctr_outer, ...
-                                        ctr_inner, alg.krylovdim, conv);
+                                    fprintf('Conv %2d (%2d/%2d):\tlambda = %.5e + %.5ei;\terror = %.5e;\ttime = %s.\n', ...
+                                        ctr_outer, ctr_inner, alg.krylovdim, ...
+                                         real(lambda(1)), imag(lambda(1)), conv, ...
+                                         time2str(toc(t_total)));
                                 end
                                 return
                             end
                             
                             if alg.verbosity >= Verbosity.detail
-                                fprintf('Iter %2d (%2d/%2d):\tlambda = %.5e + %.5ei;\terror = %.5e\n', ...
+                                fprintf('Iter %2d (%2d/%2d):\tlambda = %.5e + %.5ei;\terror = %.5e;\ttime = %s.\n', ...
                                     ctr_outer, ctr_inner, alg.krylovdim, ...
-                                    real(lambda(1)), imag(lambda(1)), conv);
+                                    real(lambda(1)), imag(lambda(1)), conv, ...
+                                    time2str(toc(t_inner)));
                             end
                         end
                     end
@@ -153,14 +160,15 @@ classdef Arnoldi
                     V = V(:, 1:alg.deflatedim) * U(:, select);
                     D = diag(lambda(select));
                     if alg.verbosity >= Verbosity.conv
-                        fprintf('Conv %2d: error = %.5e.\n', ctr_outer, conv);
+                        fprintf('Conv %2d:\tlambda = %.5e + %.5ei;\terror = %.5e;\ttime = %s.\n', ...
+                            ctr_outer, real(lambda(1)), imag(lambda(1)), conv, time2str(toc(t_outer)));
                     end
                     return
                 end
                 
                 if alg.verbosity >= Verbosity.iter
-                    fprintf('Iter %2d:\tlambda = %.5e + %.5ei;\terror = %.5e\n', ...
-                        ctr_outer, real(lambda(1)), imag(lambda(1)), conv);
+                    fprintf('Iter %2d:\tlambda = %.5e + %.5ei;\terror = %.5e;\ttime = %s.\n', ...
+                        ctr_outer, real(lambda(1)), imag(lambda(1)), conv, time2str(toc(t_total)));
                 end
                 
                 % deflate Krylov subspace
