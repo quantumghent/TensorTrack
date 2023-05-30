@@ -122,6 +122,22 @@ classdef PepsTensor
             t.var = t.var';
             t = permute(t, ndims(t):-1:1);
         end
+
+        function t = dagger(t)
+            leftflip = Tensor.eye(westvspace(t), eastvspace(t));
+            rightflip = twist(leftflip', 2);
+            pflip =  Tensor.eye(pspace(t), pspace(t)');
+            t.var = tpermute(conj(t.var), [1,2,5,4,3]);
+            t.var = contract(t.var, [1,2,-3,3,-5], pflip, [1,-1], leftflip, [-2,2], rightflip, [3,-4]);
+        end
+
+        function t = rot90(t)
+            t = tpermute(t, [1, 3, 4, 5, 2], rank(t));
+        end
+        
+        function t = rot270(t)
+            t = tpermute(t, [1, 5, 2, 3, 4], rank(t));
+        end
         
         function C = tensorprod(varargin)
             for i = 1:2
