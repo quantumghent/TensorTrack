@@ -35,13 +35,23 @@ classdef QPAnsatz
                     period(mpo), period(qp));
             end
             
+            
             % Renormalization
             [GL, GR, lambda] = environments(mpo, qp.mpsleft, qp.mpsleft);
             
             for i = period(mpo):-1:1
                 T = AC_hamiltonian(mpo, qp.mpsleft, GL, GR, i);
-                offset(i) = dot(qp.mpsleft.AC{i}, apply(T{1}, qp.mpsleft.AC{i}));
+                offsetL(i) = dot(qp.mpsleft.AC{i}, apply(T{1}, qp.mpsleft.AC{i}));
             end
+            [GL, GR, lambda] = environments(mpo, qp.mpsright, qp.mpsright);
+            
+            for i = period(mpo):-1:1
+                T = AC_hamiltonian(mpo, qp.mpsright, GL, GR, i);
+                offsetR(i) = dot(qp.mpsright.AC{i}, apply(T{1}, qp.mpsright.AC{i}));
+            end
+            offset = (offsetL + offsetR) / 2;
+            
+            GL = leftenvironment(mpo, qp.mpsleft, qp.mpsleft);
             
             % Algorithm
             H_effective = @(qp) updateX(alg, mpo, qp, GL, GR, offset);
@@ -75,6 +85,7 @@ classdef QPAnsatz
             for i = 1:period(qp)
                 qp.B{i} = B{i} - qp.B{i} * offset(i);
             end
+
             qp.X = computeX(qp);
         end
     end
