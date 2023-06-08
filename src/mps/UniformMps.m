@@ -392,6 +392,16 @@ classdef UniformMps
             mps.AC = arrayfun(@normalize, mps.AC);
         end
         
+        function mps = circshift(mps, k)
+            if length(k) > 1
+                error('tba');
+            end
+            mps.AR = circshift(mps.AR, k);
+            mps.AL = circshift(mps.AL, k);
+            mps.C = circshift(mps.C, k);
+            mps.AC = circshift(mps.AC, k);
+        end
+        
         function T = transfermatrix(mps1, mps2, sites, kwargs)
             % A finite matrix product operator that represents the transfer matrix of an
             % mps.
