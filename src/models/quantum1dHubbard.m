@@ -36,8 +36,8 @@ switch kwargs.symmetry
         
         chemical_potential = fill_tensor(Tensor(pspace, pspace), {0 2 1});
         
-        mpo = InfJMpo.twosite(-hopping, ...
-            u * interaction - mu * chemical_potential);
+        mpo = repmat(InfJMpo.twosite(-hopping, ...
+            u * interaction - mu * chemical_potential), 1, 2*q);
         
     otherwise
         error('tba:model', 'symmetry %s not implemented', kwargs.symmetry);
@@ -45,5 +45,5 @@ end
 
 
 
-end
 
+end
