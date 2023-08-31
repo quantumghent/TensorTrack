@@ -62,7 +62,7 @@ classdef TestInfJMpo < matlab.unittest.TestCase
         function test1dHeisenberg(tc)
             alg = Vumps('which', 'smallestreal', 'maxiter', 5);
             
-            mpo = InfJMpo.Heisenberg('Spin', SU2(3), 'Symmetry', 'SU2');
+            mpo = quantum1dHeisenberg('Spin', 1, 'Symmetry', 'SU2');
             mpo = [mpo mpo];
             
             vspace1 = GradedSpace.new(SU2(1:2:5), [5 5 1], false);

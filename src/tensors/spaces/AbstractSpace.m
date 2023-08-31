@@ -364,7 +364,7 @@ classdef (Abstract) AbstractSpace
         end
 
         function bool = isisometric(space1, space2)
-            bool = prod(space1)==prod(space2);
+            bool = prod(space1) == prod(space2);
         end
         
         function hashable = GetMD5_helper(spaces)

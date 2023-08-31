@@ -24,7 +24,6 @@ classdef TestPeps < matlab.unittest.TestCase
     methods (Test, ParameterCombination='exhaustive')
         
         function testFiniteMpo(tc, spaces, depth, width, dualdepth, dualwidth, samebot)
-            tc.assumeTrue(istwistless(braidingstyle(spaces)), 'Fermionic tests broken.')
             tc.assumeTrue(depth == 1, 'Test ill-defined for multiline PEPS.')
             
             mpo = tc.random_mpo(spaces, depth, width, dualdepth, dualwidth, samebot);
@@ -48,10 +47,6 @@ classdef TestPeps < matlab.unittest.TestCase
             tc.assertTrue(isequal(mpo.codomain, mpo_tensor.codomain), ...
                 'codomain should remain fixed after conversion.');
             
-            % test apply
-            v = initialize_fixedpoint(mpo);
-            tc.assertTrue(isapprox(mpo.apply(v), mpo_tensor * v));
-            
             % test transpose
             tc.assertTrue(isapprox(Tensor(mpo).', Tensor(mpo.')), ...
                 'transpose should not change mpo');
@@ -59,11 +54,14 @@ classdef TestPeps < matlab.unittest.TestCase
             % test ctranspose
             tc.assertTrue(isapprox(Tensor(mpo)', Tensor(mpo')), ...
                 'ctranspose should not change mpo');
+            
+            % test apply
+            v = initialize_fixedpoint(mpo);
+            twistinds = find(isdual(space(v, 1:nspaces(v)))); % compensate for supertrace rules when using contract versus mtimes
+            tc.assertTrue(isapprox(mpo.apply(v), mpo_tensor * twist(v, twistinds)));
         end
         
         function testFixedpoints(tc, spaces, depth, width, dualdepth, dualwidth, samebot)
-            tc.assumeTrue(istwistless(braidingstyle(spaces)), 'Fermionic tests broken.')
-
             mpo = tc.random_mpo(spaces, depth, width, dualdepth, dualwidth, samebot);
 
             [V, D] = eigsolve(mpo, 'MaxIter', 1e3, 'KrylovDim', 32);
@@ -74,8 +72,6 @@ classdef TestPeps < matlab.unittest.TestCase
         end
         
         function testDerivatives(tc, spaces, depth, width, dualdepth, dualwidth, samebot)
-            tc.assumeTrue(istwistless(braidingstyle(spaces)), 'Fermionic tests broken.')
-
             mpo = tc.random_inf_mpo(spaces, depth, width, dualdepth, dualwidth, samebot);
             vspaces = repmat({spaces(end)}, 1, width);
             mps = mpo.initialize_mps(vspaces{:});
@@ -98,8 +94,6 @@ classdef TestPeps < matlab.unittest.TestCase
         end
         
         function testMpoTensor(tc, spaces, dualdepth, dualwidth)
-            tc.assumeTrue(istwistless(braidingstyle(spaces)), 'Fermionic tests broken.')
-
             pspace = spaces(1); horzspace = spaces(2); vertspace = spaces(3);
             top = TestPeps.random_peps_unitcell(pspace, horzspace, vertspace, 1, 1, dualdepth, dualwidth);
             bot = TestPeps.random_peps_unitcell(pspace', vertspace, horzspace, 1, 1, dualdepth, dualwidth);
