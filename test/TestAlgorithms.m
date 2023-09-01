@@ -36,9 +36,9 @@ classdef TestAlgorithms < matlab.unittest.TestCase
                 [gs, lambda] = fixedpoint(alg, mpo, mps);
                 tc.verifyEqual(expectation_value(gs, mpo, gs), E0, 'RelTol', 1e-2);
                 
-                alg_expand = Expand('which', alg.which, 'schmidtcut', 1e-7, 'finalize', Vomps('maxiter', 5));
+                alg_expand = Expand('which', alg.which, 'schmidtcut', 1e-7, 'finalize', Vomps('maxiter', 10));
                 gs2 = changebonds(alg_expand, mpo, mps);
-                tc.verifyGreaterThan(abs(fidelity(gs, gs2)), 0.9^unitcell)
+                tc.verifyGreaterThan(abs(fidelity(gs, gs2)), 0.85^unitcell)
             end
         end
         

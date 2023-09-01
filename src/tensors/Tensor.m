@@ -1977,14 +1977,20 @@ classdef Tensor < AbstractTensor
             % t : :class:`Tensor`
             %   output tensor.
             
-            assert(isequal(t.codomain, t.domain), 'tensors:ArgumentError', ...
+            assert(isisometric(t.codomain, t.domain), 'tensors:ArgumentError', ...
                 'Input should be square.');
             
             mblocks = matrixblocks(t);
             for i = 1:length(mblocks)
                 mblocks{i} = inv(mblocks{i});
             end
-            t.var = fill_matrix_data(t.var, mblocks);
+
+            if isequal(t.codomain, t.domain)
+                t.var = fill_matrix_data(t.var, mblocks);
+            else
+                t = t';
+                t.var = fill_matrix_data(t.var, mblocks);
+            end
         end
         
         function A = mpower(X, Y)
