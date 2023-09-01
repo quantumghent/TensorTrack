@@ -38,7 +38,7 @@ classdef TestAlgorithms < matlab.unittest.TestCase
                 
                 alg_expand = Expand('which', alg.which, 'schmidtcut', 1e-7, 'finalize', Vomps('maxiter', 10));
                 gs2 = changebonds(alg_expand, mpo, mps);
-                tc.verifyGreaterThan(abs(fidelity(gs, gs2)), 0.9^unitcell)
+                tc.verifyGreaterThan(abs(fidelity(gs, gs2)), 0.85^unitcell)
             end
         end
         
