@@ -131,9 +131,9 @@ classdef Vumps < handle
                     fprintf('\nAC{%d} eigenvalue solver:\n------------------------\n', sites(i));
                 end
                 [AC{1, i}.var, ~] = eigsolve(alg.alg_eigs, @(x) H_AC{i}.apply(x), AC{1, i}.var, ...
-                    1, alg.which);
+                    1, alg.which); % function handle returns MpsTensor, which is then sneakily converted to a tensor by eigsolve
                 for d = 2:depth(mpo)
-                    AC{d, i}.var = H_AC{i}(d).apply(AC{d-1, i}.var);
+                    AC{d, i} = H_AC{i}(d).apply(AC{d-1, i});
                 end
             end
         end

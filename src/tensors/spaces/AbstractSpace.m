@@ -369,6 +369,10 @@ classdef (Abstract) AbstractSpace
                 (isequal(size(spaces{1}), size(spaces{2})) && ...
                 all(spaces{1} == spaces{2}));
         end
+
+        function bool = isisometric(space1, space2)
+            bool = prod(space1) == prod(space2);
+        end
         
         function hashable = GetMD5_helper(spaces)
             % Helper function for hash algorithm. This converts the space object to a data

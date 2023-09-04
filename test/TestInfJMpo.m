@@ -238,6 +238,10 @@ classdef TestInfJMpo < matlab.unittest.TestCase
             [qp, mu] = excitations(QPAnsatz(), mpo, qp);
             mu
             
+            mpo = [mpo mpo];
+            mps = initialize_mps(mpo, vspace1, vspace1);
+            [mps2, lambda2] = fixedpoint(alg, mpo, mps);
+            tc.verifyTrue(isapprox(lambda2/2, -1.401, 'RelTol', 1e-2))
         end
     end
 end

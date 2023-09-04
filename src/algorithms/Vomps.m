@@ -99,7 +99,7 @@ classdef Vomps
             AC = vertcat(ACs{:});
             for i = length(sites):-1:1
                 for d = 1:depth(mpo)
-                    AC{d, i}.var = H_AC{i}(d).apply(AC{prev(d, depth(mpo)), i}.var);
+                    AC{d, i} = H_AC{i}(d).apply(AC{prev(d, depth(mpo)), i});
                 end
             end
         end

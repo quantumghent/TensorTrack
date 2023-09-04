@@ -168,9 +168,9 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) PepsSandwich
         end
         
         function t = MpoTensor(T)
-            fuse_east = Tensor.eye(prod(leftvspace(T)), leftvspace(T));
+            fuse_east = Tensor.eye(prod(rightvspace(T)), rightvspace(T));
             fuse_south = Tensor.eye(prod(codomainspace(T)), codomainspace(T));
-            fuse_west = Tensor.eye(prod(rightvspace(T))', rightvspace(T));
+            fuse_west = Tensor.eye(prod(leftvspace(T))', leftvspace(T));
             fuse_north = Tensor.eye(prod(domainspace(T))', domainspace(T));
             t = MpoTensor(contract(...
                 T.top.var, [1, 2, 4, 6, 8], ...

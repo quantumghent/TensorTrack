@@ -2,7 +2,7 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
     % Generic mps tensor objects that have a notion of virtual, physical and auxiliary legs.
     
     properties
-        var
+        var %Tensor
         plegs
         alegs = 0
     end
@@ -22,6 +22,8 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
                 end
                 return
             end
+            
+            % TODO: copy constructor
             
             if ~isempty(tensor)
                 A.var = tensor;
@@ -298,7 +300,7 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
                 B MpsTensor = A
             end
             
-            B = twist(B, [isdual(space(B, 1:2)) ~isdual(space(B, 3))]);
+            B = twist(B, [isdual(space(B, 1:B.plegs+1)) ~isdual(space(B, B.plegs+2))]);
             T = FiniteMpo(B', {}, A);
         end
         

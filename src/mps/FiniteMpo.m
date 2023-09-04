@@ -279,7 +279,7 @@ classdef FiniteMpo
                 atop = Atop{i};
                 o = rot90(O{i});
                 twistinds = find(isdual(space(atop, 2:(nspaces(atop) - 1 - atop.alegs))));
-                abot = twist(Abot{i}', flip(twistinds) + 1 + Abot{i}.alegs);
+                abot = twist(Abot{i}, twistinds + 1)'; % IMPORTANT: ' needs to be outside of twist
                 
                 assert(isequal(pspace(abot)', leftvspace(o)));
                 assert(isequal(rightvspace(o)', pspace(atop)));
