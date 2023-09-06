@@ -211,6 +211,7 @@ classdef UniformMps
         
         function s = pspace(mps, w)
             % return the physical space at site w.
+            if nargin == 1 || isempty(w), w = 1:period(mps); end
             s = pspace(mps.AL{w});
         end
         
@@ -340,14 +341,23 @@ classdef UniformMps
             end
             
             ww = next(w, period(mps));
+
             if strcmp(type, 'R')
-                assert(mps(d).AC{w}.plegs == 1 && mps(d).AC{w}.alegs == 0, 'tba');
-                AC2 = MpsTensor(contract(mps(d).AC{w}, [-1 -2 1], ...
-                            mps(d).AR{ww}, [1 -3 -4], 'Rank', [2 2]));
+                assert(mps(d).AC{w}.alegs == 0, 'tba');
+                AC2 = MpsTensor(contract(...
+                        mps(d).AC{w}, ...
+                        [-(1:mps(dd).AC{w}.plegs+1), 1], ...
+                        mps(d).AR{ww}, ...
+                        [1, -(1:mps(dd).AR{ww}.plegs+1) - 1 - mps(dd).AR{ww}.plegs], ...
+                        'Rank', [1 + mps(dd).AC{w}.plegs, 1 + mps(dd).AR{ww}.plegs]));
             elseif strcmp(type, 'L')
-                assert(mps(d).AC{ww}.plegs == 1 && mps(d).AC{ww}.alegs == 0, 'tba');
-                AC2 = MpsTensor(contract(mps.AL{w}, [-1 -2 1], ...
-                        mps.AC{ww}, [1 -3 -4], 'Rank', [2 2]));
+                assert(mps(d).AC{ww}.alegs == 0, 'tba');
+                AC2 = MpsTensor(contract(...
+                        mps(d).AL{w}, ...
+                        [-(1:mps(dd).AL{w}.plegs+1), 1], ...
+                        mps(d).AC{ww}, ...
+                        [1, -(1:mps(dd).AR{ww}.plegs+1) - 1 - mps(dd).AC{ww}.plegs], ...
+                        'Rank', [1 + mps(dd).AL{w}.plegs, 1 + mps(dd).AR{ww}.plegs]));
             else
                 error('mps:argerror', 'invalid type %s', type)
             end
@@ -876,6 +886,29 @@ classdef UniformMps
             end
             S = 1 / (1 - n) * log(S);
         end
+
+        function out = truncate(mps, trunc)
+            arguments
+                mps
+                trunc.TruncDim
+                trunc.TruncTotalDim
+                trunc.TruncBelow
+                trunc.TruncSpace
+            end
+
+            trunc = [fieldnames(trunc),struct2cell(trunc)]';       
+            out = repmat(UniformMps, size(mps, 1), 1);
+            for d = 1:depth(mps)
+                for w = 1:period(mps(d))
+                    [~, ~, V] = tsvd(mps(d).C(w), 1, 2, trunc{:});
+                    ww = next(w, period(mps(d)));
+                    mps(d).AR(ww) = multiplyleft(mps(d).AR(ww), V);
+                    mps(d).AR(w)  = multiplyright(mps(d).AR(w), V');
+                end
+                % bring truncated mps to canonical form
+                out(d) = UniformMps(mps(d).AR);
+            end
+        end
         
         S = EntanglementEntropy(mps, loc);
         S = RenyiEntropy(mps,n, loc);
@@ -886,7 +919,7 @@ classdef UniformMps
         
         out = Block(mps, opts)
         out = Split(mps, varargin)
-        [out, lambda] = Truncate(mps, control, opts)
+        %[out, lambda] = Truncate(mps, control, opts)
         
         [f, rho] = Fidelity(mps1, mps2, tol)
         
