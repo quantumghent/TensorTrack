@@ -116,15 +116,14 @@ classdef TestInfMpo < matlab.unittest.TestCase
             
             H_AC = AC_hamiltonian(mpo, mps, GL, GR);
             for i = 1:numel(H_AC)
-                AC_ = mps.AC(i);
-                [AC_.var, lambda] = eigsolve(H_AC{i}, mps.AC(i).var, 1, 'largestabs');
+                [AC_, lambda] = eigsolve(H_AC{i}, mps.AC{i}, 1, 'largestabs');
                 AC_2 = apply(H_AC{i}, AC_);
-                tc.assertTrue(isapprox(AC_2, lambda * AC_.var));
+                tc.assertTrue(isapprox(AC_2, lambda * AC_));
             end
             
             H_C = C_hamiltonian(mpo, mps, GL, GR);
             for i = 1:numel(H_C)
-                [C_, lambda] = eigsolve(H_C{i}, mps.C(i), 1, 'largestabs');
+                [C_, lambda] = eigsolve(H_C{i}, mps.C{i}, 1, 'largestabs');
                 tc.assertTrue(isapprox(apply(H_C{i}, C_), lambda * C_));
             end
         end
@@ -140,14 +139,17 @@ classdef TestInfMpo < matlab.unittest.TestCase
             alg = Vumps('MaxIter', 10);
             mpo = statmech2dIsing('beta', beta, 'Symmetry', 'Z1');
             mps = mpo.initialize_mps(CartesianSpace.new(D));
-            [mps2, lambda] = fixedpoint(alg, mpo, mps);
+            [mps2, lambda, GL, GR] = fixedpoint(alg, mpo, mps);
             tc.assertEqual(-log(lambda) / beta, f, 'RelTol', 1e-5);
             
             % compute excitations
             p = 0;
             qp = InfQP.randnc(mps2, mps2, p);
-            GBL = leftquasienvironment(mpo, qp);
-            
+            try
+                GBL = leftquasienvironment(mpo, qp, GL, GR);
+            catch 
+                tc.verifyFail('InfMpo.leftquasienvironment broken')
+            end
             
             mps = UniformMps.randnc(GradedSpace.new(Z2(0, 1), [1 1], false), ...
                 GradedSpace.new(Z2(0, 1), [D D] ./ 2, false));

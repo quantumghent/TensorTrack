@@ -5,10 +5,10 @@ classdef MatrixBlock < AbstractBlock
     %#ok<*INUSD>
     properties
         charge
-        var
-        rowsizes
-        colsizes
-        tdims
+        var = {}
+        rowsizes = {}
+        colsizes = {}
+        tdims = {}
         rank
     end
     
@@ -17,6 +17,7 @@ classdef MatrixBlock < AbstractBlock
             if nargin == 0, return; end
             
             rank = [length(codomain) length(domain)];
+            b.rank = rank;
             
             trees = fusiontrees(codomain, domain);
             if isempty(trees)
@@ -41,8 +42,8 @@ classdef MatrixBlock < AbstractBlock
             splits = split(trees);
             fuses = fuse(trees);
             
-            b.rank = rank;
-            b.charge = reshape(c, 1, []);
+            
+            b.charge    = reshape(c, 1, []);
             b.var       = cell(size(b.charge));
             b.rowsizes  = cell(size(b.charge));
             b.colsizes  = cell(size(b.charge));

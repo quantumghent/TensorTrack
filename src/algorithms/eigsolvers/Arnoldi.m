@@ -35,8 +35,19 @@ classdef Arnoldi
             
             t_total = tic;
             
+            if ~isa(A, 'function_handle')
+                A = @(x) A * x;
+            end
+            
+            if norm(v) < eps(underlyingType(v))^(3/4)
+                error('eigsolve:inputnorm', 'starting vector should not have zero norm.');
+            end
+
+            % some input validation
             if isempty(alg.nobuild), alg.nobuild = ceil(alg.krylovdim / 10); end
             if isempty(alg.deflatedim), alg.deflatedim = max(round(3/5 * alg.krylovdim), howmany); end
+            assert(alg.deflatedim < alg.krylovdim, 'eigsolve:argerror', ...
+                'Deflate size should be smaller than krylov dimension.')
             
             v = v / norm(v, 'fro');
             

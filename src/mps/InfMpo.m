@@ -174,7 +174,6 @@ classdef InfMpo
                 T = transfermatrix(mpo, mps1, mps2, i-1, 'Type', 'LL');
                 GL{i} = apply(T, GL{i-1}) ./ lambda^(1/N);
             end
-            GL = cellfun(@MpsTensor, GL, 'UniformOutput', false);
         end
         
         function [GR, lambda] = rightenvironment(mpo, mps1, mps2, GR, eigopts)
@@ -199,7 +198,6 @@ classdef InfMpo
                 T = transfermatrix(mpo, mps1, mps2, i, 'Type', 'RR').';
                 GR{i} = apply(T, GR{next(i, N)}) ./ lambda^(1/N);
             end
-            GR = cellfun(@MpsTensor, GR, 'UniformOutput', false);
         end
         
         function GBL = leftquasienvironment(mpo, qp, GL, GR, GBL, linopts)
@@ -425,6 +423,9 @@ classdef InfMpo
                     gl = tpermute(gl, p, rank(gl));
                     
                     gr = GR{d, next(sites(i), period(mpo))};
+                    if isa(gr, 'Tensor')
+                        disp('eh?')
+                    end
                     gr = twistdual(gr, nspaces(gr)-gr.alegs);
                     p = 1:nspaces(gr);
                     p(2:(nspaces(gr)-1-gr.alegs)) = flip(p(2:(nspaces(gr)-1-gr.alegs)));

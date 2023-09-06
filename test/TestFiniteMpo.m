@@ -64,7 +64,7 @@ classdef TestFiniteMpo < matlab.unittest.TestCase
             
             L = 16;
             D = 64;
-            alg = Dmrg('maxiter', 10, 'which', 'largestabs');
+            alg = Dmrg('maxiter', 10, 'which', 'largestabs', 'verbosity', 2);
             
             mpo = statmech2dIsing('beta', beta, 'L', L);
             vspace_max = CartesianSpace.new(D);

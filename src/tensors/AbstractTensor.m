@@ -195,8 +195,10 @@ classdef AbstractTensor
             %   tolerance of the algorithm.
             %
             % Algorithm : char
-            %   choice of algorithm. Currently only 'eigs' is available, which leverages the
-            %   default Matlab eigs.
+            %   choice of eigensolver algorithm. Currently there is a choice between the use
+            %   of Matlab's buitin `eigs` specified by the identifiers 'eigs' or
+            %   'KrylovSchur', or the use of a custom Arnolid algorithm specified by
+            %   the identifier 'Arnoldi'.
             %
             % MaxIter : int
             %   maximum number of iterations, 100 by default.
@@ -233,67 +235,47 @@ classdef AbstractTensor
                 A
                 x0 = A.randnc(A.domain, [])
                 howmany = 1
-                sigma = 'largestabs'
+                sigma = 'lm'
+                
+                options.Algorithm {mustBeMember(options.Algorithm, ...
+                    {'eigs', 'KrylovSchur', 'Arnoldi'})} = 'Arnoldi'
                 
                 options.Tol = eps(underlyingType(x0))^(3/4)
-                options.Algorithm = 'eigs'
                 options.MaxIter = 100
                 options.KrylovDim = 20
-                options.IsSymmetric logical = false
-                options.DeflateDim
+                options.DeflateDim = 3
                 options.ReOrth = 2
-                options.NoBuild
-                options.Verbosity = 0
+                options.NoBuild = 3
+                options.Verbosity = Verbosity.warn
+                options.IsSymmetric logical = false
             end
-            
-            assert(isnumeric(sigma) || ismember(sigma, {'largestabs', 'smallestabs', ...
-                'largestreal', 'smallestreal', 'bothendsreal', ...
-                'largestimag', 'smallestimag', 'bothendsimag'}), ...
-                'tensors:ArgumentError', 'Invalid choice of eigenvalue selector.');
-            nargoutchk(0, 3);
-            
-            
-            x0_vec = vectorize(x0);
-            sz = size(x0_vec);
-            if sz(1) < howmany
-                warning('requested %d out of %d eigenvalues.', howmany, sz(1));
-                howmany = min(howmany, sz(1));
-            end
-
-            if isa(A, 'function_handle')
-                A_fun = @(x) vectorize(A(devectorize(x, x0)));
-            else
-                A_fun = @(x) vectorize(A * devectorize(x, x0));
-            end
-            
-            options.KrylovDim = min(sz(1), options.KrylovDim);
-            
-            if howmany > sz(1) - 2
-                [V, D, flag] = eigs(A_fun, sz(1), howmany, sigma, ...
-                    'Tolerance', options.Tol, 'MaxIterations', options.MaxIter, ...
-                    'IsFunctionSymmetric', ...
-                    options.IsSymmetric, 'StartVector', x0_vec, ...
-                    'Display', options.Verbosity >= 3, 'FailureTreatment', 'keep');
-            else
-                [V, D, flag] = eigs(A_fun, sz(1), howmany, sigma, ...
-                    'Tolerance', options.Tol, 'MaxIterations', options.MaxIter, ...
-                    'SubspaceDimension', options.KrylovDim, 'IsFunctionSymmetric', ...
-                    options.IsSymmetric, 'StartVector', x0_vec, ...
-                    'Display', options.Verbosity >= 3, 'FailureTreatment', 'keep');
+                        
+            switch options.Algorithm
+                
+                case {'Arnoldi'}
+                    alg_opts = rmfield(options, {'Algorithm', 'IsSymmetric'});
+                    kwargs = namedargs2cell(alg_opts);
+                    alg = Arnoldi(kwargs{:});
+                    [V, D, flag] = eigsolve(alg, A, x0, howmany, sigma);
+                    
+                case {'eigs', 'KrylovSchur'}
+                    alg_opts = rmfield(options, ...
+                        {'Algorithm', 'DeflateDim', 'ReOrth', 'NoBuild', 'IsSymmetric'});
+                    kwargs = namedargs2cell(alg_opts);
+                    alg = KrylovSchur(kwargs{:});
+                    [V, D, flag] = eigsolve(alg, A, x0, howmany, sigma, ...
+                        'IsSymmetric', options.IsSymmetric);
+                    
             end
             
             if nargout <= 1
                 varargout = {D};
             elseif nargout == 2
-                for i = howmany:-1:1
-                    varargout{1}(:, i) = devectorize(V(:, i), x0);
-                end
+                varargout{1} = V;
                 varargout{2} = D;
             else
+                varargout{1} = V;
                 varargout{2} = D;
-                for i = howmany:-1:1
-                    varargout{1}(:, i) = devectorize(V(:, i), x0);
-                end
                 varargout{3} = flag;
             end
             

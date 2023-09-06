@@ -42,7 +42,7 @@ classdef FiniteMpo
                 sigma = 'largestabs'
                 
                 options.Tol = eps(underlyingType(mpo))^(3/4)
-                options.Algorithm = 'eigs'
+                options.Algorithm = 'Arnoldi'
                 options.MaxIter = 100
                 options.KrylovDim = 20
                 options.IsSymmetric logical = false
@@ -53,6 +53,7 @@ classdef FiniteMpo
             end
             
             if isempty(v0), v0 = initialize_fixedpoint(mpo(1)); end
+            
             kwargs = namedargs2cell(options);
             [V, D, flag] = eigsolve(@(x) mpo.apply(x), v0, howmany, sigma, kwargs{:});
         end
@@ -62,7 +63,7 @@ classdef FiniteMpo
             
             N = prod(cellfun(@(x) size(x, 4), mpo.O));
             for i = N:-1:1
-                v(i) = Tensor.randnc(domain(slice(mpo, i, 1:N)), []);
+                v(i) = MpsTensor.randnc(domain(slice(mpo, i, 1:N)), []);
             end
         end
         

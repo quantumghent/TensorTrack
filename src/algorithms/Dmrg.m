@@ -1,6 +1,7 @@
 classdef Dmrg
     % Density Matrix Renormalisation Group algorithm for marix product states.
     
+    %% Options
     properties
         tol = 1e-10
         miniter = 5
@@ -20,10 +21,11 @@ classdef Dmrg
         saveIterations = 1
         saveMethod = 'full'
         name = 'DMRG'
+        
+        alg_eigs = KrylovSchur('MaxIter', 100, 'KrylovDim', 20) % TODO: Arnoldi has issues for DMRG specifically, need to figure out why
     end
     
     properties (Access = private)
-        alg_eigs = struct('MaxIter', 100, 'KrylovDim', 20);
         progressfig
     end
     
@@ -41,8 +43,8 @@ classdef Dmrg
             end
             
             if ~isfield('alg_eigs', kwargs)
-                alg.alg_eigs.Tol = sqrt(alg.tol_min * alg.tol_max);
-                alg.alg_eigs.Verbosity = alg.verbosity - 2;
+                alg.alg_eigs.tol = sqrt(alg.tol_min * alg.tol_max);
+                alg.alg_eigs.verbosity = alg.verbosity - 2;
             end
         end
         
@@ -99,15 +101,15 @@ classdef Dmrg
             
             % compute update
             H_AC = AC_hamiltonian(mpo, mps, envs, pos);
-            AC = mps.A(pos);
-            [AC.var, lambda] = eigsolve(H_AC, AC.var, 1, alg.which);
+            AC = mps.A{pos};
+            [AC, lambda] = eigsolve(alg.alg_eigs, @(x) H_AC.apply(x), AC, 1, alg.which);
             
             % determine error
-            phase = dot(AC.var, mps.A(pos));
-            eta = distance(AC.var ./ sign(phase), mps.A(pos));
+            phase = dot(AC, mps.A{pos});
+            eta = distance(AC ./ sign(phase), mps.A{pos});
             
             % take step
-            mps.A(pos) = AC;
+            mps.A{pos} = AC;
             envs = invalidate(envs, pos);
         end
     end
@@ -116,10 +118,10 @@ classdef Dmrg
     methods
         function alg = updatetols(alg, iter, eta)
             if alg.dynamical_tols
-                alg.alg_eigs.Tol = between(alg.tol_min, eta * alg.eigs_tolfactor / iter, ...
+                alg.alg_eigs.tol = between(alg.tol_min, eta * alg.eigs_tolfactor / iter, ...
                     alg.tol_max);
                 if alg.verbosity > Verbosity.iter
-                    fprintf('Updated eigsolver tolerances: (%e)\n', alg.alg_eigs.Tol);
+                    fprintf('Updated eigsolver tolerances: (%e)\n', alg.alg_eigs.tol);
                 end
             end
         end

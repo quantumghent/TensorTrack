@@ -41,7 +41,7 @@ classdef InfJMpo < InfMpo
                 GL{1}.var(1) = fp_left;
             end
             
-            for i = 2:size(GL{1}, 2)
+            for i = 2:size(GL{1}.var, 2)  % TODO: specify interface to get dimensions of single MpsTensor
                 rhs = apply(slice(T, i, 1:i-1), slice(GL{1}, 1, 1:i-1, 1));
                 Tdiag = slice(T, i, i);
                 if iszero(Tdiag)
@@ -174,7 +174,7 @@ classdef InfJMpo < InfMpo
                     (apply(TB(w), GL{w}) + apply(T(w), GBL{w})) * (expP^(1/L));
             end
             
-            N = size(GBL{1}, 2);
+            N = size(GBL{1}.var, 2);  % TODO: specify interface to get dimensions of single MpsTensor
             for i = 2:N % GBL{1}(1) = 0 because of quasiparticle gauge
                 rhs = apply(slice(T, i, 1:i-1), slice(GBL{1}, 1, 1:i-1, 1, 1)) * expP;
                 rhs = rhs + slice(GBL{1}, i);
@@ -251,7 +251,7 @@ classdef InfJMpo < InfMpo
                 GBR{w} = expP^(1/L) * (apply(TB_w, GR{ww}) + apply(T_w, GBR{ww}));
             end
             
-            N = size(GBR{1}, 2);
+            N = size(GBR{1}.var, 2); % TODO: specify interface to get dimensions of single MpsTensor
             for i = N:-1:1
                 if i == N
                     rhs = slice(GBR{1}, 1, i, 1, 1);

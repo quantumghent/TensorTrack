@@ -28,7 +28,7 @@ classdef TestInfJMpo < matlab.unittest.TestCase
             
             TL = transfermatrix(mpo, mps, mps, 'Type', 'LL');
             GL_2 = apply(TL, GL{1});
-            lambda2 = overlap(slice(GL_2, length(GL_2)), fp_right);
+            lambda2 = overlap(slice(GL_2, length(GL_2.var)), fp_right); % TODO: specify interface to get dimensions of single MpsTensor
             GL_2.var(end) = GL_2.var(end) - lambda2 * fp_left;
             tc.assertTrue(isapprox(GL_2, GL{1}), ...
                 'left environment fixed point equation unfulfilled.');
@@ -183,7 +183,7 @@ classdef TestInfJMpo < matlab.unittest.TestCase
             mpo = quantum1dIsing('J', 1, 'h', 1, 'L', Inf);
             mps = initialize_mps(mpo, CartesianSpace.new(D));
             [gs, lambda] = fixedpoint(alg, mpo, mps);
-            tc.verifyTrue(isapprox(lambda, -0.53, 'RelTol', 1e-2))
+            tc.verifyTrue(isapprox(lambda, -1.27, 'RelTol', 1e-2))
             
             p = 0;
             qp = InfQP.randnc(gs, gs, p);
@@ -202,7 +202,7 @@ classdef TestInfJMpo < matlab.unittest.TestCase
             mpo = quantum1dIsing('J', 1, 'h', 1, 'L', Inf, 'Symmetry', 'Z2');
             mps = initialize_mps(mpo, GradedSpace.new(Z2(0, 1), [D D] ./ 2, false));
             [mps2, lambda2] = fixedpoint(alg, mpo, mps);
-            tc.verifyTrue(isapprox(lambda2, -0.53, 'RelTol', 1e-2))
+            tc.verifyTrue(isapprox(lambda2, -1.27, 'RelTol', 1e-2))
             
             p = 0;
             qp = InfQP.randnc(mps2, mps2, p, Z2(0));
@@ -212,7 +212,7 @@ classdef TestInfJMpo < matlab.unittest.TestCase
             mpo = [mpo mpo];
             mps2 = [mps2 mps2];
             [mps2, lambda2] = fixedpoint(alg, mpo, mps2);
-            tc.verifyTrue(isapprox(lambda2/2, -0.53, 'RelTol', 1e-2))
+            tc.verifyTrue(isapprox(lambda2/2, -1.27, 'RelTol', 1e-2))
             
             p = 0;
             qp = InfQP.randnc(mps2, mps2, p, Z2(0));

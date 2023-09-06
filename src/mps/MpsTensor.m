@@ -2,7 +2,7 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
     % Generic mps tensor objects that have a notion of virtual, physical and auxiliary legs.
     
     properties
-        var %Tensor
+        var
         plegs
         alegs = 0
     end
@@ -60,17 +60,17 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
     
     %% Properties
     methods
-        function varargout = size(A, varargin)
-            [varargout{1:nargout}] = size(A.var, varargin{:});
-        end
+%         function varargout = size(A, varargin)
+%             [varargout{1:nargout}] = size(A.var, varargin{:});
+%         end
         
-        function n = numel(A)
-            n = numel(A.var);
-        end
+%         function n = numel(A)
+%             n = numel(A.var);
+%         end
         
-        function l = length(A)
-            l = length(A.var);
-        end
+%         function l = length(A)
+%             l = length(A.var);
+%         end
         
         function A = cat(dim, varargin)
             ismpstensor = cellfun(@(x) isa(x, 'MpsTensor'), varargin);
@@ -85,6 +85,10 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
                     A.var = cat(dim, B, A.var);
                 end
             end
+        end
+        
+        function bool = isscalar(~)
+            bool = false;
         end
         
         function A = horzcat(varargin)
@@ -153,6 +157,9 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
     %% Linear Algebra
     methods
         
+        function varargout = matrixblocks(t)
+            [varargout{1:nargout}] = matrixblocks(t.var);
+        end
         
         function d = dot(A, B)
             if isa(A, 'MpsTensor')
@@ -175,20 +182,93 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
             d = contract(A, inds, B, [fliplr(inds(1:end-B.alegs)) inds(end-B.alegs+1:end)]);
         end
         
+        function t = mrdivide(t1, t2)
+            if isa(t1, 'MpsTensor')
+                t = t1;
+                t1 = t1.var;
+            else
+                t = t2;
+            end
+            if isa(t2, 'MpsTensor')
+                t2 = t2.var;
+            end            
+            
+            t.var = t1 * inv(t2);
+        end
+        
         function C = mtimes(A, B)
+            
+            if isscalar(A) || isscalar(B)
+                C = A .* B;
+                return
+            end
+            
+            szA = size(A);
+            szB = size(B);
+            if szA(2) ~= szB(1)
+                error('mtimes:dimagree', ...
+                    'incompatible dimensions (%d) (%d)', szA(2), szB(1));
+            end
+
+            if ~(isnumeric(A) || isnumeric(B))
+                error('not implemented when neither input is numeric.');
+            end
+            
+            % TODO: fairly hacky for now but it works; should be revisited properly
+            
             if isnumeric(A)
+                al = repmat([B(1, :).alegs], szA(1), 1);
+                B = reshape([B.var], szB);
+            else
+                al = repmat([A(:, 1).alegs], 1, szB(2));
+                A = reshape([A.var], szA);
+            end
+            Cv = A * B;
+            
+            for i = szA(1):-1:1
+                for j = szB(2):-1:1
+                    C(i, j) = MpsTensor(Cv(i, j), al(i, j));
+                end
+            end
+
+
+%             if isnumeric(A)
+%                 al = repmat([B(1, :).alegs], szA(1), 1);
+%                 %B = reshape([B.var], szB);
+%             else
+%                 al = repmat([A(:, 1).alegs], 1, szB(2));
+%                 %A = reshape([A.var], szA); % this does not zork becquse it qlso needs to hqndle the cqse zhen the vqrs the,selves qre qlreqdy qrrqys; you should reqlly do the ,qnuql loop
+%             end
+%             
+%             for i = szA(1):-1:1
+%                 for j = szB(2):-1:1
+%                     C(i, j) = MpsTensor(A(i, 1) * B(1, j), al(i, j));
+%                     for k = 2:szA(2)
+%                         C(i, j) = C(i, j) + ...
+%                              MpsTensor(A(i, k).var * B(k, j), al(i, j));
+%                     end
+%                 end
+%             end
+
+        end
+        
+        function C = times(A, B)
+            if isscalar(A)
                 C = B;
-                C.var = A * C.var;
+                for i = 1:numel(C)
+                    C(i).var = A .* B(i).var;
+                end
                 return
             end
-            
-            if isnumeric(B)
+            if isscalar(B)
                 C = A;
-                C.var = C.var * B;
+                for i = 1:numel(C)
+                    C(i).var = A(i).var .* B;
+                end
                 return
             end
             
-            error('not implemented when both inputs not numeric.');
+            error('not implemented when neither input is scalar.');
         end
         
         function A = repartition(A, varargin)
@@ -238,6 +318,11 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
         function n = norm(A, varargin)
             n = norm(A.var, varargin{:});
         end
+        
+        function d = distance(A, B)
+            d = norm(A - B);
+        end
+
         
         function [A, n] = normalize(A)
             [A.var, n] = normalize(A.var);
@@ -303,8 +388,6 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
             B = twist(B, [isdual(space(B, 1:B.plegs+1)) ~isdual(space(B, B.plegs+2))]);
             T = FiniteMpo(B', {}, A);
         end
-        
-        
         
         function C = initializeC(A)
             % Initialize a set of gauge tensors for the given mpstensors.
@@ -617,5 +700,12 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
             local_tensors{end} = MpsTensor(repartition(psi, [2 1]));
         end
     end
+    
+    methods (Hidden)
+        function tdst = zerosLike(t, varargin)
+            tdst = repmat(0 * t, varargin{:});
+        end
+    end
+
 end
 

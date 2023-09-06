@@ -577,10 +577,10 @@ classdef UniformMps
                 v0 = [];
             end
             
-            eigkwargs.Verbosity = kwargs.Verbosity;
+            eigopts.Verbosity = kwargs.Verbosity;
             eigkwargs = namedargs2cell(eigopts);
             [V, D] = eigsolve(T, v0, howmany, which, eigkwargs{:});
-            
+
             if kwargs.Type(1) == 'r', V = V'; end
             if nargout < 2, V = diag(D); end
         end
@@ -820,7 +820,7 @@ classdef UniformMps
                 charge = []
                 kwargs.Angle
                 kwargs.AngleTol = 1e-1
-                kwargs.HowMany = 20
+                kwargs.HowMany = 5
             end
             
             spectrum = transfereigs(mps, mps, kwargs.HowMany, 'largestabs', 'Charge', charge);

@@ -11,8 +11,8 @@ classdef TestPeps < matlab.unittest.TestCase
                 fZ2(0, 1), [2 1], false, fZ2(0, 1), [5 5], false), ...
             'U1', GradedSpace.new(U1(0, 1, -1), [1 1 1], false, U1(0, 1, -1), [1 2 2], false, ...
                 U1(0, 1, -1), [2 1 1], false, U1(0, 1, -1), [2 1 1], false), ...
-            'SU2', GradedSpace.new(SU2(1, 2), [1 1], false, SU2(2), [2], false, ...
-                SU2(2), [1], false, SU2(1, 2), [2 1], false) ...
+            'SU2', GradedSpace.new(SU2(1, 2), [1 1], false, SU2(2, 3), [2, 1], false, ...
+                SU2(1, 2), [1, 2], false, SU2(1, 2), [2 1], false) ...
             )
         depth = {1}
         width = {1, 2}
@@ -80,15 +80,18 @@ classdef TestPeps < matlab.unittest.TestCase
             
             H_AC = AC_hamiltonian(mpo, mps, GL, GR);
             for i = 1:numel(H_AC)
-                AC_ = mps.AC(i);
-                [AC_.var, lambda] = eigsolve(H_AC{i}, mps.AC(i).var, 1, 'largestabs');
+                [AC_, lambda] = eigsolve(H_AC{i}, mps.AC{i}, 1, 'largestabs');
                 AC_2 = apply(H_AC{i}, AC_);
-                tc.assertTrue(isapprox(AC_2, lambda * AC_.var, 'RelTol', 1e-6));
+                dist = distance(AC_2, lambda * AC_) / norm(AC_);
+                if dist > 1e-5
+                    fprintf('Distance between AC_2 and lambda * AC: %.5e\n', distance(AC_2, lambda * AC_))
+                end
+                tc.assertTrue(isapprox(AC_2, lambda * AC_, 'RelTol', 1e-6));
             end
             
             H_C = C_hamiltonian(mpo, mps, GL, GR);
             for i = 1:numel(H_C)
-                [C_, lambda] = eigsolve(H_C{i}, mps.C(i), 1, 'largestabs');
+                [C_, lambda] = eigsolve(H_C{i}, mps.C{i}, 1, 'largestabs');
                 tc.assertTrue(isapprox(apply(H_C{i}, C_), lambda * C_, 'RelTol', 1e-6));
             end
         end

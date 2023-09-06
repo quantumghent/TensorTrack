@@ -72,7 +72,7 @@ classdef Vumps < handle
             end
         end
         
-        function [mps, lambda, GL, GR, eta, time] = fixedpoint(alg, mpo, mps)
+        function [mps, lambda, GL, GR, eta] = fixedpoint(alg, mpo, mps)
             
             if period(mpo) ~= period(mps)
                 error('vumps:argerror', ...
@@ -98,7 +98,6 @@ classdef Vumps < handle
                 
                 if iter > alg.miniter && eta < alg.tol
                     disp_conv(alg, iter, lambda, eta, toc(t_total));
-                    time = toc(t_total);
                     return
                 end
                 alg = updatetols(alg, iter, eta);
@@ -109,7 +108,6 @@ classdef Vumps < handle
                     save_iteration(alg, mps, lambda, iter, eta, toc(t_total));
                 end
             end
-            time = toc(t_total);
             disp_maxiter(alg, iter, lambda, eta, toc(t_total));
         end
     end
@@ -130,8 +128,8 @@ classdef Vumps < handle
                 if alg.verbosity >= Verbosity.detail
                     fprintf('\nAC{%d} eigenvalue solver:\n------------------------\n', sites(i));
                 end
-                [AC{1, i}.var, ~] = eigsolve(alg.alg_eigs, @(x) H_AC{i}.apply(x), AC{1, i}.var, ...
-                    1, alg.which); % function handle returns MpsTensor, which is then sneakily converted to a tensor by eigsolve
+                [AC{1, i}, ~] = eigsolve(alg.alg_eigs, @(x) H_AC{i}.apply(x), AC{1, i}, ...
+                    1, alg.which);
                 for d = 2:depth(mpo)
                     AC{d, i} = H_AC{i}(d).apply(AC{d-1, i});
                 end
@@ -152,7 +150,8 @@ classdef Vumps < handle
                 if alg.verbosity >= Verbosity.detail
                     fprintf('\nC{%d} eigenvalue solver:\n-----------------------\n', sites(i));
                 end
-                [C{1, i}, ~] = eigsolve(alg.alg_eigs, @(x) H_C{i}.apply(x), C{1, i}, 1, alg.which);
+                [C{1, i}, ~] = eigsolve(alg.alg_eigs, @(x) H_C{i}.apply(x), C{1, i}, 1, ...
+                    alg.which);
                 for d = 2:depth(mpo)
                     C{d, i} = H_C{i}(d).apply(C{d-1, i});
                 end

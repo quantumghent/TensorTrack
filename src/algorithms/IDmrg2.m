@@ -21,10 +21,12 @@ classdef IDmrg2
         saveIterations = false
         saveMethod = 'full'
         name = 'IDmrg2'
+        
+        alg_eigs = Arnoldi('MaxIter', 100, 'KrylovDim', 20)
     end
     
     properties (Access = private)
-        alg_eigs = struct('MaxIter', 100, 'KrylovDim', 20)
+        % TODO: alg_canonical, alg_environments? cf Vumps
         progressfig
     end
     
@@ -42,8 +44,8 @@ classdef IDmrg2
             end
             
             if ~isfield('alg_eigs', kwargs)
-                alg.alg_eigs.Tol = sqrt(alg.tol_min * alg.tol_max);
-                alg.alg_eigs.Verbosity = alg.verbosity - 2;
+                alg.alg_eigs.tol = sqrt(alg.tol_min * alg.tol_max);
+                alg.alg_eigs.verbosity = alg.verbosity - 2;
             end
         end
         
@@ -74,8 +76,8 @@ classdef IDmrg2
                 for pos = 1:period(mps)-1
                     AC2 = computeAC2(mps, 1, pos);
                     H = AC2_hamiltonian(mpo, mps, GL, GR, pos);
-                    [AC2.var, lambdas(pos)] = ...
-                        eigsolve(H{1}, AC2.var, 1, alg.which, kwargs{:});
+                    [AC2, lambdas(pos)] = ...
+                        eigsolve(alg.alg_eigs, @(x) H{1}.apply(x), AC2, 1, alg.which);
                     [mps.AL{pos}.var, C, mps.AR{pos+1}.var] = ...
                         tsvd(AC2.var, [1 2], [3 4], alg.trunc{:});
                     
@@ -92,7 +94,8 @@ classdef IDmrg2
                 AC2 = contract(mps.AC{end}, [-1 -2 1], inv(mps.C{end}), [1 2], ...
                     mps.AL{1}, [2 -3 3], mps.C{1}, [3 -4], 'Rank', [2 2]);
                 H = AC2_hamiltonian(mpo, mps, GL, GR, period(mps));
-                [AC2, lambdas(end)] = eigsolve(H{1}, AC2, 1, alg.which, kwargs{:});
+                [AC2, lambdas(end)] = ...
+                    eigsolve(alg.alg_eigs, @(x) H{1}.apply(x), AC2, 1, alg.which);
                 
                 [mps.AL{end}.var, C, mps.AR{1}.var] = ...
                     tsvd(AC2, [1 2], [3 4], alg.trunc{:});
@@ -111,7 +114,8 @@ classdef IDmrg2
                 for pos = period(mps)-1:-1:1
                     AC2 = computeAC2(mps, 1, pos, 'L');
                     H = AC2_hamiltonian(mpo, mps, GL, GR, pos);
-                    [AC2, lambdas(pos)] = eigsolve(H{1}, AC2, 1, alg.which, kwargs{:});
+                    [AC2, lambdas(pos)] = ...
+                        eigsolve(alg.alg_eigs, @(x) H{1}.apply(x), AC2, 1, alg.which);
                     
                     [mps.AL{pos}.var, C, mps.AR{pos + 1}.var] = ...
                        tsvd(AC2, [1 2], [3 4], alg.trunc{:});
@@ -129,7 +133,8 @@ classdef IDmrg2
                 AC2 = contract(mps.C{end-1}, [-1 1], mps.AR{end}, [1 -2 2], ...
                     inv(mps.C{end}), [2 3], mps.AC{1}, [3 -3 -4], 'Rank', [2 2]);
                 H = AC2_hamiltonian(mpo, mps, GL, GR, period(mps));
-                [AC2, lambdas(1)] = eigsolve(H{1}, AC2, 1, alg.which, kwargs{:});
+                [AC2, lambdas(1)] = ...
+                    eigsolve(alg.alg_eigs, @(x) H{1}.apply(x), AC2, 1, alg.which);
                 
                 [mps.AL{end}.var, C, mps.AR{1}.var] = ...
                     tsvd(AC2, [1 2], [3 4], alg.trunc{:});
@@ -189,12 +194,12 @@ classdef IDmrg2
         
         function alg = updatetols(alg, iter, eta)
             if alg.dynamical_tols
-                alg.alg_eigs.Tol = between(alg.tol_min, eta * alg.eigs_tolfactor, ...
+                alg.alg_eigs.tol = between(alg.tol_min, eta * alg.eigs_tolfactor, ...
                     alg.tol_max / iter);
                 
                 if alg.verbosity > Verbosity.iter
-                    fprintf('Updated subalgorithm tolerances: (%e,\t%e,\t%e)\n', ...
-                        alg.alg_eigs.Tol, alg.alg_canonical.Tol, alg.alg_environments.Tol);
+                    fprintf('Updated subalgorithm tolerances: (%e)\n', ...
+                        alg.alg_eigs.tol);
                 end
             end
         end

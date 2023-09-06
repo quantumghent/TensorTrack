@@ -29,10 +29,10 @@ classdef Vumps2 < handle
         saveMethod = 'full'
         name = 'VUMPS'
 
+        alg_eigs = Arnoldi('MaxIter', 100, 'KrylovDim', 20)
     end
     
     properties (Access = private)
-        alg_eigs = struct('MaxIter', 100, 'KrylovDim', 20)
         alg_canonical = struct('Method', 'polar')
         alg_environments = struct
         
@@ -55,8 +55,8 @@ classdef Vumps2 < handle
             end
             
             if ~isfield('alg_eigs', kwargs)
-                alg.alg_eigs.Tol = sqrt(alg.tol_min * alg.tol_max);
-                alg.alg_eigs.Verbosity = alg.verbosity - 2;
+                alg.alg_eigs.tol = sqrt(alg.tol_min * alg.tol_max);
+                alg.alg_eigs.verbosity = alg.verbosity - 2;
             end
             
             if ~isfield('alg_canonical', kwargs)
@@ -119,7 +119,6 @@ classdef Vumps2 < handle
     %% Subroutines
     methods
         function AC2 = updateAC2(alg, iter, mpo, mps, GL, GR)
-            kwargs = namedargs2cell(alg.alg_eigs);
             if strcmp(alg.multiAC, 'sequential')
                 sites = mod1(iter, period(mps));
             else
@@ -129,13 +128,12 @@ classdef Vumps2 < handle
             H_AC2 = AC2_hamiltonian(mpo, mps, GL, GR, sites);
             for i = length(sites):-1:1
                 AC2{i} = computeAC2(mps, 1, sites(i));
-                [AC2{i}.var, ~] = eigsolve(H_AC2{i}, AC2{i}.var, 1, alg.which, ...
-                    kwargs{:});
+                [AC2{i}, ~] = eigsolve(alg.alg_eigs, @(x) H_AC2{i}.apply(x), AC2{i}, ...
+                    1, alg.which);
             end
         end
         
         function C = updateC(alg, iter, mpo, mps, GL, GR)
-            kwargs = namedargs2cell(alg.alg_eigs);
             if strcmp(alg.multiAC, 'sequential')
                 sites = mod1(iter, period(mps));
             else
@@ -145,8 +143,8 @@ classdef Vumps2 < handle
             sites = next(sites, period(mps));
             H_C = C_hamiltonian(mpo, mps, GL, GR, sites);
             for i = length(sites):-1:1
-                [C{i}, ~] = eigsolve(H_C{i}, mps.C{sites(i)}, 1, alg.which, ...
-                    kwargs{:});
+                [C{i}, ~] = eigsolve(alg.alg_eigs, @(x) H_C{i}.apply(x), mps.C{sites(i)}, ...
+                    1, alg.which);
             end
         end
         
@@ -219,7 +217,7 @@ classdef Vumps2 < handle
     methods
         function alg = updatetols(alg, iter, eta)
             if alg.dynamical_tols
-                alg.alg_eigs.Tol = between(alg.tol_min, eta * alg.eigs_tolfactor, ...
+                alg.alg_eigs.tol = between(alg.tol_min, eta * alg.eigs_tolfactor, ...
                     alg.tol_max / iter);
                 alg.alg_canonical.Tol = between(alg.tol_min, ...
                     eta * alg.canonical_tolfactor, alg.tol_max / iter);
