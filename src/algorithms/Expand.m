@@ -4,10 +4,10 @@ classdef Expand
     %% Options
     properties
         bondsmethod {mustBeMember(bondsmethod, ...
-            {'off', 'factor', 'extrapolate', 'twosite'})} = 'factor'
+            {'off', 'factor', 'explicit', 'extrapolate', 'twosite', 'twosite_simple'})} = 'factor'
         
         chargesmethod {mustBeMember(chargesmethod, ...
-            {'off', 'fusionproduct', 'twosite'})} = 'off'
+            {'off', 'fusionproduct', 'twosite', 'twosite_simple'})} = 'off'
         
         % general expansion options
         schmidtcut = 1e-5
@@ -22,6 +22,7 @@ classdef Expand
         tolbond = 0.2
         bondfactor = 1.2
         cutfactor = 1
+        explicitbonds = []
         
         % charge expansion options
         mincharges = 2
@@ -70,7 +71,7 @@ classdef Expand
             
             for d = depth(mps):-1:1
                 for w = period(mps):-1:1
-                    if strcmp(alg.bondsmethod, 'twosite') || strcmp(alg.chargesmethod, 'twosite')
+                    if startsWith(alg.bondsmethod, 'twosite') || startsWith(alg.chargesmethod, 'twosite')
                         % twosite expansion takes care of both bonds and charges at the same time
                         [addbond, addcharge] = expand_twosite(alg, mpo, mps, d, w);
                     else
@@ -145,8 +146,14 @@ classdef Expand
             H_AC2 = AC2_hamiltonian(mpo, mps, GL, GR, w);
             AC2 = MpsTensor(contract(mps(dd).AC(w), [-(1:mps(dd).AC(w).plegs+1), 1], ...
                 mps(dd).AR(ww), [1, -(1:mps(dd).AR(ww).plegs+1) - 1 - mps(dd).AC(ww).plegs], ...
-                'Rank', [1 + mps(dd).AC(w).plegs, 1 + mps(dd).AR(ww).plegs]));
-            [AC2.var, ~] = eigsolve(H_AC2{1}, AC2.var, 1, alg.which);
+                'Rank', [1 + mps(dd).AC(w).plegs, 1 + mps(dd).AR(ww).plegs]));   
+            if strcmp(alg.bondsmethod, 'twosite')
+                %twosite fixed point
+                [AC2.var, ~] = eigsolve(H_AC2{1}, AC2.var, 1, alg.which);
+            else
+                %single application
+                AC2.var = apply(H_AC2{1},AC2.var);
+            end
             [~, C2, ~] = tsvd(AC2.var, ...
                 1:mps(dd).AC(w).plegs+1,  ...
                 (1:mps(dd).AR(ww).plegs+1) + 1 + mps(dd).AC(w).plegs, ...
@@ -260,6 +267,12 @@ classdef Expand
             % :code:`addbond` of integers, where :code:`addbond(i)` is the bond dimension to
             % be added to/subtracted from sector :code:`i`.
             
+            %new bonds are explicitly provided
+            if strcmp(alg.bondsmethod, 'explicit')
+                addbond = alg.explicitbonds;
+                return
+            end
+
             % recursive
             if iscell(svals)
                 addbond = zeros(size(svals));
@@ -297,7 +310,7 @@ classdef Expand
                     if svals(end) > cut
                         % need to add bond
                         chi_new = extrapolate_schmidt(svals, cut) + floor(chi_tol / 2);
-                    elseif chi > alg.minond && svals(max(1, chi-chi_tol)) < cut && ~alg.notrunc
+                    elseif chi > alg.minbond && svals(max(1, chi-chi_tol)) < cut && ~alg.notrunc
                         % need to subtract bond
                         chi_new = min(nnz(svals > cut) + 1 + ceil(chi_tol / 2), chi);
                     else
