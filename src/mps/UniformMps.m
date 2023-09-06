@@ -202,6 +202,7 @@ classdef UniformMps
         
         function s = pspace(mps, w)
             % return the physical space at site w.
+            if nargin == 1 || isempty(w), w = 1:period(mps); end
             s = pspace(mps.AL(w));
         end
         
@@ -818,6 +819,29 @@ classdef UniformMps
             end
             S = 1 / (1 - n) * log(S);
         end
+
+        function out = truncate(mps, trunc)
+            arguments
+                mps
+                trunc.TruncDim
+                trunc.TruncTotalDim
+                trunc.TruncBelow
+                trunc.TruncSpace
+            end
+
+            trunc = [fieldnames(trunc),struct2cell(trunc)]';       
+            out = repmat(UniformMps, size(mps, 1), 1);
+            for d = 1:depth(mps)
+                for w = 1:period(mps(d))
+                    [~, ~, V] = tsvd(mps(d).C(w), 1, 2, trunc{:});
+                    ww = next(w, period(mps(d)));
+                    mps(d).AR(ww) = multiplyleft(mps(d).AR(ww), V);
+                    mps(d).AR(w)  = multiplyright(mps(d).AR(w), V');
+                end
+                % bring truncated mps to canonical form
+                out(d) = UniformMps(mps(d).AR);
+            end
+        end
         
         S = EntanglementEntropy(mps, loc);
         S = RenyiEntropy(mps,n, loc);
@@ -828,7 +852,7 @@ classdef UniformMps
         
         out = Block(mps, opts)
         out = Split(mps, varargin)
-        [out, lambda] = Truncate(mps, control, opts)
+        %[out, lambda] = Truncate(mps, control, opts)
         
         [f, rho] = Fidelity(mps1, mps2, tol)
         

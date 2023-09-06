@@ -123,7 +123,7 @@ classdef ProductCharge < AbstractCharge
                         d_ = subsref(d, substruct('()', {1})) * ...
                             a_i;
                         if nargout > 1
-                            N_(1:length(d_)) = N(1);
+                            N_ = repmat(N(1),1,length(d_));
                         end
                         
                         for j = 2:length(d)
