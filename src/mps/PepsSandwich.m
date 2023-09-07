@@ -68,7 +68,7 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) PepsSandwich
                 T PepsSandwich
                 L MpsTensor
                 R MpsTensor
-                v
+                v MpsTensor
             end
             auxlegs_v = nspaces(v) - 4;
             auxlegs_l = nspaces(L) - 4;
@@ -82,6 +82,7 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) PepsSandwich
                 T.bot.var, [6, 2, -3, 9, 3], ...
                 R, [7, 8, 9, -4, (-(1:auxlegs_r) - 4 - auxlegs_l - auxlegs_v)], ...
                 'Rank', newrank);
+            v = MpsTensor(v, auxlegs_v + auxlegs_l + auxlegs_r);
         end
         
         function v = applympo(varargin)
@@ -168,10 +169,11 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) PepsSandwich
         end
         
         function t = MpoTensor(T)
-            fuse_east = Tensor.eye(prod(leftvspace(T)), leftvspace(T));
+            fuse_east = Tensor.eye(prod(rightvspace(T)), rightvspace(T)');
             fuse_south = Tensor.eye(prod(codomainspace(T)), codomainspace(T));
-            fuse_west = Tensor.eye(prod(rightvspace(T))', rightvspace(T));
+            fuse_west = Tensor.eye(prod(leftvspace(T)), leftvspace(T)');
             fuse_north = Tensor.eye(prod(domainspace(T))', domainspace(T));
+            
             t = MpoTensor(contract(...
                 T.top.var, [1, 2, 4, 6, 8], ...
                 T.bot.var, [1, 3, 5, 7, 9], ...

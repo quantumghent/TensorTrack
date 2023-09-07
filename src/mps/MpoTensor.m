@@ -70,6 +70,14 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) MpoTensor < Ab
         end
         
         function t = plus(t, t2)
+            if isnumeric(t2)
+                t.scalars = t.scalars + t2;
+                return
+            end
+            if isnumeric(t)
+                t = t2 + t;
+                return
+            end
             t.tensors = t.tensors + t2.tensors;
             t.scalars = t.scalars + t2.scalars;
         end
@@ -98,24 +106,25 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) MpoTensor < Ab
             t.scalars = t.scalars / a;
         end
         
-        function v = applychannel(O, L, R, v)
+        function dst = applychannel(O, L, R, src)
             arguments
                 O MpoTensor
                 L MpsTensor
                 R MpsTensor
-                v
+                src MpsTensor
             end
             
-            auxlegs_v = nspaces(v) - 3;
+            auxlegs_v = nspaces(src) - 3;
             auxlegs_l = nspaces(L) - 3;
             auxlegs_r = nspaces(R) - 3;
-            newrank = rank(v); newrank(2) = newrank(2) + auxlegs_l + auxlegs_r;
+            newrank = rank(src); newrank(2) = newrank(2) + auxlegs_l + auxlegs_r;
             
-            v = contract(v, [1 3 5 (-(1:auxlegs_v) - 3 - auxlegs_l)], ...
+            dst = contract(src, [1 3 5 (-(1:auxlegs_v) - 3 - auxlegs_l)], ...
                 L, [-1 2 1 (-(1:auxlegs_l) - 3)], ...
                 O, [2 -2 4 3], ...
                 R, [5 4 -3 (-(1:auxlegs_r) - 3 - auxlegs_l - auxlegs_v)], ...
                 'Rank', newrank);
+            dst = MpsTensor(dst, auxlegs_v + auxlegs_l + auxlegs_r);
         end
         
         function v = applympo(varargin)
@@ -239,7 +248,10 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) MpoTensor < Ab
                         if isempty(mask), continue; end
                         subs = [repmat(Ia(i), length(mask), 1) Jb(mask)];
                         idx = sub2ind_(sz2, subs);
-                        C(idx) = C(idx) + Va(i) .* Vb(mask);
+                        % TODO this should probably work vectorized?
+                        for j = 1:length(idx)
+                            C(idx(j)) = C(idx(j)) + Va(i) .* Vb(mask(j));
+                        end
                     end
                 end
             end
@@ -443,29 +455,7 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) MpoTensor < Ab
                 kwargs.Trunc = {'TruncBelow', 1e-14}
             end
             
-            assert(mod(nspaces(H), 2) == 0, ...
-                'MpoTensor:Argerror', 'local operator must have an even amount of legs.');
-            H = repartition(H, nspaces(H) ./ [2 2]);
-            assert(isequal(H.domain, H.codomain), ...
-                'MpoTensor:ArgError', 'local operator must be square.');
-            
-            N = indin(H);
-            local_operators = cell(1, N);
-            if N == 1
-                local_operators{1} = insert_onespace(insert_onespace(H, 1), 3);
-            else
-                [u, s, v] = tsvd(H, [1 N+1], [2:N N+2:2*N], kwargs.Trunc{:});
-                local_operators{1} = insert_onespace(tpermute(u * s, [1 3 2], [1 2]), 1);
-                
-                for i = 2:N-1
-                    [u, s, v] = tsvd(v, [1 2 N-i+3], [3:(N-i+2) (N-i+4):nspaces(v)], ...
-                        kwargs.Trunc{:});
-                    local_operators{i} = tpermute(u * s, [1 2 4 3], [2 2]);
-                end
-                
-                local_operators{N} = insert_onespace(repartition(v, [2 1]), 3);
-            end
-            
+            local_operators = decompose_local_operator(H, 'Trunc', kwargs.Trunc);
             local_operators = cellfun(@MpoTensor, local_operators, 'UniformOutput', false);
         end
     end

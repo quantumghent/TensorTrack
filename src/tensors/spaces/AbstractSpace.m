@@ -330,6 +330,13 @@ classdef (Abstract) AbstractSpace
             bool = le(space2, space1);
         end
         
+        function bool = istrivial(space)
+            % Check whether a space is isomorphic to a trivial space.
+            
+            E = one(space);
+            bool = space == E || space == conj(E);
+        end
+        
         function bool = isequal(spaces)
             % Check whether all input spaces are equal. Spaces are considered equal if they
             % are of same size, and are equal element-wise. For convenience, empty spaces

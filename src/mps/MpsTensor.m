@@ -23,6 +23,8 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
                 return
             end
             
+            % TODO: copy constructor
+            
             if ~isempty(tensor)
                 A.var = tensor;
                 A.plegs = nspaces(tensor) - alegs - 2;
@@ -31,8 +33,88 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
         end
     end
     
+    methods (Static)
+        function A = new(varargin, kwargs)
+            arguments (Repeating)
+                varargin
+            end
+            arguments
+                kwargs.alegs = 0
+            end
+            
+            A = MpsTensor(Tensor.new(varargin{:}), kwargs.alegs);
+        end
+        
+        function A = randnc(varargin, kwargs)
+            arguments (Repeating)
+                varargin
+            end
+            arguments
+                kwargs.alegs = 0
+            end
+            
+            A = MpsTensor(Tensor.randnc(varargin{:}), kwargs.alegs);
+        end
+    end
+    
     
     %% Properties
+    methods
+%         function varargout = size(A, varargin)
+%             [varargout{1:nargout}] = size(A.var, varargin{:});
+%         end
+        
+%         function n = numel(A)
+%             n = numel(A.var);
+%         end
+        
+%         function l = length(A)
+%             l = length(A.var);
+%         end
+        
+        function A = cat(dim, varargin)
+            ismpstensor = cellfun(@(x) isa(x, 'MpsTensor'), varargin);
+            i = find(ismpstensor, 1);
+            A = varargin{i};
+            for j = 1:i-1
+                B = varargin{j};
+                if ismpstensor(j)
+                    assert(B.alegs == A.alegs && B.plegs == A.plegs);
+                    A.var = cat(dim, B.var, A.var);
+                else
+                    A.var = cat(dim, B, A.var);
+                end
+            end
+        end
+        
+        function bool = isscalar(~)
+            bool = false;
+        end
+        
+        function A = horzcat(varargin)
+            A = cat(2, varargin{:});
+        end
+        
+        function A = vertcat(varargin)
+            A = cat(1, varargin{:});
+        end
+        
+        function n = nnz(A)
+            n = nnz(A.var);
+        end
+        
+        function A = slice(A, varargin)
+            s = substruct('()', varargin);
+            A.var = subsref(A.var, s);
+        end
+        
+        function tdst = insert_onespace(tsrc, varargin)
+            % insert a trivial space at position i.
+            tdst = MpsTensor(insert_onespace(tsrc.var, varargin{:}), tsrc.alegs + 1);
+        end
+    end
+    
+    %% Spaces
     methods
         function s = space(A, varargin)
             s = space(A.var, varargin{:});
@@ -40,18 +122,6 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
         
         function n = nspaces(A)
             n = nspaces(A.var);
-        end
-        
-        function s = pspace(A)
-            s = space(A, 1 + (1:A.plegs));
-        end
-        
-        function s = leftvspace(A)
-            s = space(A.var(1), 1);
-        end
-        
-        function s = rightvspace(A)
-            s = space(A.var(1), nspaces(A.var(1)) - A.alegs);
         end
         
         function cod = codomain(A)
@@ -63,37 +133,32 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
         end
         
         function r = rank(A)
-            r = rank([A.var]);
+            r = rank(A.var);
+        end
+        
+        function s = pspace(A)
+            % The physical space of an :class:`MpsTensor`.
+            s = space(A, 1 + (1:A.plegs));
+        end
+        
+        function s = leftvspace(A)
+            % The left virtual space of an :class:`MpsTensor`.
+            s = space(A.var(1), 1);
+        end
+        
+        function s = rightvspace(A)
+            % The right virtual space of an :class:`MpsTensor`.
+            s = space(A.var(1), nspaces(A.var(1)) - A.alegs);
         end
     end
     
     
+    
     %% Linear Algebra
     methods
-        function [A, L] = leftorth(A, alg)
-            arguments
-                A
-                alg = 'polar'
-            end
-            
-            if numel(A) > 1
-                for i = numel(A):-1:1
-                    [A(i), L(i)] = leftorth(A, alg);
-                end
-                return
-            end
-            
-            if A.alegs == 0
-                [A.var, L] = leftorth(A.var, 1:nspaces(A)-1, nspaces(A), alg);
-                if isdual(space(L, 1)) == isdual(space(L, 2))
-                    L.codomain = conj(L.codomain);
-                    L = twist(L, 1);
-                    A.var.domain = conj(A.var.domain);
-                end
-            else
-                [A.var, L] = leftorth(A.var, [1:A.plegs+1 A.plegs+3], A.plegs+2, alg);
-                A.var = permute(A.var, [1:A.plegs+1 A.plegs+3 A.plegs+2], rank(A));
-            end
+        
+        function varargout = matrixblocks(t)
+            [varargout{1:nargout}] = matrixblocks(t.var);
         end
         
         function d = dot(A, B)
@@ -106,10 +171,108 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
             d = dot(A, B);
         end
         
-        function A = repartition(A, varargin)
-            for i = 1:numel(A)
-                A(i).var = repartition(A(i).var, varargin{:});
+        function d = overlap(A, B)
+            arguments
+                A
+                B MpsTensor
             end
+            
+            inds = 1:nspaces(A);
+            
+            d = contract(A, inds, B, [fliplr(inds(1:end-B.alegs)) inds(end-B.alegs+1:end)]);
+        end
+        
+        function t = mrdivide(t1, t2)
+            if isa(t1, 'MpsTensor')
+                t = t1;
+                t1 = t1.var;
+            else
+                t = t2;
+            end
+            if isa(t2, 'MpsTensor')
+                t2 = t2.var;
+            end            
+            
+            t.var = t1 * inv(t2);
+        end
+        
+        function C = mtimes(A, B)
+            
+            if isscalar(A) || isscalar(B)
+                C = A .* B;
+                return
+            end
+            
+            szA = size(A);
+            szB = size(B);
+            if szA(2) ~= szB(1)
+                error('mtimes:dimagree', ...
+                    'incompatible dimensions (%d) (%d)', szA(2), szB(1));
+            end
+
+            if ~(isnumeric(A) || isnumeric(B))
+                error('not implemented when neither input is numeric.');
+            end
+            
+            % TODO: fairly hacky for now but it works; should be revisited properly
+            
+            if isnumeric(A)
+                al = repmat([B(1, :).alegs], szA(1), 1);
+                B = reshape([B.var], szB);
+            else
+                al = repmat([A(:, 1).alegs], 1, szB(2));
+                A = reshape([A.var], szA);
+            end
+            Cv = A * B;
+            
+            for i = szA(1):-1:1
+                for j = szB(2):-1:1
+                    C(i, j) = MpsTensor(Cv(i, j), al(i, j));
+                end
+            end
+
+
+%             if isnumeric(A)
+%                 al = repmat([B(1, :).alegs], szA(1), 1);
+%                 %B = reshape([B.var], szB);
+%             else
+%                 al = repmat([A(:, 1).alegs], 1, szB(2));
+%                 %A = reshape([A.var], szA); % this does not zork becquse it qlso needs to hqndle the cqse zhen the vqrs the,selves qre qlreqdy qrrqys; you should reqlly do the ,qnuql loop
+%             end
+%             
+%             for i = szA(1):-1:1
+%                 for j = szB(2):-1:1
+%                     C(i, j) = MpsTensor(A(i, 1) * B(1, j), al(i, j));
+%                     for k = 2:szA(2)
+%                         C(i, j) = C(i, j) + ...
+%                              MpsTensor(A(i, k).var * B(k, j), al(i, j));
+%                     end
+%                 end
+%             end
+
+        end
+        
+        function C = times(A, B)
+            if isscalar(A)
+                C = B;
+                for i = 1:numel(C)
+                    C(i).var = A .* B(i).var;
+                end
+                return
+            end
+            if isscalar(B)
+                C = A;
+                for i = 1:numel(C)
+                    C(i).var = A(i).var .* B;
+                end
+                return
+            end
+            
+            error('not implemented when neither input is scalar.');
+        end
+        
+        function A = repartition(A, varargin)
+            A.var = repartition(A.var, varargin{:});
         end
         
         function A = plus(varargin)
@@ -152,37 +315,29 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
             A = MpsTensor(ldivide(varargin{:}), alegs);
         end
         
-        function n = norm(A)
-            n = norm([A.var]);
+        function n = norm(A, varargin)
+            n = norm(A.var, varargin{:});
+        end
+        
+        function d = distance(A, B)
+            d = norm(A - B);
+        end
+
+        
+        function [A, n] = normalize(A)
+            [A.var, n] = normalize(A.var);
         end
         
         function A = conj(A)
-            [A.var] = conj([A.var]);
+            A.var = conj(A.var);
         end
 
         function A = twist(A, varargin)
-            [A.var] = twist([A.var], varargin{:});
+            A.var = twist(A.var, varargin{:});
         end
         
-        function [R, A] = rightorth(A, alg)
-            arguments
-                A
-                alg = 'rqpos'
-            end
-            
-            if numel(A) > 1
-                for i = numel(A):-1:1
-                    [R(i), A(i)] = rightorth(A, alg);
-                end
-                return
-            end
-            
-            [R, A.var] = rightorth(A.var, 1, 2:nspaces(A), alg);
-            if isdual(space(R, 1)) == isdual(space(R, 2))
-                R.domain = conj(R.domain);
-                R = twist(R, 2);
-                A.var.codomain = conj(A.var.codomain);
-            end
+        function A = twistdual(A, varargin)
+            A.var = twistdual(A.var, varargin{:});
         end
         
         function t = ctranspose(t)
@@ -224,141 +379,134 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
             C = tensorprod(varargin{:});
         end
         
-        function [AL, CL, lambda, eta] = uniform_leftorth(A, CL, kwargs)
-            arguments
-                A
-                CL = []
-                kwargs.Tol = eps(underlyingType(A))^(3/4)
-                kwargs.MaxIter = 500
-                kwargs.Method = 'polar'
-                kwargs.Verbosity = 0
-                kwargs.Normalize = true
-                kwargs.EigsInit = 3
-                kwargs.EigsFrequence = 2
-            end
-%             
-            % constants
-            EIG_TOLFACTOR = 1/50;
-            EIG_MAXTOL = 1e-4;
-            MINKRYLOVDIM = 8;
-            MAXKRYLOVDIM = 30;
-            
-            % initialization
-            N = size(A, 2);
-            if isempty(CL), CL = initializeC(A, A); end
-            if kwargs.Normalize, CL(1) = normalize(CL(1)); end
-            for i = 1:numel(A)
-                A(i).var = repartition(A(i).var, [nspaces(A(i).var) - 1, 1]);
-            end
-            AL = A;
-            
-            eta_best = Inf;
-            ctr_best = 0;
-            AL_best = AL;
-            C_best = CL;
-            lambda_best = 0;
-            
-            for ctr = 1:kwargs.MaxIter
-                if ctr > kwargs.EigsInit && mod(ctr, kwargs.EigsFrequence) == 0
-                    C_ = repartition(CL(end), [2 0]);
-                    T = transfermatrix(A, AL);
-                    [C_, ~] = eigsolve(T, C_, ...
-                        1, 'largestabs', ...
-                        'Tol', min(eta * EIG_TOLFACTOR, EIG_MAXTOL), ...
-                        'KrylovDim', between(MINKRYLOVDIM, ...
-                            MAXKRYLOVDIM - ctr / 2 + 4, ...
-                            MAXKRYLOVDIM), ...
-                        'NoBuild', 4, ...
-                        'Verbosity', kwargs.Verbosity - 1);
-                    [~, CL(end)] = leftorth(C_, 1, 2, kwargs.Method);
-                    if isdual(space(CL(end), 2)) == isdual(space(CL(end), 1))
-                        CL(end).codomain = conj(CL(end).codomain);
-                        CL(end) = twist(CL(end), 1);
-                    end
-                end
-                
-                C_ = CL(end);
-                lambdas = ones(1, N);
-                for w = 1:N
-                    ww = prev(w, N);
-                    CA = multiplyleft(A(w), CL(ww));
-                    [AL(w), CL(w)] = leftorth(CA, kwargs.Method);
-                    lambdas(w) = norm(CL(w));
-                    if kwargs.Normalize, CL(w) = CL(w) ./ lambdas(w); end
-                end
-                lambda = prod(lambdas);
-                eta = norm(C_ - CL(end), Inf);
-                if eta < kwargs.Tol
-                    if kwargs.Verbosity >= Verbosity.conv
-                        fprintf('Conv %2d:\terror = %0.4e\n', ctr, eta);
-                    end
-                    break;
-                elseif eta < eta_best
-                    eta_best = eta;
-                    ctr_best = ctr;
-                    AL_best = AL;
-                    C_best = CL;
-                    lambda_best = lambda;
-                elseif ctr > 40 && ctr - ctr_best > 5
-                    warning('uniform_orthright:stagnate', 'Algorithm stagnated');
-                    eta = eta_best;
-                    AL = AL_best;
-                    CL = C_best;
-                    lambda = lambda_best;
-                    break;
-                end
-                
-                if kwargs.Verbosity >= Verbosity.iter
-                    fprintf('Iter %2d:\terror = %0.4e\n', ctr, eta);
-                end
-            end
-            
-            if kwargs.Verbosity >= Verbosity.warn && eta > kwargs.Tol
-                fprintf('Not converged %2d:\terror = %0.4e\n', ctr, eta);
-            end
-        end
-        
-        function [AR, CR, lambda, eta] = uniform_rightorth(A, CR, kwargs)
-            arguments
-                A
-                CR = []
-                kwargs.Tol = eps(underlyingType(A))^(3/4)
-                kwargs.MaxIter = 500
-                kwargs.Method = 'polar'
-                kwargs.Verbosity = 0
-                kwargs.Normalize = true
-                kwargs.EigsInit = 3
-                kwargs.EigsFrequence = 2
-            end
-            
-            opts = namedargs2cell(kwargs);
-            
-            Ad = flip(arrayfun(@ctranspose, A));
-            if isempty(CR)
-                Cd = [];
-            else
-                Cd = circshift(flip(arrayfun(@ctranspose, CR)), -1);
-            end
-            
-            [ARd, CRd, lambda, eta] = uniform_leftorth(Ad, Cd, opts{:});
-            
-            AR = flip(arrayfun(@ctranspose, ARd));
-            CR  = circshift(flip(arrayfun(@ctranspose, CRd)), -1);
-            lambda = conj(lambda);
-        end
-        
         function T = transfermatrix(A, B)
             arguments
                 A MpsTensor
                 B MpsTensor = A
             end
             
+            B = twist(B, [isdual(space(B, 1:B.plegs+1)) ~isdual(space(B, B.plegs+2))]);
+            T = FiniteMpo(B', {}, A);
+        end
+        
+        function C = initializeC(A)
+            % Initialize a set of gauge tensors for the given mpstensors.
+            arguments (Repeating)
+                A MpsTensor
+            end
+            C = cell(size(A));
+            
             for i = length(A):-1:1
-                B(i).var = twist(B(i).var, [isdual(space(B(i), 1:B(i).plegs+1)) ~isdual(space(B(i), B(i).plegs+2))]);
-                T(i, 1) = FiniteMpo(B(i).var', {}, A(i));
+                C{i} = A{i}.var.eye(rightvspace(A{i})', leftvspace(A{next(i, length(A))}));
             end
         end
         
+        function A = expand(A, leftvspace, rightvspace, noisefactor)
+            % Expand a tensor to the given virtual spaces.
+            arguments
+                A
+                leftvspace
+                rightvspace
+                noisefactor = 1e-3
+            end
+            
+            spaces = space(A);
+            spaces(nspaces(A) - A.alegs) = rightvspace;
+            spaces(1) = conj(leftvspace);
+            r = rank(A);
+            A.var = embed(A.var, ...
+                noisefactor * ...
+                normalize(A.var.randnc(spaces(1:r(1)), spaces(r(1)+1:end)')));
+        end
+        
+        function type = underlyingType(A)
+            type = underlyingType(A.var);
+        end
+        
+        function disp(t)
+            fprintf('%s with %d plegs and %d alegs:\n', class(t), t.plegs, t.alegs);
+            disp(t.var);
+        end
+    end
+    
+    
+    %% Factorizations
+    methods
+        function [A, L] = leftorth(A, alg)
+            arguments
+                A
+                alg = 'polar'
+            end
+            
+            if A.alegs == 0
+                [A.var, L] = leftorth(A.var, 1:nspaces(A)-1, nspaces(A), alg);
+                if isdual(space(L, 1)) == isdual(space(L, 2))
+                    L.codomain = conj(L.codomain);
+                    L = twist(L, 1);
+                    A.var.domain = conj(A.var.domain);
+                end
+            else
+                [A.var, L] = leftorth(A.var, [1:A.plegs+1 A.plegs+3], A.plegs+2, alg);
+                A.var = permute(A.var, [1:A.plegs+1 A.plegs+3 A.plegs+2], rank(A));
+            end
+        end
+        
+        function [R, A] = rightorth(A, alg)
+            arguments
+                A
+                alg = 'rqpos'
+            end
+            
+            [R, A.var] = rightorth(A.var, 1, 2:nspaces(A), alg);
+            if isdual(space(R, 1)) == isdual(space(R, 2))
+                R.domain = conj(R.domain);
+                R = twist(R, 2);
+                A.var.codomain = conj(A.var.codomain);
+            end
+        end
+        
+        function varargout = tsvd(t, varargin)
+            [varargout{1:nargout}] = tsvd(t.var, varargin{:});
+        end
+        
+        function A = leftnull(A, alg)
+            arguments
+                A
+                alg = 'svd'
+            end
+            
+            if numel(A) > 1
+                for i = numel(A):-1:1
+                    A(i) = leftnull(A(i), alg);
+                end
+                return
+            end
+            
+            p = 1:nspaces(A);
+            p1 = p(1:(end - A.alegs - 1));
+            p2 = p((end - A.alegs):end);
+            A.var = leftnull(A.var, p1, p2, alg);
+        end
+        
+        function A = rightnull(A, alg)
+            arguments
+                A
+                alg = 'svd'
+            end
+            
+            if numel(A) > 1
+                for i = numel(A):-1:1
+                    A(i) = rightnull(A(i), alg);
+                end
+                return
+            end
+            
+            A.var = rightnull(A.var, 1, 2:nspaces(A), alg);
+        end
+    end
+    
+    %% Contractions
+    methods
         function v = applytransfer(L, R, v)
             arguments
                 L MpsTensor
@@ -410,7 +558,7 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
             auxlegs_r = R.alegs;
             assert(R.plegs == L.plegs);
             plegs = L.plegs; %#ok<PROPLC>
-            newrank = [2 auxlegs_l + auxlegs_r];
+            newrank = [1 1 + auxlegs_l + auxlegs_r];
             
             v = contract(...
                 L, [-1 1:(plegs + 1) (-(1:auxlegs_l) - 2)], ...
@@ -418,145 +566,28 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
                 'Rank', newrank); %#ok<PROPLC>
         end
         
-        function rho = applyleft(T, B, rho)
-            if nargin == 2
-                rho = [];
-                return
-            end
-            assert(isequal(size(T), size(B)), 'mpstensor:dimagree', ...
-                'dimensions should agree.');
-            if length(T) > 1
-                for i = 1:length(T)
-                    rho = applyleft(T(i), B(i), rho);
-                end
-                return
-            end
-            
-            if isempty(rho)
-                switch num2str([T1.plegs T1.alegs T2.alegs])
-                    case '1  0  0'
-                        indices = {[1 2 -2] [1 2 -1]};
-                        
-                    case '2  0  0'
-                        indices = {[1 2 3 -2] [1 2 3 -1]};
-                    case '1  1  0'
-                        indices = {[1 2 -2 -3] [1 2 -1]};
-                    case '1  0  1'
-                        indices = {[1 2 -2] [1 2 -1 -3]};
-                    case '1  1  1'
-                        indices = {[1 2 -2 3] [1 2 -1 3]};
-                    otherwise
-                        error('mps:ArgError', 'leftapply ill-defined.');
-                end
-                rho = contract(T1, indices{1}, T2, indices{2});
-                return
-            end
-            
-            switch num2str([nspaces(rho) T.plegs T.alegs B.alegs])
-                case '2  1  0  0'
-                    tmp = repartition(rho, [1 1]) * repartition(T, [1 2]);
-                    tmp = tpermute(B, [3 2 1], [1 2]) * repartition(tmp, [2 1]);
-                    rho = repartition(tmp, rank(rho));
-%                     indices = {[1 2] [2 3 -2] [1 3 -1]};
-%                     r = rank(rho);
-%                     T = twist(T, [isdual(space(T, [1 2])) false]);
-                case '3  1  0  0'
-                    tmp = tpermute(rho, [1 3 2], [2 1]) * repartition(T, [1 2]);
-                    tmp = tpermute(B, [3 2 1], [1 2]) * tpermute(tmp, [1 3 4 2], [2 2]);
-                    rho = repartition(tmp, rank(rho));
-                otherwise
-                    error('mps:ArgError', 'applyleft ill-defined');
-            end
-%             rho = contract(rho, indices{1}, T, indices{2}, B, indices{3}, ...
-%                 'Rank', r);
-        end
-        
-        function rho = applyright(T, B, rho)
-            if nargin == 2
-                rho = [];
-                return
-            end
-            assert(isequal(size(T), size(B)), 'mpstensor:dimagree', ...
-                'dimensions should agree.');
-            if length(T) > 1
-                for i = length(T):-1:1
-                    rho = applyright(T(i), B(i), rho);
-                end
-                return
-            end
-            if isempty(rho)
-                switch num2str([T.plegs T.alegs B.alegs])
-                    case '1  0  0'
-                        rho = contract(T, [-1 2 1], B, [-2 2 1]);
-%                         rhoR=Contract({T1,T2},{[-1,2,1],[-2,2,1]});
-                    case '2  0  0'
-                        rhoR=Contract({T1,T2},{[-1,2,3,1],[-2,2,3,1]});
-                    case '1  1  0'
-                        rhoR=Contract({T1,T2},{[-1,2,1,-3],[-2,2,1]});
-                    case '1  0  1'
-                        rhoR=Contract({T1,T2},{[-1,2,1],[-2,2,1,-3]});
-                    case '1  1  1'
-                        rhoR=Contract({T1,T2},{[-1,2,1,3],[-2,2,1,3]});
-                    otherwise
-                        error('mps:ArgError', 'applyright ill-defined.');
-                end
-                return
-            end
-            
-            switch num2str([nspaces(rho) T.plegs T.alegs B.alegs])
-                case '2  1  0  0'
-                    tmp = repartition(T, [2 1]) * repartition(rho, [1 1]);
-                    rho = repartition(...
-                        repartition(tmp, [1 2]) * tpermute(B, [3 2 1], [2 1]), rank(rho));
-                    
-%                     T = twist(T, [false ~isdual(space(T, 2:3))]);
-%                     rho = contract(rho, [1 2], T, [-1 3 1], B, [-2 3 2], ...
-%                         'Rank', rank(rho));
-                otherwise
-                    error('mps:ArgError', 'applyright ill-defined.');
-            end
-        end
-        
         function A = multiplyleft(A, C)
-            [A.var] = contract(C, [-1 1], ...
-                [A.var], [1 -((1:A.plegs)+1) -((1:A.alegs+1)+A.plegs+1)], 'Rank', rank(A));
+            % Multiply a gauge matrix from the left.
+            assert(nspaces(C) == 2, 'mps:tba', 'not implemented yet');
+            A.var = contract(C, [-1 1], ...
+                A.var, [1 -((1:A.plegs)+1) -((1:A.alegs+1)+A.plegs+1)], 'Rank', rank(A));
         end
         
         function A = multiplyright(A, C)
-            [A.var] = contract([A.var], [-(1:A.plegs+1) 1 -((1:A.alegs)+A.plegs+2)], ...
-                C, [1 -(2+A.plegs)], 'Rank', rank(A));
+            % Multiply a gauge matrix from the right.
+            r = rank(A);    npA = A.plegs;  naA = A.alegs; 
+            nC = nspaces(C);    naC = nC - 2;
+            r(2) = r(2) + naC;
+            A.var = contract(A.var, [-(1:npA + 1) 1 -((1:naA) + npA + 2)], ...
+                C, [1 -(2 + npA + (1:(nC - 1)))], 'Rank', r);
+            A.alegs = A.alegs + naC;
         end
-        
-        function C = initializeC(AL, AR)
-            for i = length(AL):-1:1
-                C(i) = AL(i).var.eye(rightvspace(AL(i))', leftvspace(AR(next(i, length(AR)))));
-            end
-        end
-        
-        function A = expand(A, addspace, noisefactor)
-            arguments
-                A
-                addspace
-                noisefactor = 1e-3
-            end
-            
-            for i = length(A):-1:1
-                spaces = space(A(i));
-                spaces(nspaces(A(i)) - A(i).alegs) = addspace(i);
-                spaces(1) = conj(addspace(prev(i, length(A))));
-                r = rank(A(i));
-                A(i).var = embed(A(i).var, ...
-                    noisefactor * ...
-                    normalize(A(i).var.randnc(spaces(1:r(1)), spaces(r(1)+1:end)')));
-            end
-        end
-        
-        function type = underlyingType(A)
-            type = underlyingType(A.var);
-        end
-        
-        function disp(t)
-            builtin('disp', t);
+    end
+    
+    %%
+    methods
+        function bool = isisometry(t, varargin)
+            bool = isisometry(t.var, varargin{:});
         end
     end
     
@@ -564,14 +595,71 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
     %% Converters
     methods
         function t = Tensor(A)
-            for i = numel(A):-1:1
-                t(i) = full(A(i).var);
-            end
+            t = full(A.var);
         end
         
         function t = SparseTensor(A)
             t = reshape([A.var], size(A));
             t = sparse(t);
+        end
+    end
+    
+    
+    %% Solvers
+    methods
+        function v = vectorize(t, type)
+            % Collect all parameters in a vector, weighted to reproduce the correct
+            % inproduct.
+            %
+            % Arguments
+            % ---------
+            % t : :class:`Tensor`
+            %   input tensor.
+            %
+            % type : 'real' or 'complex'
+            %   optionally specify if complex entries should be seen as 1 or 2 parameters.
+            %   Defaults to 'complex', with complex parameters.
+            %
+            % Returns
+            % -------
+            % v : numeric
+            %   real or complex vector containing the parameters of the tensor.
+            
+            arguments
+                t
+                type = 'complex'
+            end
+            
+            v = vectorize(t.var, type);
+        end
+        
+        function t = devectorize(v, t, type)
+            % Collect all parameters from a vector, and insert into a tensor.
+            %
+            % Arguments
+            % ---------
+            % v : numeric
+            %   real or complex vector containing the parameters of the tensor.
+            %
+            % t : :class:`Tensor`
+            %   input tensor.
+            %
+            % type : 'real' or 'complex'
+            %   optionally specify if complex entries should be seen as 1 or 2 parameters.
+            %   Defaults to 'complex', with complex parameters.
+            %
+            % Returns
+            % -------
+            % t : :class:`Tensor`
+            %   output tensor, filled with the parameters.
+            
+            arguments
+                v
+                t
+                type = 'complex'
+            end
+            
+            t.var = devectorize(v, t.var, type);
         end
     end
     
@@ -612,5 +700,12 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
             local_tensors{end} = MpsTensor(repartition(psi, [2 1]));
         end
     end
+    
+    methods (Hidden)
+        function tdst = zerosLike(t, varargin)
+            tdst = repmat(0 * t, varargin{:});
+        end
+    end
+
 end
 

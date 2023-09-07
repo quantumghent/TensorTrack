@@ -85,7 +85,7 @@ classdef Expand
                     end
                     flag = addcharge.flag ~= 0 || nnz(addbond) > 0;
                     
-                    old_space = rightvspace(mps(d).AR(w));
+                    old_space = rightvspace(mps(d).AR{w});
                     
                     new_space = struct;
                     new_space.charges = charges(old_space);
@@ -144,19 +144,18 @@ classdef Expand
             % perform twosite update, take SVD and normalize
             [GL, GR] = environments(Vumps, mpo, mps); % should be able to input this...
             H_AC2 = AC2_hamiltonian(mpo, mps, GL, GR, w);
-            AC2 = MpsTensor(contract(mps(dd).AC(w), [-(1:mps(dd).AC(w).plegs+1), 1], ...
-                mps(dd).AR(ww), [1, -(1:mps(dd).AR(ww).plegs+1) - 1 - mps(dd).AC(ww).plegs], ...
-                'Rank', [1 + mps(dd).AC(w).plegs, 1 + mps(dd).AR(ww).plegs]));   
+            AC2 = computeAC2(mps, dd, w);
+            [AC2, ~] = eigsolve(H_AC2{1}, AC2.var, 1, alg.which);
             if strcmp(alg.bondsmethod, 'twosite')
                 %twosite fixed point
-                [AC2.var, ~] = eigsolve(H_AC2{1}, AC2.var, 1, alg.which);
+                [AC2, ~] = eigsolve(H_AC2{1}, AC2, 1, alg);
             else
                 %single application
-                AC2.var = apply(H_AC2{1},AC2.var);
+                AC2 = apply(H_AC2{1}, AC2);
             end
             [~, C2, ~] = tsvd(AC2.var, ...
-                1:mps(dd).AC(w).plegs+1,  ...
-                (1:mps(dd).AR(ww).plegs+1) + 1 + mps(dd).AC(w).plegs, ...
+                1:mps(dd).AC{w}.plegs+1,  ...
+                (1:mps(dd).AR{ww}.plegs+1) + 1 + mps(dd).AC{w}.plegs, ...
                 'TruncBelow', alg.schmidtcut, ...
                 'TruncDim', alg.maxbond);
             [svals2, charges2] = matrixblocks(C2);
@@ -352,7 +351,13 @@ classdef Expand
             
             for d  = 1:depth(mps)
                 % expand tensors and convert to UniformMps
-                mps(d) = UniformMps(expand(mps(d).AR, new_spaces(d, :), alg.noisefactor));
+                AR = mps(d).AR;
+                for w = 1:period(mps)
+                    AR{w} = expand(AR{w}, new_spaces(d, prev(w, period(mps))), ...
+                        new_spaces(d, w), alg.noisefactor);
+                end
+                
+                mps(d) = UniformMps(AR);
             end
         end
         
