@@ -145,12 +145,11 @@ classdef Expand
             [GL, GR] = environments(Vumps, mpo, mps); % should be able to input this...
             H_AC2 = AC2_hamiltonian(mpo, mps, GL, GR, w);
             AC2 = computeAC2(mps, dd, w);
-            [AC2, ~] = eigsolve(H_AC2{1}, AC2.var, 1, alg.which);
             if strcmp(alg.bondsmethod, 'twosite')
-                %twosite fixed point
-                [AC2, ~] = eigsolve(H_AC2{1}, AC2, 1, alg);
+                % twosite fixed point
+                [AC2, ~] = eigsolve(H_AC2{1}, AC2, 1, alg.which);
             else
-                %single application
+                % single application
                 AC2 = apply(H_AC2{1}, AC2);
             end
             [~, C2, ~] = tsvd(AC2.var, ...
