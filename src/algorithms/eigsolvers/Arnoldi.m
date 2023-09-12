@@ -24,39 +24,61 @@ classdef Arnoldi
             end
         end
         
-        function [V, D, flag] = eigsolve(alg, A, v, howmany, sigma)
+        function varargout = eigsolve(alg, A, v0, howmany, sigma)
             arguments
                 alg
                 A
-                v
+                v0
                 howmany = 1
                 sigma = 'lm'
             end
             
-            t_total = tic;
-            
-            if ~isa(A, 'function_handle')
-                A = @(x) A * x;
-            end
-            
-            if norm(v) < eps(underlyingType(v))^(3/4)
-                error('eigsolve:inputnorm', 'starting vector should not have zero norm.');
-            end
-
             % some input validation
             if isempty(alg.nobuild), alg.nobuild = ceil(alg.krylovdim / 10); end
             if isempty(alg.deflatedim), alg.deflatedim = max(round(3/5 * alg.krylovdim), howmany); end
             assert(alg.deflatedim < alg.krylovdim, 'eigsolve:argerror', ...
                 'Deflate size should be smaller than krylov dimension.')
             
-            v = v / norm(v, 'fro');
+            t_total = tic;
+            
+            if isnumeric(v0)
+                v0_vec = v0;
+                if isa(A, 'function_handle')
+                    A_fun = @A;
+                else
+                    A_fun = @(v) A * v;
+                end
+            else
+                v0_vec = vectorize(v0);
+                if isa(A, 'function_handle')
+                    A_fun = @(v) vectorize(A(devectorize(v, v0)));
+                else
+                    A_fun = @(v) vectorize(A * devectorize(v, v0));
+                end
+            end
+            
+            if norm(v0_vec) < eps(underlyingType(v0_vec))^(3/4)
+                error('eigsolve:inputnorm', 'starting vector should not have zero norm.');
+            end
+
+            sz = size(v0_vec);
+            
+            if sz(1) < howmany
+                warning('eigsolve:size', 'requested %d out of %d eigenvalues.', ...
+                    howmany, sz(1));
+                howmany = sz(1);
+            end
+            
+            if sz(1) < alg.krylovdim
+                warning('eigsolve:size', 'requested %d out of %d eigenvalues.', ...
+                    howmany, sz(1));
+                alg.krylovdim = sz(1);
+            end
+            
+            v = v0_vec / norm(v0_vec, 'fro');
             
             % preallocation
-            if isnumeric(v) && isvector(v)
-                V = zeros(length(v), alg.krylovdim, 'like', v);
-            else
-                V = zeros(1, alg.krylovdim, 'like', v);                 % Krylov subspace basis
-            end
+            V = zeros(length(v), alg.krylovdim, 'like', v); % Krylov subspace basis
             H = zeros(alg.krylovdim, alg.krylovdim, underlyingType(v)); % Hessenberg matrix
             
             ctr_outer = 0;
@@ -67,12 +89,13 @@ classdef Arnoldi
                 t_outer = tic;
                 ctr_outer = ctr_outer + 1;
                 
+                flag_inner = 0;
                 while ctr_inner < alg.krylovdim  % build Krylov subspace
                     t_inner = tic;
                     ctr_inner = ctr_inner + 1;
                     
                     V(:, ctr_inner) = v;
-                    v = A(v);
+                    v = A_fun(v);
                     for i = 1:ctr_inner
                         H(i, ctr_inner) = dot(V(:, i), v);
                     end
@@ -119,7 +142,8 @@ classdef Arnoldi
                                          real(lambda(1)), imag(lambda(1)), conv, ...
                                          time2str(toc(t_total)));
                                 end
-                                return
+                                flag_inner = 1;
+                                break
                             end
                             
                             if alg.verbosity >= Verbosity.detail
@@ -132,6 +156,9 @@ classdef Arnoldi
                     end
                     
                     H(ctr_inner + 1, ctr_inner) = beta;
+                end
+                if flag_inner
+                    break
                 end
                 
                 % stopping criterium reached - irrespective of convergence
@@ -151,7 +178,7 @@ classdef Arnoldi
                             flag = 2;
                         end
                     end
-                    return
+                    break
                 end
                 
                 % deflate Krylov subspace
@@ -174,7 +201,7 @@ classdef Arnoldi
                         fprintf('Conv %2d:\tlambda = %.5e + %.5ei;\terror = %.5e;\ttime = %s.\n', ...
                             ctr_outer, real(lambda(1)), imag(lambda(1)), conv, time2str(toc(t_outer)));
                     end
-                    return
+                    break
                 end
                 
                 if alg.verbosity >= Verbosity.iter
@@ -190,6 +217,28 @@ classdef Arnoldi
                     beta * U1(alg.krylovdim, 1:alg.deflatedim);
                 V(:, alg.deflatedim + 1:end) = 0 * V(:, alg.deflatedim + 1:end);
                 ctr_inner = alg.deflatedim;
+            end
+            
+            % process results
+            if nargout <= 1
+                varargout = {D};
+            else
+                if ~isnumeric(v0)
+                    for i = howmany:-1:1
+                        varargout{1}(:, i) = devectorize(V(:, i), v0);
+                    end
+                end
+                varargout{2} = D;
+                if nargout == 3
+                    varargout{3} = flag;
+                end
+            end
+            
+            % display
+            if flag
+                warning('eigsolve did not converge.');
+            elseif ~flag && alg.verbosity > Verbosity.warn
+                fprintf('eigsolve converged.\n');
             end
         end
         

@@ -83,7 +83,7 @@ arguments
     sigma = 'lm'
 
     options.Algorithm {mustBeMember(options.Algorithm, ...
-        {'eigs', 'KrylovSchur', 'Arnoldi'})} = 'KrylovSchur'
+        {'eigs', 'KrylovSchur', 'Arnoldi'})} = 'Arnoldi'
 
     options.Tol = eps(underlyingType(x0))^(3/4)
     options.MaxIter = 100

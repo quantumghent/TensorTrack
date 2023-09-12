@@ -254,6 +254,10 @@ classdef CartesianSpace < AbstractSpace
             % bools : (1, :) logical
             %   flags that indicate if the element spaces are equal.
             
+            if isscalar(spaces1) && isscalar(spaces2)
+                bools = spaces1.dimensions == spaces2.dimensions;
+                return
+            end
             bools = [spaces1.dimensions] == [spaces2.dimensions];
         end
         
