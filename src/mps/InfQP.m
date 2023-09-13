@@ -278,6 +278,72 @@ classdef InfQP
         end
     end
     
+    
+    %% Solvers
+    methods
+        function v = vectorize(qp, type)
+            % Collect all parameters in a vector, weighted to reproduce the correct
+            % inner product.
+            %
+            % Arguments
+            % ---------
+            % qp : :class:`InfQP`
+            %   input quasi-particle state.
+            %
+            % type : 'real' or 'complex'
+            %   optionally specify if complex entries should be seen as 1 or 2 parameters.
+            %   Defaults to 'complex', with complex parameters.
+            %
+            % Returns
+            % -------
+            % v : numeric
+            %   real or complex vector containing the parameters of the quasi-particle
+            %   state.
+            
+            arguments
+                qp
+                type = 'complex'
+            end
+            
+            v = vectorize([qp.X{:}], type);
+        end
+        
+        function qp = devectorize(v, qp, type)
+            % Collect all parameters from a vector, and insert into a quasi-particle state.
+            %
+            % Arguments
+            % ---------
+            % v : numeric
+            %   real or complex vector containing the parameters of the quasi-particle
+            %   state.
+            %
+            % qp : :class:`InfQP`
+            %   input quasi-particle state.
+            %
+            % type : 'real' or 'complex'
+            %   optionally specify if complex entries should be seen as 1 or 2 parameters.
+            %   Defaults to 'complex', with complex parameters.
+            %
+            % Returns
+            % -------
+            % qp : :class:`InfQP`
+            %   output quasi-particle state, filled with the parameters.
+            
+            arguments
+                v
+                qp
+                type = 'complex'
+            end
+            
+            Xs = devectorize(v, [qp.X{:}], type);
+            for i = 1:numel(qp.X)
+                qp.X{i} = Xs(i);
+            end
+        end
+    end
+    
+    
+    %%
     methods
         function p = period(qp)
             p = length(qp.X);

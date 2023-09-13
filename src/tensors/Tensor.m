@@ -2296,7 +2296,7 @@ classdef Tensor < AbstractTensor
     methods
         function v = vectorize(t, type)
             % Collect all parameters in a vector, weighted to reproduce the correct
-            % inproduct.
+            % inner product.
             %
             % Arguments
             % ---------
