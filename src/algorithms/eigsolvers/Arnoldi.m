@@ -70,8 +70,9 @@ classdef Arnoldi
             end
             
             if sz(1) < alg.krylovdim
-                warning('eigsolve:size', 'requested %d out of %d eigenvalues.', ...
-                    howmany, sz(1));
+                warning('eigsolve:size', ...
+                    'Krylov subspace dimension is larger than total number of eigenvalues, reducing Krylov dimension to %d.', ...
+                    sz(1));
                 alg.krylovdim = sz(1);
             end
             
