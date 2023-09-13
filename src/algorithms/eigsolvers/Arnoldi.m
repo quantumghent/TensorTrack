@@ -5,7 +5,7 @@ classdef Arnoldi
         tol         = 1e-10             % convergence tolerance
         maxiter     = 100               % maximum iterations
         krylovdim   = 20                % Krylov subspace dimension
-        deflatedim  = 3                 % number of Krylov vectors to keep when deflating
+        deflatedim                      % number of Krylov vectors to keep when deflating
         reorth      = 20                % reorthogonalize basis if larger than this number
         nobuild     = 3                 % frequency of convergence check when building
         verbosity   = Verbosity.warn    % display information
@@ -33,12 +33,6 @@ classdef Arnoldi
                 sigma = 'lm'
             end
             
-            % some input validation
-            if isempty(alg.nobuild), alg.nobuild = ceil(alg.krylovdim / 10); end
-            if isempty(alg.deflatedim), alg.deflatedim = max(round(3/5 * alg.krylovdim), howmany); end
-            assert(alg.deflatedim < alg.krylovdim, 'eigsolve:argerror', ...
-                'Deflate size should be smaller than krylov dimension.')
-            
             t_total = tic;
             
             if isnumeric(v0)
@@ -64,17 +58,28 @@ classdef Arnoldi
             sz = size(v0_vec);
             
             if sz(1) < howmany
-                warning('eigsolve:size', 'requested %d out of %d eigenvalues.', ...
-                    howmany, sz(1));
                 howmany = sz(1);
+                if alg.verbosity >= Verbosity.warn
+                    warning('eigsolve:size', 'requested %d out of %d eigenvalues.', ...
+                        howmany, sz(1));
+                end
             end
             
             if sz(1) < alg.krylovdim
-                warning('eigsolve:size', ...
-                    'Krylov subspace dimension is larger than total number of eigenvalues, reducing Krylov dimension to %d.', ...
-                    sz(1));
                 alg.krylovdim = sz(1);
+                if alg.verbosity >= Verbosity.warn
+                    warning('eigsolve:size', ...
+                        'Krylov subspace dimension is larger than total number of eigenvalues, reducing Krylov dimension to %d.', ...
+                        sz(1));
+                end
             end
+            
+            % some input validation
+            if isempty(alg.nobuild), alg.nobuild = ceil(alg.krylovdim / 10); end
+            if isempty(alg.deflatedim), alg.deflatedim = max(round(3/5 * alg.krylovdim), howmany); end
+            alg.deflatedim = max(alg.deflatedim, howmany);
+            assert(alg.deflatedim < alg.krylovdim, 'eigsolve:argerror', ...
+                'Deflate size should be smaller than krylov dimension.')
             
             v = v0_vec / norm(v0_vec, 'fro');
             
@@ -192,6 +197,7 @@ classdef Arnoldi
                 V = V * U1;
                 [U, lambda] = eig(T(1:alg.deflatedim, 1:alg.deflatedim), 'vector');
                 select = selecteigvals(lambda, howmany, sigma);
+
                 conv = max(abs(beta * U1(alg.krylovdim, 1:alg.deflatedim) * U(:, select)));
                 
                 % check for convergence

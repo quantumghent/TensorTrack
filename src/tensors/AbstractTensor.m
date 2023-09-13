@@ -243,7 +243,6 @@ classdef AbstractTensor
                 options.Tol = eps(underlyingType(x0))^(3/4)
                 options.MaxIter = 100
                 options.KrylovDim = 20
-                options.DeflateDim = 3
                 options.ReOrth = 2
                 options.NoBuild = 3
                 options.Verbosity = Verbosity.warn

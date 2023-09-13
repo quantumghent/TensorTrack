@@ -564,6 +564,7 @@ classdef UniformMps
                 mps2 = mps1
                 howmany = min(20, dim(leftvspace(mps1, 1) * leftvspace(mps2, 1)'))
                 which = 'largestabs'
+                eigopts.Algorithm = 'Arnoldi'
                 eigopts.KrylovDim = 100
                 eigopts.MaxIter = 1000
                 eigopts.ReOrth = 2
