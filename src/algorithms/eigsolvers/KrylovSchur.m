@@ -110,15 +110,20 @@ classdef KrylovSchur
             sz = size(v0_vec);
             
             if sz(1) < howmany
-                warning('eigsolve:size', 'requested %d out of %d eigenvalues.', ...
-                    howmany, sz(1)); 
                 howmany = sz(1);
+                if alg.verbosity >= Verbosity.warn
+                    warning('eigsolve:size', 'requested %d out of %d eigenvalues.', ...
+                        howmany, sz(1));
+                end
             end
             
             if sz(1) < alg.krylovdim
-                warning('eigsolve:size', 'requested %d out of %d eigenvalues.', ...
-                    howmany, sz(1)); 
                 alg.krylovdim = sz(1);
+                if alg.verbosity >= Verbosity.warn
+                    warning('eigsolve:size', ...
+                        'Krylov subspace dimension is larger than total number of eigenvalues, reducing Krylov dimension to %d.', ...
+                        sz(1));
+                end
             end
             
             % call builtin eigs
