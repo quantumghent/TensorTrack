@@ -5,7 +5,7 @@ classdef Arnoldi
         tol         = 1e-10             % convergence tolerance
         maxiter     = 100               % maximum iterations
         krylovdim   = 20                % Krylov subspace dimension
-        deflatedim  = 3                 % number of Krylov vectors to keep when deflating
+        deflatedim                      % number of Krylov vectors to keep when deflating
         reorth      = 20                % reorthogonalize basis if larger than this number
         nobuild     = 3                 % frequency of convergence check when building
         verbosity   = Verbosity.warn    % display information
@@ -24,39 +24,116 @@ classdef Arnoldi
             end
         end
         
-        function [V, D, flag] = eigsolve(alg, A, v, howmany, sigma)
+        function varargout = eigsolve(alg, A, v0, howmany, sigma)
+            % Find a few eigenvalues and eigenvectors of an operator using an Arnoldi
+            % routine.
+            %
+            % Usage
+            % -----
+            % :code:`[V, D, flag] = eigsolve(A, v, howmany, sigma)`
+            % :code:`D = eigsolve(A, v, ...)`
+            %
+            % Arguments
+            % ---------
+            % A : matrix or function_handle
+            %   A square matrix.
+            %   A function handle which implements one of the following, depending on sigma:
+            %
+            %   - A \ x, if `sigma` is 0 or 'smallestabs'
+            %   - (A - sigma * I) \ x, if sigma is a nonzero scalar
+            %   - A * x, for all other cases
+            %
+            % v : vector
+            %   initial guess for the eigenvector.
+            %
+            % howmany : int
+            %   amount of eigenvalues and eigenvectors that should be computed. By default
+            %   this is 1, and this should not be larger than the total dimension of A.
+            %
+            % sigma : `char` or numeric
+            %   selector for the eigenvalues, should be either one of the following:
+            %
+            %   - 'largestabs', 'lm': default, eigenvalues of largest magnitude
+            %   - 'largestreal', 'lr': eigenvalues with largest real part
+            %   - 'largestimag', 'li': eigenvalues with largest imaginary part.
+            %   - 'smallestabs', 'sm': default, eigenvalues of smallest magnitude
+            %   - 'smallestreal', 'sr': eigenvalues with smallest real part
+            %   - 'smallestimag', 'si': eigenvalues with smallest imaginary part.
+            %
+            % Returns
+            % -------
+            % V : (1, howmany) array
+            %   vector of eigenvectors.
+            %
+            % D : numeric
+            %   vector of eigenvalues if only a single output argument is asked, diagonal
+            %   matrix of eigenvalues otherwise.
+            %
+            % flag : int
+            %   - flag = 0: all eigenvalues are converged.
+            %   - flag = 1: invariant subspace was found and the algorithm was aborted.
+            %   - flag = 2: algorithm did not converge after maximum number of iterations.
+
             arguments
                 alg
                 A
-                v
+                v0
                 howmany = 1
                 sigma = 'lm'
             end
             
             t_total = tic;
             
-            if ~isa(A, 'function_handle')
-                A = @(x) A * x;
+            if isnumeric(v0)
+                v0_vec = v0;
+                if isa(A, 'function_handle')
+                    A_fun = @A;
+                else
+                    A_fun = @(v) A * v;
+                end
+            else
+                v0_vec = vectorize(v0);
+                if isa(A, 'function_handle')
+                    A_fun = @(v) vectorize(A(devectorize(v, v0)));
+                else
+                    A_fun = @(v) vectorize(A * devectorize(v, v0));
+                end
             end
             
-            if norm(v) < eps(underlyingType(v))^(3/4)
+            if norm(v0_vec) < eps(underlyingType(v0_vec))^(3/4)
                 error('eigsolve:inputnorm', 'starting vector should not have zero norm.');
             end
 
+            sz = size(v0_vec);
+            
+            if sz(1) < howmany
+                howmany = sz(1);
+                if alg.verbosity >= Verbosity.warn
+                    warning('eigsolve:size', 'requested %d out of %d eigenvalues.', ...
+                        howmany, sz(1));
+                end
+            end
+            
+            if sz(1) < alg.krylovdim
+                alg.krylovdim = sz(1);
+                if alg.verbosity >= Verbosity.warn
+                    warning('eigsolve:size', ...
+                        'Krylov subspace dimension is larger than total number of eigenvalues, reducing Krylov dimension to %d.', ...
+                        sz(1));
+                end
+            end
+            
             % some input validation
             if isempty(alg.nobuild), alg.nobuild = ceil(alg.krylovdim / 10); end
             if isempty(alg.deflatedim), alg.deflatedim = max(round(3/5 * alg.krylovdim), howmany); end
+            alg.deflatedim = max(alg.deflatedim, howmany);
             assert(alg.deflatedim < alg.krylovdim, 'eigsolve:argerror', ...
                 'Deflate size should be smaller than krylov dimension.')
             
-            v = v / norm(v, 'fro');
+            v = v0_vec / norm(v0_vec, 'fro');
             
             % preallocation
-            if isnumeric(v) && isvector(v)
-                V = zeros(length(v), alg.krylovdim, 'like', v);
-            else
-                V = zeros(1, alg.krylovdim, 'like', v);                 % Krylov subspace basis
-            end
+            V = zeros(length(v), alg.krylovdim, 'like', v); % Krylov subspace basis
             H = zeros(alg.krylovdim, alg.krylovdim, underlyingType(v)); % Hessenberg matrix
             
             ctr_outer = 0;
@@ -67,12 +144,13 @@ classdef Arnoldi
                 t_outer = tic;
                 ctr_outer = ctr_outer + 1;
                 
+                flag_inner = 0;
                 while ctr_inner < alg.krylovdim  % build Krylov subspace
                     t_inner = tic;
                     ctr_inner = ctr_inner + 1;
                     
                     V(:, ctr_inner) = v;
-                    v = A(v);
+                    v = A_fun(v);
                     for i = 1:ctr_inner
                         H(i, ctr_inner) = dot(V(:, i), v);
                     end
@@ -119,7 +197,8 @@ classdef Arnoldi
                                          real(lambda(1)), imag(lambda(1)), conv, ...
                                          time2str(toc(t_total)));
                                 end
-                                return
+                                flag_inner = 1;
+                                break
                             end
                             
                             if alg.verbosity >= Verbosity.detail
@@ -133,6 +212,9 @@ classdef Arnoldi
                     
                     H(ctr_inner + 1, ctr_inner) = beta;
                 end
+                if flag_inner
+                    break
+                end
                 
                 % stopping criterium reached - irrespective of convergence
                 if ctr_outer == alg.maxiter || ctr_inner ~= alg.krylovdim
@@ -144,14 +226,12 @@ classdef Arnoldi
                     
                     if conv > alg.tol
                         if invariantsubspace
-                            warning('Found invariant subspace (error = %.5e).\n', conv);
                             flag = 1;
                         else
-                            warning('Reached maxiter without convergence.\n');
                             flag = 2;
                         end
                     end
-                    return
+                    break
                 end
                 
                 % deflate Krylov subspace
@@ -164,6 +244,7 @@ classdef Arnoldi
                 V = V * U1;
                 [U, lambda] = eig(T(1:alg.deflatedim, 1:alg.deflatedim), 'vector');
                 select = selecteigvals(lambda, howmany, sigma);
+
                 conv = max(abs(beta * U1(alg.krylovdim, 1:alg.deflatedim) * U(:, select)));
                 
                 % check for convergence
@@ -174,7 +255,7 @@ classdef Arnoldi
                         fprintf('Conv %2d:\tlambda = %.5e + %.5ei;\terror = %.5e;\ttime = %s.\n', ...
                             ctr_outer, real(lambda(1)), imag(lambda(1)), conv, time2str(toc(t_outer)));
                     end
-                    return
+                    break
                 end
                 
                 if alg.verbosity >= Verbosity.iter
@@ -190,6 +271,37 @@ classdef Arnoldi
                     beta * U1(alg.krylovdim, 1:alg.deflatedim);
                 V(:, alg.deflatedim + 1:end) = 0 * V(:, alg.deflatedim + 1:end);
                 ctr_inner = alg.deflatedim;
+            end
+            
+            % process results
+            if nargout <= 1
+                varargout = {diag(D)};
+            else
+                if ~isnumeric(v0)
+                    for i = howmany:-1:1
+                        varargout{1}(:, i) = devectorize(V(:, i), v0);
+                    end
+                else
+                    for i = howmany:-1:1
+                        varargout{1}(:, i) = V(:, i);
+                    end
+                end
+                varargout{2} = D;
+                if nargout == 3
+                    varargout{3} = flag;
+                end
+            end
+            
+            % display
+            if nargout < 3
+                if flag == 1
+                    warning('Found invariant subspace (error = %.5e).\n', conv);
+                elseif flag == 2
+                     warning('Reached maxiter without convergence.\n');
+                end
+            end
+            if ~flag && alg.verbosity > Verbosity.warn
+                fprintf('eigsolve converged.\n');
             end
         end
         

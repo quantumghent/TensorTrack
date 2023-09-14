@@ -197,7 +197,6 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
         end
         
         function C = mtimes(A, B)
-            
             if isscalar(A) || isscalar(B)
                 C = A .* B;
                 return
@@ -230,26 +229,6 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
                     C(i, j) = MpsTensor(Cv(i, j), al(i, j));
                 end
             end
-
-
-%             if isnumeric(A)
-%                 al = repmat([B(1, :).alegs], szA(1), 1);
-%                 %B = reshape([B.var], szB);
-%             else
-%                 al = repmat([A(:, 1).alegs], 1, szB(2));
-%                 %A = reshape([A.var], szA); % this does not zork becquse it qlso needs to hqndle the cqse zhen the vqrs the,selves qre qlreqdy qrrqys; you should reqlly do the ,qnuql loop
-%             end
-%             
-%             for i = szA(1):-1:1
-%                 for j = szB(2):-1:1
-%                     C(i, j) = MpsTensor(A(i, 1) * B(1, j), al(i, j));
-%                     for k = 2:szA(2)
-%                         C(i, j) = C(i, j) + ...
-%                              MpsTensor(A(i, k).var * B(k, j), al(i, j));
-%                     end
-%                 end
-%             end
-
         end
         
         function C = times(A, B)

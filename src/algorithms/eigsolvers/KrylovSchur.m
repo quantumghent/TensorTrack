@@ -22,6 +22,64 @@ classdef KrylovSchur
         end
         
         function varargout = eigsolve(alg, A, v0, howmany, sigma, kwargs)
+            % Find a few eigenvalues and eigenvectors of an operator using the builtin
+            % Matlab eigs routine.
+            %
+            % Usage
+            % -----
+            % :code:`[V, D, flag] = eigsolve(A, v, howmany, sigma, kwargs)`
+            % :code:`D = eigsolve(A, v, ...)`
+            %
+            % Arguments
+            % ---------
+            % A : matrix or function_handle
+            %   A square matrix.
+            %   A function handle which implements one of the following, depending on sigma:
+            %
+            %   - A \ x, if `sigma` is 0 or 'smallestabs'
+            %   - (A - sigma * I) \ x, if sigma is a nonzero scalar
+            %   - A * x, for all other cases
+            %
+            % v : vector
+            %   initial guess for the eigenvector.
+            %
+            % howmany : int
+            %   amount of eigenvalues and eigenvectors that should be computed. By default
+            %   this is 1, and this should not be larger than the total dimension of A.
+            %
+            % sigma : `char` or numeric
+            %   selector for the eigenvalues, should be either one of the following:
+            %
+            %   - 'largestabs', 'lm': default, eigenvalues of largest magnitude
+            %   - 'largestreal', 'lr': eigenvalues with largest real part
+            %   - 'largestimag', 'li': eigenvalues with largest imaginary part.
+            %   - 'smallestabs', 'sm': default, eigenvalues of smallest magnitude
+            %   - 'smallestreal', 'sr': eigenvalues with smallest real part
+            %   - 'smallestimag', 'si': eigenvalues with smallest imaginary part.
+            %   - 'bothendsreal', 'be': both ends, with howmany/2 values with largest and
+            %     smallest real part respectively.
+            %   - 'bothendsimag', 'li': both ends, with howmany/2 values with largest and
+            %     smallest imaginary part respectively.
+            %   - numeric : eigenvalues closest to sigma.
+            %
+            % Keyword Arguments
+            % -----------------
+            % IsSymmetric : logical
+            %   flag to speed up the algorithm if the operator is symmetric, false by
+            %   default.
+            %
+            % Returns
+            % -------
+            % V : (1, howmany) array
+            %   vector of eigenvectors.
+            %
+            % D : numeric
+            %   vector of eigenvalues if only a single output argument is asked, diagonal
+            %   matrix of eigenvalues otherwise.
+            %
+            % flag : int
+            %   if flag = 0 then all eigenvalues are converged, otherwise not.
+
             arguments
                 alg
                 A
@@ -31,10 +89,6 @@ classdef KrylovSchur
                 kwargs.IsSymmetric logical = false
             end
             
-            assert(isnumeric(sigma) || ismember(sigma, {'largestabs', 'smallestabs', ...
-                'largestreal', 'smallestreal', 'bothendsreal', ...
-                'largestimag', 'smallestimag', 'bothendsimag'}), ...
-                'tensors:ArgumentError', 'Invalid choice of eigenvalue selector.');
             nargoutchk(0, 3);
             
             if isnumeric(v0)
@@ -56,15 +110,20 @@ classdef KrylovSchur
             sz = size(v0_vec);
             
             if sz(1) < howmany
-                warning('eigsolve:size', 'requested %d out of %d eigenvalues.', ...
-                    howmany, sz(1)); 
                 howmany = sz(1);
+                if alg.verbosity >= Verbosity.warn
+                    warning('eigsolve:size', 'requested %d out of %d eigenvalues.', ...
+                        howmany, sz(1));
+                end
             end
             
             if sz(1) < alg.krylovdim
-                warning('eigsolve:size', 'requested %d out of %d eigenvalues.', ...
-                    howmany, sz(1)); 
                 alg.krylovdim = sz(1);
+                if alg.verbosity >= Verbosity.warn
+                    warning('eigsolve:size', ...
+                        'Krylov subspace dimension is larger than total number of eigenvalues, reducing Krylov dimension to %d.', ...
+                        sz(1));
+                end
             end
             
             % call builtin eigs
@@ -85,11 +144,15 @@ classdef KrylovSchur
             
             % process results
             if nargout <= 1
-                varargout = {D};
+                varargout = {diag(D)};
             else
                 if ~isnumeric(v0)
                     for i = howmany:-1:1
                         varargout{1}(:, i) = devectorize(V(:, i), v0);
+                    end
+                else
+                    for i = howmany:-1:1
+                        varargout{1}(:, i) = V(:, i);
                     end
                 end
                 varargout{2} = D;
@@ -99,9 +162,12 @@ classdef KrylovSchur
             end
             
             % display
-            if flag
-                warning('eigsolve did not converge.');
-            elseif ~flag && alg.verbosity > Verbosity.warn
+            if nargout < 3
+                if flag
+                    warning('eigsolve did not converge.');
+                end
+            end
+            if ~flag && alg.verbosity > Verbosity.warn
                 fprintf('eigsolve converged.\n');
             end
         end

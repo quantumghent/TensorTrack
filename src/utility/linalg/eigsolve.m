@@ -25,13 +25,19 @@ function varargout = eigsolve(A, v, howmany, sigma, options)
 %   amount of eigenvalues and eigenvectors that should be computed. By default
 %   this is 1, and this should not be larger than the total dimension of A.
 %
-% sigma : 'char' or numeric
+% sigma : `char` or numeric
 %   selector for the eigenvalues, should be either one of the following:
 %
-%   - 'largestabs', 'largestreal', 'largestimag' : default, eigenvalues of
-%       largest magnitude, real part or imaginary part.
-%   - 'smallestabs', 'smallestreal', 'smallestimag' : eigenvalues of smallest
-%       magnitude, real part or imaginary part.
+%   - 'largestabs', 'lm': default, eigenvalues of largest magnitude
+%   - 'largestreal', 'lr': eigenvalues with largest real part
+%   - 'largestimag', 'li': eigenvalues with largest imaginary part.
+%   - 'smallestabs', 'sm': default, eigenvalues of smallest magnitude
+%   - 'smallestreal', 'sr': eigenvalues with smallest real part
+%   - 'smallestimag', 'si': eigenvalues with smallest imaginary part.
+%   - 'bothendsreal', 'be': both ends, with howmany/2 values with largest and
+%     smallest real part respectively.
+%   - 'bothendsimag', 'li': both ends, with howmany/2 values with largest and
+%     smallest imaginary part respectively.
 %   - numeric : eigenvalues closest to sigma.
 %
 % Keyword Arguments
@@ -83,9 +89,9 @@ arguments
     sigma = 'lm'
 
     options.Algorithm {mustBeMember(options.Algorithm, ...
-        {'eigs', 'KrylovSchur', 'Arnoldi'})} = 'KrylovSchur'
+        {'eigs', 'KrylovSchur', 'Arnoldi'})} = 'Arnoldi'
 
-    options.Tol = eps(underlyingType(x0))^(3/4)
+    options.Tol = eps(underlyingType(v))^(3/4)
     options.MaxIter = 100
     options.KrylovDim = 20
     options.DeflateDim
@@ -101,33 +107,16 @@ switch options.Algorithm
         alg_opts = rmfield(options, {'Algorithm', 'IsSymmetric'});
         kwargs = namedargs2cell(alg_opts);
         alg = Arnoldi(kwargs{:});
-        [V, D, flag] = eigsolve(alg, A, x0, howmany, sigma);
+        [varargout{1:nargout}] = eigsolve(alg, A, v, howmany, sigma);
 
     case {'eigs', 'KrylovSchur'}
         alg_opts = rmfield(options, ...
             {'Algorithm', 'DeflateDim', 'ReOrth', 'NoBuild', 'IsSymmetric'});
         kwargs = namedargs2cell(alg_opts);
         alg = KrylovSchur(kwargs{:});
-        [V, D, flag] = eigsolve(alg, A, x0, howmany, sigma, ...
+        [varargout{1:nargout}] = eigsolve(alg, A, v, howmany, sigma, ...
             'IsSymmetric', options.IsSymmetric);
 
-end
-
-if nargout <= 1
-    varargout = {D};
-elseif nargout == 2
-    varargout{1} = V;
-    varargout{2} = D;
-else
-    varargout{1} = V;
-    varargout{2} = D;
-    varargout{3} = flag;
-end
-
-if any(flag)
-    warning('eigsolve did not converge on eigenvalues %s.', num2str(find(flag)));
-elseif ~any(flag) && options.Verbosity > 1
-    fprintf('eigsolve converged.\n');
 end
 
 end
