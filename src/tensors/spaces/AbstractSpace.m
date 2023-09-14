@@ -360,7 +360,7 @@ classdef (Abstract) AbstractSpace
                 spaces
             end
             
-            if length(spaces) > 2
+            if nargin > 2
                 bool = isequal(spaces{1:2}) && isequal(spaces{2:end});
                 return
             end

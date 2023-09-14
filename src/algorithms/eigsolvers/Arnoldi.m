@@ -25,6 +25,53 @@ classdef Arnoldi
         end
         
         function varargout = eigsolve(alg, A, v0, howmany, sigma)
+            % Find a few eigenvalues and eigenvectors of an operator using an Arnoldi
+            % routine.
+            %
+            % Usage
+            % -----
+            % :code:`[V, D, flag] = eigsolve(A, v, howmany, sigma)`
+            % :code:`D = eigsolve(A, v, ...)`
+            %
+            % Arguments
+            % ---------
+            % A : matrix or function_handle
+            %   A square matrix.
+            %   A function handle which implements one of the following, depending on sigma:
+            %
+            %   - A \ x, if `sigma` is 0 or 'smallestabs'
+            %   - (A - sigma * I) \ x, if sigma is a nonzero scalar
+            %   - A * x, for all other cases
+            %
+            % v : vector
+            %   initial guess for the eigenvector.
+            %
+            % howmany : int
+            %   amount of eigenvalues and eigenvectors that should be computed. By default
+            %   this is 1, and this should not be larger than the total dimension of A.
+            %
+            % sigma : `char` or numeric
+            %   selector for the eigenvalues, should be either one of the following:
+            %
+            %   - 'largestabs', 'lm': default, eigenvalues of largest magnitude
+            %   - 'largestreal', 'lr': eigenvalues with largest real part
+            %   - 'largestimag', 'li': eigenvalues with largest imaginary part.
+            %   - 'smallestabs', 'sm': default, eigenvalues of smallest magnitude
+            %   - 'smallestreal', 'sr': eigenvalues with smallest real part
+            %   - 'smallestimag', 'si': eigenvalues with smallest imaginary part.
+            %
+            % Returns
+            % -------
+            % V : (1, howmany) array
+            %   vector of eigenvectors.
+            %
+            % D : numeric
+            %   vector of eigenvalues if only a single output argument is asked, diagonal
+            %   matrix of eigenvalues otherwise.
+            %
+            % flag : int
+            %   if flag = 0 then all eigenvalues are converged, otherwise not.
+
             arguments
                 alg
                 A
@@ -177,10 +224,8 @@ classdef Arnoldi
                     
                     if conv > alg.tol
                         if invariantsubspace
-                            warning('Found invariant subspace (error = %.5e).\n', conv);
                             flag = 1;
                         else
-                            warning('Reached maxiter without convergence.\n');
                             flag = 2;
                         end
                     end
@@ -228,11 +273,15 @@ classdef Arnoldi
             
             % process results
             if nargout <= 1
-                varargout = {D};
+                varargout = {diag(D)};
             else
                 if ~isnumeric(v0)
                     for i = howmany:-1:1
                         varargout{1}(:, i) = devectorize(V(:, i), v0);
+                    end
+                else
+                    for i = howmany:-1:1
+                        varargout{1}(:, i) = V(:, i);
                     end
                 end
                 varargout{2} = D;
@@ -242,10 +291,14 @@ classdef Arnoldi
             end
             
             % display
-            if flag
-                warning('eigsolve did not converge.');
-            elseif ~flag && alg.verbosity > Verbosity.warn
-                fprintf('eigsolve converged.\n');
+            if nargout < 3
+                if flag == 1
+                    warning('Found invariant subspace (error = %.5e).\n', conv);
+                elseif flag == 2
+                     warning('Reached maxiter without convergence.\n');
+                elseif ~flag && alg.verbosity > Verbosity.warn
+                    fprintf('eigsolve converged.\n');
+                end
             end
         end
         

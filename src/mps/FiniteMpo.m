@@ -34,7 +34,7 @@ classdef FiniteMpo
             v = v - overlap(v, fp2) * repartition(fp1, rank(v));
         end
         
-        function [V, D, flag] = eigsolve(mpo, v0, howmany, sigma, options)
+        function varargout = eigsolve(mpo, v0, howmany, sigma, options)
             arguments
                 mpo
                 v0 = []
@@ -55,7 +55,8 @@ classdef FiniteMpo
             if isempty(v0), v0 = initialize_fixedpoint(mpo(1)); end
             
             kwargs = namedargs2cell(options);
-            [V, D, flag] = eigsolve(@(x) mpo.apply(x), v0, howmany, sigma, kwargs{:});
+            [varargout{1:nargout}] = ...
+                eigsolve(@(x) mpo.apply(x), v0, howmany, sigma, kwargs{:});
         end
         
         function v = initialize_fixedpoint(mpo)
