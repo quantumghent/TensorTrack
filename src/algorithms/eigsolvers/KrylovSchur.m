@@ -158,11 +158,12 @@ classdef KrylovSchur
             
             % display
             if nargout < 3
-                if any(flag)
+                if flag
                     warning('eigsolve did not converge.');
-                elseif ~any(flag) && alg.verbosity > Verbosity.warn
-                    fprintf('eigsolve converged.\n');
                 end
+            end
+            if ~flag && alg.verbosity > Verbosity.warn
+                fprintf('eigsolve converged.\n');
             end
         end
     end

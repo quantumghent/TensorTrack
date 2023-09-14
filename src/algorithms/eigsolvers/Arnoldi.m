@@ -70,7 +70,9 @@ classdef Arnoldi
             %   matrix of eigenvalues otherwise.
             %
             % flag : int
-            %   if flag = 0 then all eigenvalues are converged, otherwise not.
+            %   - flag = 0: all eigenvalues are converged.
+            %   - flag = 1: invariant subspace was found and the algorithm was aborted.
+            %   - flag = 2: algorithm did not converge after maximum number of iterations.
 
             arguments
                 alg
@@ -296,9 +298,10 @@ classdef Arnoldi
                     warning('Found invariant subspace (error = %.5e).\n', conv);
                 elseif flag == 2
                      warning('Reached maxiter without convergence.\n');
-                elseif ~flag && alg.verbosity > Verbosity.warn
-                    fprintf('eigsolve converged.\n');
                 end
+            end
+            if ~flag && alg.verbosity > Verbosity.warn
+                fprintf('eigsolve converged.\n');
             end
         end
         
