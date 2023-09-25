@@ -169,13 +169,27 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor < AbstractTensor
         function [codomain, domain] = deduce_spaces(t)
             spaces = cell(1, ndims(t));
             for i = 1:length(spaces)
+                todo = false(1, size(t, i));
                 for j = flip(1:size(t, i))
                     idx = find(t.ind(:, i) == j, 1);
                     if isempty(idx)
-                        error('sparse:argerror', ...
+                        warning('sparse:argerror', ...
                             'Cannot deduce %dth space at index %d.', i, j);
+                        todo(j) = true;
+                    else
+                        spaces{i}(j) = space(t.var(idx), i);
                     end
-                    spaces{i}(j) = space(t.var(idx), i);
+                end
+                
+                if any(todo)
+                    I = find(~todo, 1);
+                    E = one(spaces{i}(I));
+                    if isdual(spaces{i}(I))
+                        E = conj(E);
+                    end
+                    for J = find(todo)
+                        spaces{i}(J) = E;
+                    end
                 end
             end
             Nout = indout(t.var(1));
@@ -337,6 +351,15 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor < AbstractTensor
             bools(sub2ind_(a.sz, a.ind)) = false;
             bools(sub2ind_(b.sz, b.ind)) = false;
             bools(sub2ind_(a.sz, inds)) = a.var(ia) == b.var(ib);
+        end
+        
+        function jl = mat2jl(a)
+            jl = struct('classname', 'SparseTensor');
+            jl.codomain = mat2jl(a.codomain);
+            jl.domain = mat2jl(a.domain);
+            jl.ind = mat2jl(a.ind);
+            jl.sz = mat2jl(a.sz);
+            jl.var = mat2jl(a.var);
         end
     end
     

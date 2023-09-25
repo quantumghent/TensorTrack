@@ -1107,6 +1107,11 @@ classdef SparseArray
             return;
         end
         
+        function jl = mat2jl(a)
+            jl = struct('classname', 'SparseArray');
+            jl.sz = mat2jl(a.sz);
+            jl.var = mat2jl(a.var);
+        end
     end
     
     methods (Static)

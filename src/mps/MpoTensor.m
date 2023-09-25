@@ -424,6 +424,12 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) MpoTensor < Ab
         function disp(O)
             builtin('disp', O);
         end
+        
+        function jl = mat2jl(a)
+            jl = struct('classname', 'MpoTensor');
+            jl.tensors = mat2jl(a.tensors);
+            jl.scalars = mat2jl(a.scalars);
+        end
     end
     
     methods (Static)
