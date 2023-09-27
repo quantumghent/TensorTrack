@@ -183,6 +183,9 @@ classdef (InferiorClasses = {?Tensor}) SparseTensor < AbstractTensor
                 
                 if any(todo)
                     I = find(~todo, 1);
+                    if isempty(I)
+                        error('unable to deduce spaces automatically');
+                    end
                     E = one(spaces{i}(I));
                     if isdual(spaces{i}(I))
                         E = conj(E);

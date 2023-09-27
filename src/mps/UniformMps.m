@@ -95,7 +95,7 @@ classdef UniformMps
                 if iscell(varargin{1}), mps.AL = varargin{1}; else, mps.AL = varargin(1); end
                 if iscell(varargin{2}), mps.AR = varargin{2}; else, mps.AR = varargin(2); end
                 if iscell(varargin{3}), mps.C = varargin{3};  else, mps.C = varargin(3); end
-                if nargout == 4
+                if nargin == 4
                     if iscell(varargin{4})
                         mps.AC = varargin{4};
                     else
