@@ -99,7 +99,7 @@ classdef Vomps
             AC = vertcat(ACs{:});
             for i = length(sites):-1:1
                 for d = 1:depth(mpo)
-                    AC(d, i).var = H_AC{i}(d).apply(AC(prev(d, depth(mpo)), i).var);
+                    AC{d, i} = H_AC{i}(d).apply(AC{prev(d, depth(mpo)), i});
                 end
             end
         end
@@ -116,7 +116,7 @@ classdef Vomps
             C = vertcat(Cs{:});
             for i = length(sites):-1:1
                 for d = 1:depth(mpo)
-                    C(d, i) = H_C{i}(d).apply(C(prev(d, depth(mpo)), i));
+                    C{d, i} = H_C{i}(d).apply(C{prev(d, depth(mpo)), i});
                 end
             end
         end
@@ -130,9 +130,9 @@ classdef Vomps
             
             for d = size(AC, 1):-1:1
                 for i = length(AC):-1:1
-                    [Q_AC, ~] = leftorth(AC(d, i), 'polar');
-                    [Q_C, ~]  = leftorth(C(d, i), 1, 2, 'polar');
-                    mps(d).AL(sites(i)) = multiplyright(Q_AC, Q_C');
+                    [Q_AC, ~] = leftorth(AC{d, i}, 'polar');
+                    [Q_C, ~]  = leftorth(C{d, i}, 1, 2, 'polar');
+                    mps(d).AL{sites(i)} = multiplyright(Q_AC, Q_C');
                 end
             end
             
@@ -160,17 +160,17 @@ classdef Vomps
             H_C  = C_hamiltonian(mpo, mps1, GL, GR);
             eta = zeros(1, period(mps1));
             for w = 1:period(mps1)
-                AC_ = apply(H_AC{w}, mps1.AC(w));
-                lambda_AC = dot(AC_, mps2.AC(w));
+                AC_ = apply(H_AC{w}, mps1.AC{w});
+                lambda_AC = dot(AC_, mps2.AC{w});
                 AC_ = normalize(AC_ ./ lambda_AC);
                 
                 ww = prev(w, period(mps1));
-                C_ = apply(H_C{ww}, mps1.C(ww));
-                lambda_C = dot(C_, mps2.C(ww));
+                C_ = apply(H_C{ww}, mps1.C{ww});
+                lambda_C = dot(C_, mps2.C{ww});
                 C_ = normalize(C_ ./ lambda_C);
             
                 eta(w) = distance(AC_ , ...
-                    repartition(multiplyleft(mps2.AR(w), C_), rank(AC_)));
+                    repartition(multiplyleft(mps2.AR{w}, C_), rank(AC_)));
             end
             eta = max(eta, [], 'all');
         end

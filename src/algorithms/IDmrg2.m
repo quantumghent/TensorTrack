@@ -21,10 +21,12 @@ classdef IDmrg2
         saveIterations = false
         saveMethod = 'full'
         name = 'IDmrg2'
+        
+        alg_eigs = Arnoldi('MaxIter', 100, 'KrylovDim', 20)
     end
     
     properties (Access = private)
-        alg_eigs = struct('MaxIter', 100, 'KrylovDim', 20)
+        % TODO: alg_canonical, alg_environments? cf Vumps
         progressfig
     end
     
@@ -42,8 +44,8 @@ classdef IDmrg2
             end
             
             if ~isfield('alg_eigs', kwargs)
-                alg.alg_eigs.Tol = sqrt(alg.tol_min * alg.tol_max);
-                alg.alg_eigs.Verbosity = alg.verbosity - 2;
+                alg.alg_eigs.tol = sqrt(alg.tol_min * alg.tol_max);
+                alg.alg_eigs.verbosity = alg.verbosity - 2;
             end
         end
         
@@ -66,23 +68,21 @@ classdef IDmrg2
             for iter = 1:alg.maxiter
                 t_iter = tic;
                 
-                C_ = mps.C(end);
+                C_ = mps.C{end};
                 kwargs = {};
                 lambdas = zeros(1, period(mps));
                 
                 % sweep from left to right
                 for pos = 1:period(mps)-1
-                    AC2 = contract(mps.AC(pos), [-1 -2 1], ...
-                        mps.AR(pos + 1), [1 -3 -4], ...
-                        'Rank', [2 2]);
+                    AC2 = computeAC2(mps, 1, pos);
                     H = AC2_hamiltonian(mpo, mps, GL, GR, pos);
                     [AC2, lambdas(pos)] = ...
-                        eigsolve(H{1}, AC2, 1, alg.which, kwargs{:});
-                    [mps.AL(pos), C, mps.AR(pos + 1), delta] = ...
-                        tsvd(AC2, [1 2], [3 4], alg.trunc{:});
+                        eigsolve(alg.alg_eigs, @(x) H{1}.apply(x), AC2, 1, alg.which);
+                    [mps.AL{pos}.var, C, mps.AR{pos+1}.var] = ...
+                        tsvd(AC2.var, [1 2], [3 4], alg.trunc{:});
                     
-                    mps.C(pos) = normalize(C);
-                    mps.AC(pos + 1) = multiplyleft(mps.AR(pos + 1), mps.C(pos));
+                    mps.C{pos} = normalize(C);
+                    mps.AC{pos + 1} = computeAC(mps, 1, pos + 1, 'R');
                     
                     TL = transfermatrix(mpo, mps, mps, pos, 'Type', 'LL');
                     GL{pos + 1} = apply(TL, GL{pos});
@@ -91,17 +91,19 @@ classdef IDmrg2
                 end
                 
                 % update edge
-                AC2 = contract(mps.AC(end), [-1 -2 1], inv(mps.C(end)), [1 2], ...
-                    mps.AL(1), [2 -3 3], mps.C(1), [3 -4], 'Rank', [2 2]);
+                AC2 = contract(mps.AC{end}, [-1 -2 1], inv(mps.C{end}), [1 2], ...
+                    mps.AL{1}, [2 -3 3], mps.C{1}, [3 -4], 'Rank', [2 2]);
                 H = AC2_hamiltonian(mpo, mps, GL, GR, period(mps));
-                [AC2, lambdas(end)] = eigsolve(H{1}, AC2, 1, alg.which, kwargs{:});
+                [AC2, lambdas(end)] = ...
+                    eigsolve(alg.alg_eigs, @(x) H{1}.apply(x), AC2, 1, alg.which);
                 
-                [mps.AL(end), C, mps.AR(1)] = ...
+                [mps.AL{end}.var, C, mps.AR{1}.var] = ...
                     tsvd(AC2, [1 2], [3 4], alg.trunc{:});
-                mps.C(end) = normalize(C);
-                mps.AC(end) = multiplyright(mps.AL(end), mps.C(end));
-                mps.AC(1) = multiplyleft(mps.AR(1), mps.C(end));
-                mps.AL(1) = multiplyright(mps.AC(1), inv(mps.C(1)));
+                
+                mps.C{end} = normalize(C);
+                mps.AC{end} = computeAC(mps, 1, period(mps), 'L');
+                mps.AC{1} = computeAC(mps, 1, 1, 'R');
+                mps.AL{1} = multiplyright(mps.AC{1}, inv(mps.C{1}));
                 
                 TL = transfermatrix(mpo, mps, mps, period(mps), 'Type', 'LL');
                 GL{1} = apply(TL, GL{end});
@@ -110,16 +112,16 @@ classdef IDmrg2
                 
                 % sweep from right to left
                 for pos = period(mps)-1:-1:1
-                    AC2 = contract(mps.AL(pos), [-1 -2 1], ...
-                        mps.AC(pos + 1), [1 -3 -4], 'Rank', [2 2]);
+                    AC2 = computeAC2(mps, 1, pos, 'L');
                     H = AC2_hamiltonian(mpo, mps, GL, GR, pos);
-                    [AC2, lambdas(pos)] = eigsolve(H{1}, AC2, 1, alg.which, kwargs{:});
+                    [AC2, lambdas(pos)] = ...
+                        eigsolve(alg.alg_eigs, @(x) H{1}.apply(x), AC2, 1, alg.which);
                     
-                    [mps.AL(pos), C, mps.AR(pos + 1)] = ...
-                        tsvd(AC2, [1 2], [3 4], alg.trunc{:});
-                    mps.C(pos) = normalize(C);
-                    mps.AC(pos) = multiplyright(mps.AL(pos), mps.C(pos));
-                    mps.AC(pos + 1) = multiplyleft(mps.AR(pos + 1), mps.C(pos));
+                    [mps.AL{pos}.var, C, mps.AR{pos + 1}.var] = ...
+                       tsvd(AC2, [1 2], [3 4], alg.trunc{:});
+                    mps.C{pos} = normalize(C);
+                    mps.AC{pos} = computeAC(mps, 1, pos, 'L');
+                    mps.AC{pos + 1} = computeAC(mps, 1, pos + 1, 'R');
                     
                     TL = transfermatrix(mpo, mps, mps, pos, 'Type', 'LL');
                     GL{pos + 1} = apply(TL, GL{pos});
@@ -128,18 +130,19 @@ classdef IDmrg2
                 end
                 
                 % update edge
-                AC2 = contract(mps.C(end-1), [-1 1], mps.AR(end), [1 -2 2], ...
-                    inv(mps.C(end)), [2 3], mps.AC(1), [3 -3 -4], 'Rank', [2 2]);
+                AC2 = contract(mps.C{end-1}, [-1 1], mps.AR{end}, [1 -2 2], ...
+                    inv(mps.C{end}), [2 3], mps.AC{1}, [3 -3 -4], 'Rank', [2 2]);
                 H = AC2_hamiltonian(mpo, mps, GL, GR, period(mps));
-                [AC2, lambdas(1)] = eigsolve(H{1}, AC2, 1, alg.which, kwargs{:});
+                [AC2, lambdas(1)] = ...
+                    eigsolve(alg.alg_eigs, @(x) H{1}.apply(x), AC2, 1, alg.which);
                 
-                [mps.AL(end), C, mps.AR(1)] = ...
+                [mps.AL{end}.var, C, mps.AR{1}.var] = ...
                     tsvd(AC2, [1 2], [3 4], alg.trunc{:});
-                mps.C(end) = normalize(C);
-                mps.AC(1) = multiplyleft(mps.AR(1), mps.C(end));
+                mps.C{end} = normalize(C);
+                mps.AC{1} = computeAC(mps, 1, 1, 'R');
                 
-                mps.AR(end) = multiplyleft(multiplyright(mps.AL(end), mps.C(end)), ...
-                    inv(mps.C(end - 1)));
+                mps.AR{end} = multiplyleft(multiplyright(mps.AL{end}, mps.C{end}), ...
+                    inv(mps.C{end - 1}));
                 
                 
                 TL = transfermatrix(mpo, mps, mps, period(mps), 'Type', 'LL');
@@ -148,11 +151,11 @@ classdef IDmrg2
                 GR{1} = apply(TR.', GR{2});
                 
                 % error measure
-                infspace = infimum(space(C_, 1), space(mps.C(end), 1));
-                e1 = C_.eye(space(mps.C(end), 1), infspace);
+                infspace = infimum(space(C_, 1), space(mps.C{end}, 1));
+                e1 = C_.eye(space(mps.C{end}, 1), infspace);
                 e2 = C_.eye(space(C_, 1), infspace);
                 
-                eta = distance(e2' * C_ * e2, e1' * mps.C(end) * e1);
+                eta = distance(e2' * C_ * e2, e1' * mps.C{end} * e1);
                 lambda = prod(sqrt(lambdas));
                 
                 if iter > alg.miniter && eta < alg.tol
@@ -191,12 +194,12 @@ classdef IDmrg2
         
         function alg = updatetols(alg, iter, eta)
             if alg.dynamical_tols
-                alg.alg_eigs.Tol = between(alg.tol_min, eta * alg.eigs_tolfactor, ...
+                alg.alg_eigs.tol = between(alg.tol_min, eta * alg.eigs_tolfactor, ...
                     alg.tol_max / iter);
                 
                 if alg.verbosity > Verbosity.iter
-                    fprintf('Updated subalgorithm tolerances: (%e,\t%e,\t%e)\n', ...
-                        alg.alg_eigs.Tol, alg.alg_canonical.Tol, alg.alg_environments.Tol);
+                    fprintf('Updated subalgorithm tolerances: (%e)\n', ...
+                        alg.alg_eigs.tol);
                 end
             end
         end

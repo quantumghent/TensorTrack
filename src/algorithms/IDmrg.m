@@ -12,10 +12,12 @@ classdef IDmrg
         tol_min                 = 1e-12
         tol_max                 = 1e-6
         eigs_tolfactor          = 1e-4
+        
+        alg_eigs = Arnoldi('MaxIter', 100, 'KrylovDim', 20)
     end
     
     properties (Access = private)
-        alg_eigs = struct('MaxIter', 100, 'KrylovDim', 20)
+        % TODO: alg_canonical, alg_environments? cf Vumps
     end
     
     methods
@@ -32,8 +34,8 @@ classdef IDmrg
             end
             
             if ~isfield('alg_eigs', kwargs)
-                alg.alg_eigs.Tol = sqrt(alg.tol_min * alg.tol_max);
-                alg.alg_eigs.Verbosity = alg.verbosity - 2;
+                alg.alg_eigs.tol = sqrt(alg.tol_min * alg.tol_max);
+                alg.alg_eigs.verbosity = alg.verbosity - 2;
             end
         end
         
@@ -52,14 +54,15 @@ classdef IDmrg
             for iter = 1:alg.maxiter
                 t_iter = tic;
                 
-                C_ = mps.C(end);
+                C_ = mps.C{end};
                 kwargs = {};
                 lambdas = zeros(1, period(mps));
                 for pos = 1:period(mps)
                     H = AC_hamiltonian(mpo, mps, GL, GR, pos);
-                    [mps.AC(pos).var, lambdas(pos)] = ...
-                        eigsolve(H{1}, mps.AC(pos).var, 1, alg.which, kwargs{:});
-                    [mps.AL(pos), mps.C(pos)] = leftorth(mps.AC(pos));
+                    [mps.AC{pos}, lambdas(pos)] = ...
+                        eigsolve(alg.alg_eigs, @(x) H{1}.apply(x), mps.AC{pos}, 1, ...
+                        alg.which);
+                    [mps.AL{pos}, mps.C{pos}] = leftorth(mps.AC{pos});
                     
                     T = transfermatrix(mpo, mps, mps, pos, 'Type', 'LL');
                     GL{next(pos, period(mps))} = apply(T, GL{pos}) / lambdas(pos);
@@ -67,15 +70,16 @@ classdef IDmrg
                 
                 for pos = period(mps):-1:1
                     H = AC_hamiltonian(mpo, mps, GL, GR, pos);
-                    [mps.AC(pos).var, lambdas(pos)] = ...
-                        eigsolve(H{1}, mps.AC(pos).var, 1, alg.which, kwargs{:});
-                    [mps.C(prev(pos, period(mps))), mps.AR(pos)] = rightorth(mps.AC(pos));
+                    [mps.AC{pos}, lambdas(pos)] = ...
+                        eigsolve(alg.alg_eigs, @(x) H{1}.apply(x), mps.AC{pos}, 1, ...
+                            alg.which);
+                    [mps.C{prev(pos, period(mps))}, mps.AR{pos}] = rightorth(mps.AC{pos});
                     
                     T = transfermatrix(mpo, mps, mps, pos, 'Type', 'RR').';
                     GR{pos} = apply(T, GR{next(pos, period(mps))}) / lambdas(pos);
                 end
 
-                eta = distance(C_, mps.C(end));
+                eta = distance(C_, mps.C{end});
                 lambda = prod(lambdas);
                 
                 if iter > alg.miniter && eta < alg.tol
@@ -109,12 +113,12 @@ classdef IDmrg
         
         function alg = updatetols(alg, iter, eta)
             if alg.dynamical_tols
-                alg.alg_eigs.Tol = between(alg.tol_min, eta * alg.eigs_tolfactor, ...
+                alg.alg_eigs.tol = between(alg.tol_min, eta * alg.eigs_tolfactor, ...
                     alg.tol_max / iter);
                 
                 if alg.verbosity > Verbosity.iter
-                    fprintf('Updated subalgorithm tolerances: (%e,\t%e,\t%e)\n', ...
-                        alg.alg_eigs.Tol, alg.alg_canonical.Tol, alg.alg_environments.Tol);
+                    fprintf('Updated subalgorithm tolerances: (%e)\n', ...
+                        alg.alg_eigs.tol);
                 end
             end
         end

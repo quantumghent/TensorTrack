@@ -1,184 +1,122 @@
-function [V, D, flag] = eigsolve(A, v, howmany, which, kwargs)
-%EIGSOLVE Summary of this function goes here
-%   Detailed explanation goes here
+function varargout = eigsolve(A, v, howmany, sigma, options)
+% Find a few eigenvalues and eigenvectors of an operator.
+%
+% Usage
+% -----
+% :code:`[V, D, flag] = eigsolve(A, v, howmany, sigma, kwargs)`
+% :code:`D = eigsolve(A, v, ...)`
+%
+% Arguments
+% ---------
+% A : matrix or function_handle
+%   A square matrix.
+%   A function handle which implements one of the following, depending on sigma:
+%
+%   - A \ x, if `sigma` is 0 or 'smallestabs'
+%   - (A - sigma * I) \ x, if sigma is a nonzero scalar
+%   - A * x, for all other cases
+%
+% v : vector
+%   initial guess for the eigenvector. If A is a :class:`Tensor`, this defaults
+%   to a random complex :class:`Tensor`, for function handles this is a required
+%   argument.
+%
+% howmany : int
+%   amount of eigenvalues and eigenvectors that should be computed. By default
+%   this is 1, and this should not be larger than the total dimension of A.
+%
+% sigma : `char` or numeric
+%   selector for the eigenvalues, should be either one of the following:
+%
+%   - 'largestabs', 'lm': default, eigenvalues of largest magnitude
+%   - 'largestreal', 'lr': eigenvalues with largest real part
+%   - 'largestimag', 'li': eigenvalues with largest imaginary part.
+%   - 'smallestabs', 'sm': default, eigenvalues of smallest magnitude
+%   - 'smallestreal', 'sr': eigenvalues with smallest real part
+%   - 'smallestimag', 'si': eigenvalues with smallest imaginary part.
+%   - 'bothendsreal', 'be': both ends, with howmany/2 values with largest and
+%     smallest real part respectively.
+%   - 'bothendsimag', 'li': both ends, with howmany/2 values with largest and
+%     smallest imaginary part respectively.
+%   - numeric : eigenvalues closest to sigma.
+%
+% Keyword Arguments
+% -----------------
+% Tol : numeric
+%   tolerance of the algorithm.
+%
+% Algorithm : char
+%   choice of eigensolver algorithm. Currently there is a choice between the use
+%   of Matlab's buitin `eigs` specified by the identifiers 'eigs' or
+%   'KrylovSchur', or the use of a custom Arnolid algorithm specified by
+%   the identifier 'Arnoldi'.
+%
+% MaxIter : int
+%   maximum number of iterations, 100 by default.
+%
+% KrylovDim : int
+%   number of vectors kept in the Krylov subspace.
+%
+% IsSymmetric : logical
+%   flag to speed up the algorithm if the operator is symmetric, false by
+%   default.
+%
+% Verbosity : int
+%   Level of output information, by default nothing is printed if `flag` is
+%   returned, otherwise only warnings are given.
+%
+%   - 0 : no information
+%   - 1 : information at failure
+%   - 2 : information at convergence
+%   - 3 : information at every iteration
+%
+% Returns
+% -------
+% V : (1, howmany) array
+%   vector of eigenvectors.
+%
+% D : numeric
+%   vector of eigenvalues if only a single output argument is asked, diagonal
+%   matrix of eigenvalues otherwise.
+%
+% flag : int
+%   if flag = 0 then all eigenvalues are converged, otherwise not.
 
 arguments
     A
     v
     howmany = 1
-    which {mustBeMember(which, {'lm', 'largestabs', 'lr', 'largestreal', ...
-        'li', 'largestimag', 'sm', 'smallestabs', 'sr', 'smallestreal', ...
-        'si', 'smallestimag'})} = 'lm'
-    kwargs.Tol = eps(underlyingType(v))^(3/4)
-    kwargs.Algorithm = 'Arnoldi'
-    kwargs.MaxIter = 100
-    kwargs.KrylovDim {mustBeGreaterThan(kwargs.KrylovDim, howmany)} = 20
-    kwargs.DeflateDim
-    kwargs.ReOrth = 2
-    kwargs.NoBuild
-    kwargs.Verbosity = Verbosity.warn
+    sigma = 'lm'
+
+    options.Algorithm {mustBeMember(options.Algorithm, ...
+        {'eigs', 'KrylovSchur', 'Arnoldi'})} = 'Arnoldi'
+
+    options.Tol = eps(underlyingType(v))^(3/4)
+    options.MaxIter = 100
+    options.KrylovDim = 20
+    options.DeflateDim
+    options.ReOrth = 2
+    options.NoBuild
+    options.Verbosity = Verbosity.warn
+    options.IsSymmetric logical = false
 end
 
-% Input validations
-if ~isfield(kwargs, 'NoBuild')
-    kwargs.NoBuild = ceil(kwargs.KrylovDim / 10);
-end
-if ~isfield(kwargs, 'DeflateDim')
-    kwargs.DeflateDim = max(round(3/5 * kwargs.KrylovDim), howmany);
-else
-    assert(kwargs.DeflateDim < kwargs.KrylovDim, 'eigsolve:argerror', ...
-        'Deflate size should be smaller than krylov dimension.')
-end
-if ~isa(A, 'function_handle')
-    A = @(x) A * x;
-end
-if norm(v) < eps(underlyingType(v))^(3/4)
-    error('eigsolve:inputnorm', 'starting vector should not have zero norm.');
-end
+switch options.Algorithm
 
-% Arnoldi storage for Krylov subspace basis
-V = zeros(0, kwargs.KrylovDim, 'like', v);
+    case {'Arnoldi'}
+        alg_opts = rmfield(options, {'Algorithm', 'IsSymmetric'});
+        kwargs = namedargs2cell(alg_opts);
+        alg = Arnoldi(kwargs{:});
+        [varargout{1:nargout}] = eigsolve(alg, A, v, howmany, sigma);
 
-% Arnoldi storage for Hessenberg matrix
-H = zeros(kwargs.KrylovDim, kwargs.KrylovDim, underlyingType(v));  
-
-ctr_outer = 0;
-ctr_inner = 0;
-flag = 0;
-
-while ctr_outer < kwargs.MaxIter
-    ctr_outer = ctr_outer + 1;
-    
-    while ctr_inner < kwargs.KrylovDim  % build Krylov subspace
-        ctr_inner = ctr_inner + 1;
-        
-        V(1:length(v), ctr_inner) = v;
-        v = A(v);
-        H(1:ctr_inner, ctr_inner) = V(:, 1:ctr_inner)' * v;
-        v = v - V * H(:, ctr_inner);
-        
-        % reorthogonalize new vector
-        if ctr_inner >= kwargs.ReOrth
-            c = V(:, 1:ctr_inner)' * v;
-            H(1:ctr_inner, ctr_inner) = H(1:ctr_inner, ctr_inner) + c;
-            v = v - V(:, 1:ctr_inner) * c;
-        end
-        
-        % normalize
-        beta = norm(v, 'fro');
-        v = v / beta;
-        
-        if ctr_inner == kwargs.KrylovDim, break; end
-        
-        if ctr_inner >= howmany
-            invariantsubspace = beta < eps(underlyingType(beta))^(3/4);
-            if invariantsubspace || ctr_inner == kwargs.KrylovDim
-                break;
-            end
-            
-            % check for convergence during subspace build
-            if ~mod(ctr_inner, kwargs.NoBuild)
-                [U, lambda] = eig(H(1:ctr_inner, 1:ctr_inner), 'vector');
-                select = selecteigvals(lambda, howmany, which);
-                conv = max(abs(beta * U(ctr_inner, select)));
-                
-                if conv < kwargs.Tol
-                    V = V(:, 1:ctr_inner) * U(:, select);
-                    D = diag(lambda(select));
-                    if kwargs.Verbosity >= Verbosity.conv
-                        fprintf('Conv %2d (%2d/%2d): error = %.5e.\n', ctr_outer, ...
-                            ctr_inner, kwargs.KrylovDim, conv);
-                    end
-                    return
-                end
-                
-                if kwargs.Verbosity >= Verbosity.detail
-                    fprintf('Iter %2d (%2d/%2d):\tlambda = %.5e + %.5ei;\terror = %.5e\n', ...
-                        ctr_outer, ctr_inner, kwargs.KrylovDim, ...
-                        real(lambda(1)), imag(lambda(1)), conv);
-                end
-            end
-        end
-        
-        H(ctr_inner + 1, ctr_inner) = beta;
-    end
-    
-    % stopping criterium reached - irrespective of convergence
-    if ctr_outer == kwargs.MaxIter || ctr_inner ~= kwargs.KrylovDim
-        [U, lambda] = eig(H(1:ctr_inner, 1:ctr_inner), 'vector');
-        select = selecteigvals(lambda, howmany, which);
-        conv = max(abs(beta * U(ctr_inner, select)));
-        V = V(:, 1:ctr_inner) * U(:, select);
-        D = diag(lambda(select));
-        
-        if conv > kwargs.Tol
-            if invariantsubspace
-                fprintf('Found invariant subspace.\n');
-                flag = 1;
-            else
-                fprintf('Reached maxiter without convergence.\n');
-                flag = 2;
-            end
-        end
-        return
-    end
-    
-    % deflate Krylov subspace
-    [U1, T] = schur(H, 'real');
-    E = ordeig(T);
-    select1 = false(size(E));
-    select1(selecteigvals(E, kwargs.DeflateDim, which)) = true;
-    [U1, T] = ordschur(U1, T, select1);
-    
-    V = V * U1;
-    [U, lambda] = eig(T(1:kwargs.DeflateDim, 1:kwargs.DeflateDim), 'vector');
-    select = selecteigvals(lambda, howmany, which);
-    conv = max(abs(beta * U1(kwargs.KrylovDim, 1:kwargs.DeflateDim) * U(:, select)));
-    
-    % check for convergence
-    if conv < kwargs.Tol
-        V = V(:, 1:kwargs.DeflateDim) * U(:, select);
-        D = diag(lambda(select));
-        if kwargs.Verbosity >= Verbosity.conv
-            fprintf('Conv %2d: error = %.5e.\n', ctr_outer, conv);
-        end
-        return
-    end
-    
-    if kwargs.Verbosity >= Verbosity.iter
-        fprintf('Iter %2d:\tlambda = %.5e + %.5ei;\terror = %.5e\n', ...
-            ctr_outer, real(lambda(1)), imag(lambda(1)), conv);
-    end
-    
-    % deflate Krylov subspace
-    H = zeros(kwargs.KrylovDim, kwargs.KrylovDim, underlyingType(v));
-    H(1:kwargs.DeflateDim, 1:kwargs.DeflateDim) = ...
-        T(1:kwargs.DeflateDim, 1:kwargs.DeflateDim);
-    H(kwargs.DeflateDim + 1, 1:kwargs.DeflateDim) = ...
-        beta * U1(kwargs.KrylovDim, 1:kwargs.DeflateDim);
-%     V(:, kwargs.DeflateDim + 1:end) = 0 * V(:, kwargs.DeflateDim + 1:end);
-    ctr_inner = kwargs.DeflateDim;
-end
+    case {'eigs', 'KrylovSchur'}
+        alg_opts = rmfield(options, ...
+            {'Algorithm', 'DeflateDim', 'ReOrth', 'NoBuild', 'IsSymmetric'});
+        kwargs = namedargs2cell(alg_opts);
+        alg = KrylovSchur(kwargs{:});
+        [varargout{1:nargout}] = eigsolve(alg, A, v, howmany, sigma, ...
+            'IsSymmetric', options.IsSymmetric);
 
 end
-
-function select = selecteigvals(lambda, howmany, which)
-
-switch which
-    case {'largestabs', 'lm'}
-        [~, p] = sort(abs(lambda), 'descend');
-    case {'largestreal', 'lr'}
-        [~, p] = sort(real(lambda), 'descend');
-    case {'largestimag', 'li'}
-        [~, p] = sort(imag(lambda), 'descend');
-    case {'smallestabs', 'sm'}
-        [~, p] = sort(abs(lambda), 'ascend');
-    case {'smallestreal', 'sr'}
-        [~, p] = sort(real(lambda), 'ascend');
-    case {'smallestimag', 'si'}
-        [~, p] = sort(imag(lambda), 'ascend');
-end
-
-select = p(1:howmany);
 
 end

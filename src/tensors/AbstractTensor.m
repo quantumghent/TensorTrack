@@ -180,13 +180,19 @@ classdef AbstractTensor
             %   amount of eigenvalues and eigenvectors that should be computed. By default
             %   this is 1, and this should not be larger than the total dimension of A.
             %
-            % sigma : 'char' or numeric
+            % sigma : `char` or numeric
             %   selector for the eigenvalues, should be either one of the following:
             %
-            %   - 'largestabs', 'largestreal', 'largestimag' : default, eigenvalues of
-            %       largest magnitude, real part or imaginary part.
-            %   - 'smallestabs', 'smallestreal', 'smallestimag' : eigenvalues of smallest
-            %       magnitude, real part or imaginary part.
+            %   - 'largestabs', 'lm': default, eigenvalues of largest magnitude
+            %   - 'largestreal', 'lr': eigenvalues with largest real part
+            %   - 'largestimag', 'li': eigenvalues with largest imaginary part.
+            %   - 'smallestabs', 'sm': default, eigenvalues of smallest magnitude
+            %   - 'smallestreal', 'sr': eigenvalues with smallest real part
+            %   - 'smallestimag', 'si': eigenvalues with smallest imaginary part.
+            %   - 'bothendsreal', 'be': both ends, with howmany/2 values with largest and
+            %     smallest real part respectively.
+            %   - 'bothendsimag', 'li': both ends, with howmany/2 values with largest and
+            %     smallest imaginary part respectively.
             %   - numeric : eigenvalues closest to sigma.
             %
             % Keyword Arguments
@@ -195,8 +201,10 @@ classdef AbstractTensor
             %   tolerance of the algorithm.
             %
             % Algorithm : char
-            %   choice of algorithm. Currently only 'eigs' is available, which leverages the
-            %   default Matlab eigs.
+            %   choice of eigensolver algorithm. Currently there is a choice between the use
+            %   of Matlab's buitin `eigs` specified by the identifiers 'eigs' or
+            %   'KrylovSchur', or the use of a custom Arnolid algorithm specified by
+            %   the identifier 'Arnoldi'.
             %
             % MaxIter : int
             %   maximum number of iterations, 100 by default.
@@ -233,74 +241,36 @@ classdef AbstractTensor
                 A
                 x0 = A.randnc(A.domain, [])
                 howmany = 1
-                sigma = 'largestabs'
+                sigma = 'lm'
+                
+                options.Algorithm {mustBeMember(options.Algorithm, ...
+                    {'eigs', 'KrylovSchur', 'Arnoldi'})} = 'Arnoldi'
                 
                 options.Tol = eps(underlyingType(x0))^(3/4)
-                options.Algorithm = 'eigs'
                 options.MaxIter = 100
                 options.KrylovDim = 20
-                options.IsSymmetric logical = false
-                options.DeflateDim
                 options.ReOrth = 2
-                options.NoBuild
-                options.Verbosity = 0
+                options.NoBuild = 3
+                options.Verbosity = Verbosity.warn
+                options.IsSymmetric logical = false
             end
-            
-            assert(isnumeric(sigma) || ismember(sigma, {'largestabs', 'smallestabs', ...
-                'largestreal', 'smallestreal', 'bothendsreal', ...
-                'largestimag', 'smallestimag', 'bothendsimag'}), ...
-                'tensors:ArgumentError', 'Invalid choice of eigenvalue selector.');
-            nargoutchk(0, 3);
-            
-            
-            x0_vec = vectorize(x0);
-            sz = size(x0_vec);
-            if sz(1) < howmany
-                warning('requested %d out of %d eigenvalues.', howmany, sz(1));
-                howmany = min(howmany, sz(1));
-            end
-
-            if isa(A, 'function_handle')
-                A_fun = @(x) vectorize(A(devectorize(x, x0)));
-            else
-                A_fun = @(x) vectorize(A * devectorize(x, x0));
-            end
-            
-            options.KrylovDim = min(sz(1), options.KrylovDim);
-            
-            if howmany > sz(1) - 2
-                [V, D, flag] = eigs(A_fun, sz(1), howmany, sigma, ...
-                    'Tolerance', options.Tol, 'MaxIterations', options.MaxIter, ...
-                    'IsFunctionSymmetric', ...
-                    options.IsSymmetric, 'StartVector', x0_vec, ...
-                    'Display', options.Verbosity >= 3, 'FailureTreatment', 'keep');
-            else
-                [V, D, flag] = eigs(A_fun, sz(1), howmany, sigma, ...
-                    'Tolerance', options.Tol, 'MaxIterations', options.MaxIter, ...
-                    'SubspaceDimension', options.KrylovDim, 'IsFunctionSymmetric', ...
-                    options.IsSymmetric, 'StartVector', x0_vec, ...
-                    'Display', options.Verbosity >= 3, 'FailureTreatment', 'keep');
-            end
-            
-            if nargout <= 1
-                varargout = {D};
-            elseif nargout == 2
-                for i = howmany:-1:1
-                    varargout{1}(:, i) = devectorize(V(:, i), x0);
-                end
-                varargout{2} = D;
-            else
-                varargout{2} = D;
-                for i = howmany:-1:1
-                    varargout{1}(:, i) = devectorize(V(:, i), x0);
-                end
-                varargout{3} = flag;
-            end
-            
-            if any(flag)
-                warning('eigsolve did not converge on eigenvalues %s.', num2str(find(flag)));
-            elseif ~any(flag) && options.Verbosity > 1
-                fprintf('eigsolve converged.\n');
+                        
+            switch options.Algorithm
+                
+                case {'Arnoldi'}
+                    alg_opts = rmfield(options, {'Algorithm', 'IsSymmetric'});
+                    kwargs = namedargs2cell(alg_opts);
+                    alg = Arnoldi(kwargs{:});
+                    [varargout{1:nargout}] = eigsolve(alg, A, x0, howmany, sigma);
+                    
+                case {'eigs', 'KrylovSchur'}
+                    alg_opts = rmfield(options, ...
+                        {'Algorithm', 'DeflateDim', 'ReOrth', 'NoBuild', 'IsSymmetric'});
+                    kwargs = namedargs2cell(alg_opts);
+                    alg = KrylovSchur(kwargs{:});
+                    [varargout{1:nargout}] = eigsolve(alg, A, x0, howmany, sigma, ...
+                        'IsSymmetric', options.IsSymmetric);
+                    
             end
         end
         
@@ -478,7 +448,7 @@ classdef AbstractTensor
             %   :meth:`Tensor.tsvd`
             arguments
                 H
-                kwargs.Trunc = {'TruncBelow', 1e-14}
+                kwargs.Trunc = {'TruncBelow', 1e-12}
             end
             
             assert(mod(nspaces(H), 2) == 0, ...
@@ -490,18 +460,18 @@ classdef AbstractTensor
             N = indin(H);
             local_operators = cell(1, N);
             if N == 1
-                local_operators{1} = insert_onespace(insert_onespace(H, 1), 3);
+                local_operators{1} = insert_onespace(insert_onespace(H, 1), 3, true);
             else
-                [u, s, v] = tsvd(H, [1 N+1], [2:N N+2:2*N], kwargs.Trunc{:});
+                [u, s, v] = tsvd(H, [1 2*N], 2:(2*N-1), kwargs.Trunc{:});
                 local_operators{1} = insert_onespace(tpermute(u * s, [1 3 2], [1 2]), 1);
                 
                 for i = 2:N-1
-                    [u, s, v] = tsvd(v, [1 2 N-i+3], [3:(N-i+2) (N-i+4):nspaces(v)], ...
+                    [u, s, v] = tsvd(v, [1 2 nspaces(v)], 3:(nspaces(v) - 1), ...
                         kwargs.Trunc{:});
                     local_operators{i} = tpermute(u * s, [1 2 4 3], [2 2]);
                 end
                 
-                local_operators{N} = insert_onespace(repartition(v, [2 1]), 3);
+                local_operators{N} = insert_onespace(repartition(v, [2 1]), 3, true);
             end
         end
         

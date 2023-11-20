@@ -29,12 +29,12 @@ classdef FiniteMpo
             end
         end
         
-        function v = apply_regularised(mpo, fp1, fp2, v)
+        function v = apply_regularized(mpo, fp1, fp2, v)
             v = apply(mpo, v);
-            v = v - contract(fp1, 1:nspaces(fp1), v, nspaces(fp1):-1:1) * fp2;
+            v = v - overlap(v, fp2) * repartition(fp1, rank(v));
         end
         
-        function [V, D, flag] = eigsolve(mpo, v0, howmany, sigma, options)
+        function varargout = eigsolve(mpo, v0, howmany, sigma, options)
             arguments
                 mpo
                 v0 = []
@@ -42,7 +42,7 @@ classdef FiniteMpo
                 sigma = 'largestabs'
                 
                 options.Tol = eps(underlyingType(mpo))^(3/4)
-                options.Algorithm = 'eigs'
+                options.Algorithm = 'Arnoldi'
                 options.MaxIter = 100
                 options.KrylovDim = 20
                 options.IsSymmetric logical = false
@@ -53,8 +53,10 @@ classdef FiniteMpo
             end
             
             if isempty(v0), v0 = initialize_fixedpoint(mpo(1)); end
+            
             kwargs = namedargs2cell(options);
-            [V, D, flag] = eigsolve(@(x) mpo.apply(x), v0, howmany, sigma, kwargs{:});
+            [varargout{1:nargout}] = ...
+                eigsolve(@(x) mpo.apply(x), v0, howmany, sigma, kwargs{:});
         end
         
         function v = initialize_fixedpoint(mpo)
@@ -62,7 +64,7 @@ classdef FiniteMpo
             
             N = prod(cellfun(@(x) size(x, 4), mpo.O));
             for i = N:-1:1
-                v(i) = Tensor.randnc(domain(slice(mpo, i, 1:N)), []);
+                v(i) = MpsTensor.randnc(domain(slice(mpo, i, 1:N)), []);
             end
         end
         
@@ -132,7 +134,7 @@ classdef FiniteMpo
         end
         
         function d = depth(mpo)
-            d = size(mpo, 1);
+            d = builtin('length', mpo);
         end
         
         function l = length(mpo)
@@ -145,7 +147,7 @@ classdef FiniteMpo
         
         function mpo = ctranspose(mpo)
             if depth(mpo) > 1
-                mpo = flip(mpo, 1);
+                mpo = flip(mpo);
             end
             
             for d = 1:depth(mpo)
@@ -160,7 +162,7 @@ classdef FiniteMpo
         
         function mpo = transpose(mpo)
             if depth(mpo) > 1
-                mpo = flip(mpo, 1);
+                mpo = flip(mpo);
             end
             
             for d = 1:depth(mpo)
@@ -272,16 +274,19 @@ classdef FiniteMpo
                 Abot    % bottom mps tensors (unconjugated)
             end
             
+            assert(length(Atop) == length(O) && length(O) == length(Abot), ...
+                'FiniteMpo:argerror', 'unmatching sizes');
+            
             for i = numel(Atop):-1:1
-                atop = Atop(i);
+                atop = Atop{i};
                 o = rot90(O{i});
-                twistinds = 1 + find(isdual(space(Atop(i), 2:nspaces(Atop(i)) - 1)));
-                abot = twist(Abot(i), twistinds)'; % IMPORTANT: ' needs to be outside of twist
+                twistinds = find(isdual(space(atop, 2:(nspaces(atop) - 1 - atop.alegs))));
+                abot = twist(Abot{i}, twistinds + 1)'; % IMPORTANT: ' needs to be outside of twist
                 
                 assert(isequal(pspace(abot)', leftvspace(o)));
                 assert(isequal(rightvspace(o)', pspace(atop)));
                 
-                T(i, 1) = FiniteMpo(abot, {o}, atop);
+                T(i) = FiniteMpo(abot, {o}, atop);
             end
         end
     end

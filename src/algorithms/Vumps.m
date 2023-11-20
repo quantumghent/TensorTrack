@@ -25,10 +25,11 @@ classdef Vumps < handle
         saveIterations = 1
         saveMethod = 'full'
         name = 'VUMPS'
+        
+        alg_eigs = Arnoldi('MaxIter', 100, 'KrylovDim', 20)
     end
     
     properties (Access = private)
-        alg_eigs = struct('MaxIter', 100, 'KrylovDim', 20)
         alg_canonical = struct('Method', 'polar')
         alg_environments = struct
         
@@ -51,22 +52,27 @@ classdef Vumps < handle
             end
             
             if ~isfield('alg_eigs', kwargs)
-                alg.alg_eigs.Tol = sqrt(alg.tol_min * alg.tol_max);
-                alg.alg_eigs.Verbosity = alg.verbosity - 2;
+                alg.alg_eigs.tol = sqrt(alg.tol_min * alg.tol_max);
+                alg.alg_eigs.verbosity = alg.verbosity - 2;
             end
             
             if ~isfield('alg_canonical', kwargs)
-                alg.alg_canonical.Tol = sqrt(alg.tol_min * alg.tol_max);
-                alg.alg_canonical.Verbosity = alg.verbosity - 2;
+                alg.alg_canonical.tol = sqrt(alg.tol_min * alg.tol_max);
+                alg.alg_canonical.verbosity = alg.verbosity - 2;
             end
             
             if ~isfield('alg_environments', kwargs)
-                alg.alg_environments.Tol = sqrt(alg.tol_min * alg.tol_max);
-                alg.alg_environments.Verbosity = alg.verbosity - 2;
+                alg.alg_environments.tol = sqrt(alg.tol_min * alg.tol_max);
+                alg.alg_environments.verbosity = alg.verbosity - 2;
+            end
+            
+            if isfield('verbosity', kwargs)
+                alg.alg_eigs.verbosity = alg.verbosity - 2;
+                alg.alg_environments.verbosity = alg.verbosity - 2;
             end
         end
         
-        function [mps, lambda, GL, GR, eta, time] = fixedpoint(alg, mpo, mps)
+        function [mps, lambda, GL, GR, eta] = fixedpoint(alg, mpo, mps)
             
             if period(mpo) ~= period(mps)
                 error('vumps:argerror', ...
@@ -92,7 +98,6 @@ classdef Vumps < handle
                 
                 if iter > alg.miniter && eta < alg.tol
                     disp_conv(alg, iter, lambda, eta, toc(t_total));
-                    time = toc(t_total);
                     return
                 end
                 alg = updatetols(alg, iter, eta);
@@ -103,7 +108,6 @@ classdef Vumps < handle
                     save_iteration(alg, mps, lambda, iter, eta, toc(t_total));
                 end
             end
-            time = toc(t_total);
             disp_maxiter(alg, iter, lambda, eta, toc(t_total));
         end
     end
@@ -112,7 +116,6 @@ classdef Vumps < handle
     %% Subroutines
     methods
         function AC = updateAC(alg, iter, mpo, mps, GL, GR)
-            kwargs = namedargs2cell(alg.alg_eigs);
             if strcmp(alg.multiAC, 'sequential')
                 sites = mod1(iter, period(mps));
             else
@@ -122,17 +125,18 @@ classdef Vumps < handle
             ACs = arrayfun(@(x) x.AC(sites), mps, 'UniformOutput', false);
             AC = vertcat(ACs{:});
             for i = length(sites):-1:1
-                [AC(1, i).var, ~] = eigsolve(H_AC{i}, AC(1, i).var, 1, alg.which, ...
-                    kwargs{:});
-                
+                if alg.verbosity >= Verbosity.detail
+                    fprintf('\nAC{%d} eigenvalue solver:\n------------------------\n', sites(i));
+                end
+                [AC{1, i}, ~] = eigsolve(alg.alg_eigs, @(x) H_AC{i}.apply(x), AC{1, i}, ...
+                    1, alg.which);
                 for d = 2:depth(mpo)
-                    AC(d, i).var = H_AC{i}(d).apply(AC(d-1, i).var);
+                    AC{d, i} = H_AC{i}(d).apply(AC{d-1, i});
                 end
             end
         end
         
         function C = updateC(alg, iter, mpo, mps, GL, GR)
-            kwargs = namedargs2cell(alg.alg_eigs);
             if strcmp(alg.multiAC, 'sequential')
                 sites = mod1(iter, period(mps));
             else
@@ -143,16 +147,22 @@ classdef Vumps < handle
             Cs = arrayfun(@(x) x.C(sites), mps, 'UniformOutput', false);
             C = vertcat(Cs{:});
             for i = length(sites):-1:1
-                [C(1, i), ~] = eigsolve(H_C{i}, C(1, i), 1, alg.which, ...
-                    kwargs{:});
-                
+                if alg.verbosity >= Verbosity.detail
+                    fprintf('\nC{%d} eigenvalue solver:\n-----------------------\n', sites(i));
+                end
+                [C{1, i}, ~] = eigsolve(alg.alg_eigs, @(x) H_C{i}.apply(x), C{1, i}, 1, ...
+                    alg.which);
                 for d = 2:depth(mpo)
-                    C(d, i) = H_C{i}(d).apply(C(d-1, i));
+                    C{d, i} = H_C{i}(d).apply(C{d-1, i});
                 end
             end
         end
         
         function mps = updatemps(alg, iter, mps, AC, C)
+            if alg.verbosity >= Verbosity.detail
+                fprintf('\nCanonicalize:\n------------------\n');
+            end
+            
             if strcmp(alg.multiAC, 'sequential')
                 sites = mod1(iter, period(mps));
             else
@@ -161,9 +171,9 @@ classdef Vumps < handle
             
             for d = size(AC, 1):-1:1
                 for i = size(AC, 2):-1:1
-                    [Q_AC, ~] = leftorth(AC(d, i), 'polar');
-                    [Q_C, ~]  = leftorth(C(d, i), 1, 2, 'polar');
-                    mps(d).AL(sites(i)) = multiplyright(Q_AC, Q_C');
+                    [Q_AC, ~] = leftorth(AC{d, i}, 'polar');
+                    [Q_C, ~]  = leftorth(C{d, i}, 1, 2, 'polar');
+                    mps(d).AL{sites(i)} = multiplyright(Q_AC, Q_C');
                 end
             end
             
@@ -179,13 +189,16 @@ classdef Vumps < handle
                 GL = cell(depth(mpo), period(mps))
                 GR = cell(depth(mpo), period(mps))
             end
-            
+            if alg.verbosity >= Verbosity.detail
+                fprintf('\nEnvironments:\n------------------\n');
+            end
             kwargs = namedargs2cell(alg.alg_environments);
             D = depth(mpo);
             lambda = zeros(D, 1);
             for d = 1:D
-                [GL(d, :), GR(d, :), lambda(d)] = environments(mpo.slice(d), mps(d), mps(next(d, D)), GL(d, :), GR(d, :), ...
-                    kwargs{:});
+                dd = next(d, D);
+                [GL(d, :), GR(d, :), lambda(d)] = environments(mpo.slice(d), ...
+                    mps(d), mps(dd), GL(d, :), GR(d, :), kwargs{:});
             end
             lambda = prod(lambda);
         end
@@ -198,17 +211,17 @@ classdef Vumps < handle
             for d = 1:depth(mpo)
                 dd = next(d, depth(mpo));
                 for w = 1:period(mps)
-                    AC_ = apply(H_AC{w}(d), mps(d).AC(w));
-                    lambda_AC = dot(AC_, mps(dd).AC(w));
+                    AC_ = apply(H_AC{w}(d), mps(d).AC{w});
+                    lambda_AC = dot(AC_, mps(dd).AC{w});
                     AC_ = normalize(AC_ ./ lambda_AC);
 
                     ww = prev(w, period(mps));
-                    C_ = apply(H_C{ww}(d), mps(d).C(ww));
-                    lambda_C = dot(C_, mps(dd).C(ww));
+                    C_ = apply(H_C{ww}(d), mps(d).C{ww});
+                    lambda_C = dot(C_, mps(dd).C{ww});
                     C_ = normalize(C_ ./ lambda_C);
 
                     eta(dd, w) = distance(AC_ , ...
-                        repartition(multiplyleft(mps(dd).AR(w), C_), rank(AC_)));
+                        repartition(multiplyleft(mps(dd).AR{w}, C_), rank(AC_)));
                 end
             end
             eta = max(eta, [], 'all');
@@ -220,7 +233,7 @@ classdef Vumps < handle
     methods
         function alg = updatetols(alg, iter, eta)
             if alg.dynamical_tols
-                alg.alg_eigs.Tol = between(alg.tol_min, eta * alg.eigs_tolfactor / iter, ...
+                alg.alg_eigs.tol = between(alg.tol_min, eta * alg.eigs_tolfactor / iter, ...
                     alg.tol_max);
                 alg.alg_canonical.Tol = between(alg.tol_min, ...
                     eta * alg.canonical_tolfactor / iter, alg.tol_max);
@@ -229,7 +242,7 @@ classdef Vumps < handle
                 
                 if alg.verbosity > Verbosity.iter
                     fprintf('Updated subalgorithm tolerances: (%e,\t%e,\t%e)\n', ...
-                        alg.alg_eigs.Tol, alg.alg_canonical.Tol, alg.alg_environments.Tol);
+                        alg.alg_eigs.tol, alg.alg_canonical.Tol, alg.alg_environments.Tol);
                 end
             end
             

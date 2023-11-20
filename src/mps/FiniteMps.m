@@ -2,7 +2,7 @@ classdef FiniteMps
     % Finite Matrix product states
     
     properties
-        A (1,:) MpsTensor
+        A (1,:) cell
         center
     end
     
@@ -11,9 +11,17 @@ classdef FiniteMps
         function mps = FiniteMps(varargin)
             if nargin == 0, return; end
             if nargin == 1
-                mps.A = varargin{1};
+                if iscell(varargin{1})
+                    mps.A = varargin{1};
+                else
+                    mps.A = varargin(1);
+                end
             elseif nargin == 2
-                mps.A = varargin{1};
+                if iscell(varargin{1})
+                    mps.A = varargin{1};
+                else
+                    mps.A = varargin(1);
+                end
                 mps.center = varargin{2};
             end
         end
@@ -75,7 +83,7 @@ classdef FiniteMps
                         'Cannot create a full rank mps with given spaces.');
                 end
                 
-                A{w} = Tensor.new(fun, [vspaces{w} pspaces{w}], vspaces{w + 1});
+                A{w} = MpsTensor.new(fun, [vspaces{w} pspaces{w}], vspaces{w + 1});
             end
             mps = FiniteMps(A);
         end
@@ -109,7 +117,7 @@ classdef FiniteMps
                     error('mps:rank', ...
                         'Cannot create a full rank mps with given spaces.');
                 end
-                A{w} = Tensor.new(fun, [Vleft P], Vright);
+                A{w} = MpsTensor.new(fun, [Vleft P], Vright);
             end
             
             mps = FiniteMps(A);
@@ -159,7 +167,7 @@ classdef FiniteMps
             end
             
             assert(all(diff(sites) == 1), 'sites must be neighbouring and increasing.');
-            T = transfermatrix(mps1.A(sites), mps2.A(sites));
+            T = cellfun(@transfermatrix, mps1.A(sites), mps2.A(sites));
         end
     end
     
@@ -186,12 +194,12 @@ classdef FiniteMps
             end
             
             for i = low:(newcenter - 1)
-                [mps.A(i), L] = leftorth(mps.A(i), alg);
-                mps.A(i + 1) = multiplyleft(mps.A(i + 1), L);
+                [mps.A{i}, L] = leftorth(mps.A{i}, alg);
+                mps.A{i + 1} = multiplyleft(mps.A{i + 1}, L);
             end
             for i = high:-1:(newcenter + 1)
-                [R, mps.A(i)] = rightorth(mps.A(i), alg);
-                [mps.A(i - 1)] = multiplyright(mps.A(i - 1), R);
+                [R, mps.A{i}] = rightorth(mps.A{i}, alg);
+                [mps.A{i - 1}] = multiplyright(mps.A{i - 1}, R);
             end
             mps.center = newcenter;
         end
@@ -269,13 +277,13 @@ classdef FiniteMps
                 return
             end
             
-            n = norm(mps.A(mps.center));
+            n = norm(mps.A{mps.center});
         end
         
         function [mps, n] = normalize(mps)
             if isempty(mps.center), mps = movegaugecenter(mps); end
             n = norm(mps);
-            mps.A(mps.center) = mps.A(mps.center) ./ n;
+            mps.A{mps.center} = mps.A{mps.center} ./ n;
         end
     end
     
@@ -285,19 +293,19 @@ classdef FiniteMps
         function psi = Tensor(mps)
             % Convert a finite mps to a dense tensor.
             
-            tensors = num2cell(mps.A);
+            tensors = mps.A;
             indices = cell(size(tensors));
             
-            nout = nspaces(mps.A(1)) - 1;
+            nout = nspaces(mps.A{1}) - 1;
             indices{1} = [-(1:nout), 1];
             
             for i = 2:length(indices)-1
-                plegs = mps.A(i).plegs;
+                plegs = mps.A{i}.plegs;
                 indices{i} = [i-1 -(1:plegs)-nout i];
                 nout = nout + plegs;
             end
             
-            plegs = mps.A(end).plegs;
+            plegs = mps.A{end}.plegs;
             indices{end} = [length(indices)-1 -(1:plegs+1)-nout];
             
             args = [tensors; indices];

@@ -6,3 +6,4 @@ _build
 docs/src/examples/**/*.m
 resources/
 *.prj
+scripts/

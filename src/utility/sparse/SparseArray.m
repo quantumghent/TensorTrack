@@ -831,6 +831,8 @@ classdef SparseArray
                 s(1).subs = {sub2ind(a.sz, s(1).subs{:})};
             end
             
+            rhs = full(rhs);
+            
             [I, ~, V] = find(a.var);
             [lia, locb] = ismember(s(1).subs{1}, I);
             newI = vertcat(I, s(1).subs{1}(~lia));
@@ -1105,6 +1107,11 @@ classdef SparseArray
             return;
         end
         
+        function jl = mat2jl(a)
+            jl = struct('classname', 'SparseArray');
+            jl.sz = mat2jl(a.sz);
+            jl.var = mat2jl(a.var);
+        end
     end
     
     methods (Static)

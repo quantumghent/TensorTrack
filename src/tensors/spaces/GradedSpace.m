@@ -107,7 +107,7 @@ classdef GradedSpace < AbstractSpace
             % spaces : :class:`GradedSpace`
             %   array of spaces.
             
-            if isstruct(varargin{1})    % default 
+            if isstruct(varargin{1})    % default
                 assert(mod(nargin, 2) == 0);
                 for i = 1:2:nargin
                     if varargin{i+1}, varargin{i}.charges = conj(varargin{i}.charges); end
