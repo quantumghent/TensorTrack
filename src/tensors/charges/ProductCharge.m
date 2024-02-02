@@ -11,14 +11,19 @@ classdef ProductCharge < AbstractCharge
             % 
             % Usage
             % -----
-            % charges = ProductCharge(charges1, charges2, ...)
-            %   creates an (array of) charges that are representations of the direct product
-            %   group group1 x group2 x ...
+            % :code:`charges = ProductCharge(charges1, charges2, ...)` creates an (array of)
+            % charges that are representations of the direct product group
+            % :math:`G_1 \otimes G_2 \otimes \dots`.
             %
             % Arguments
             % ---------
-            % charges1, charges2, ... : AbstractCharge
-            %   charges of the separate groups.
+            % charges1, charges2, ... : :class:`.AbstractCharge`
+            %   charges of the separate groups
+            %
+            % Returns
+            % -------
+            % prodcharge : :class:`.ProductCharge`
+            %   resulting product charge
             
             arguments (Repeating)
                 charges
@@ -36,7 +41,7 @@ classdef ProductCharge < AbstractCharge
         end
         
         function a = cat(dim, varargin)
-            % Concatenate charges.
+            % Concatenate charges along a given axis.
             mask = cellfun(@isempty, varargin);
             firstnonempty = find(~mask, 1);
             if isempty(firstnonempty)
@@ -96,7 +101,21 @@ classdef ProductCharge < AbstractCharge
         end
         
         function [d, N] = prod(a, dim)
-            % Total fusion product of charges.
+            % Compute the total fusion product of array of charges along a given axis.
+            %
+            % Arguments
+            % ---------
+            % a : :class:`.ProductCharge`
+            %   input array of charges
+            % dim : :class:`int`
+            %   array dimension along which to take the fusion product, defaults to first
+            %   non-trivial axis
+            %
+            % Returns
+            % -------
+            % c : :class:`.ProductCharge`
+            %   array of total fusion products determined by subsequently multiplying input
+            %   charges along the given direction
             
             arguments
                 a
@@ -181,53 +200,53 @@ classdef ProductCharge < AbstractCharge
             end
         end
 
-        function varargout = subsref(prodcharge, s)
+        function varargout = subsref(prodcharges, s)
             % Overload indexing.
             %
             % Usage
             % -----
-            % charges_slice = charges(i1, i2, ...)
-            %   extracts elements out of the charge array.
+            % :code:`charges_slice = prodcharges(i1, i2, ...)`
+            % extracts elements out of the charge array.
             %
-            % product_slice = charges{i}
-            %   separate out the direct product factors.
+            % :code:`product_slice = prodcharges{i}`
+            % separates out the direct product factors.
             %
             % Arguments
             % ---------
-            % charges : ProductCharge
-            %   array of charges.
+            % prodcharges : :class:`.ProductCharge`
+            %   array of product charges
             %
-            % s : substruct
-            %   structure containing indexing data.
+            % s : :class:`substruct`
+            %   structure containing indexing data
             %
             % Returns
             % -------
-            % charges_slice : ProductCharge
-            %   sliced array of product charges.
+            % charges_slice : :class:`.ProductCharge`
+            %   sliced array of product charges
             %
-            % product_slice : AbstractCharge
-            %   array of factor charges.
+            % product_slice : :class:`.AbstractCharge`
+            %   array of factor charges
             
             switch s(1).type
                 case '.'
-                    [varargout{1:nargout}] = builtin('subsref', prodcharge, s);
+                    [varargout{1:nargout}] = builtin('subsref', prodcharges, s);
                     
                 case '()'
-                    for i = 1:numel(prodcharge.charges)
-                        prodcharge.charges{i} = prodcharge.charges{i}(s(1).subs{:});
+                    for i = 1:numel(prodcharges.charges)
+                        prodcharges.charges{i} = prodcharges.charges{i}(s(1).subs{:});
                     end
                     if length(s) == 1
-                        varargout = {prodcharge};
+                        varargout = {prodcharges};
                         return
                     end
                     
-                    [varargout{1:nargout}] = subsref(prodcharge, s(2:end));
+                    [varargout{1:nargout}] = subsref(prodcharges, s(2:end));
                     
                 case '{}'
                     assert(length(s) == 1);
                     assert(length(s(1).subs) == 1);
                     assert(nargout == length(s(1).subs{1}));
-                    varargout(1:nargout) = prodcharge.charges(s(1).subs{:});
+                    varargout(1:nargout) = prodcharges.charges(s(1).subs{:});
                     
                 otherwise
                     error('Undefined behaviour');
@@ -239,33 +258,36 @@ classdef ProductCharge < AbstractCharge
             %
             % Usage
             % -----
+            %
             % :code:`a = subsasgn(a, substruct('()', subs), b)`
             %
             % :code:`a(subs{:}) = b`
-            %   assign array slices.
+            %
+            % Assign array slices.
             %
             % :code:`a = subsasgn(a, substruct('{}', subs), c)`
             %
             % :code:`a{i} = c`
-            %   assign to a factor slice.
+            %
+            % Assign to a factor slice.
             %
             % Arguments
             % ---------
-            % a : :class:`ProductCharge`
+            % a : :class:`.ProductCharge`
             %   array of charges to assign to.
             %
             % s : :class:`struct`
             %   structure containing indexing data.
             %
-            % b : :class:`ProductCharge`
+            % b : :class:`.ProductCharge`
             %   slice to assign.
             %
-            % c : :class:`AbstractCharge`
+            % c : :class:`.AbstractCharge`
             %   factor to assign.
             %
             % Returns
             % -------
-            % a : ProductCharge
+            % a : :class:`.ProductCharge`
             %   assigned array
             
             switch s(1).type
@@ -380,29 +402,9 @@ classdef ProductCharge < AbstractCharge
         function F = Fmatrix(a, b, c, d, e, f)
             % Compute the full recoupling matrix from ``e`` to ``f``.
             %
-            % .. todo::
-            %   Add proper definition?
-            %
-            % Usage
-            % -----
-            % :code:`F = Fmatrix(a, b, c, d, e, f)` computes the matrix between all allowed
-            % channels.
-            % 
-            % Arguments
-            % ---------
-            % a, b, c : :class:`.AbstractCharge`
-            %   charges being fused
-            % d : :class:`.AbstractCharge`
-            %   total charges
-            % e : :class:`.AbstractCharge` (1, \*)
-            %   intermediate charges before recoupling
-            % f : :class:`.AbstractCharge` (1, \*)
-            %   intermediate charge after recoupling
-            %
-            % Returns
-            % -------
-            % F : :class:`double` (\*, \*, \*, \*)
-            %   recoupling matrix between all allowed channels
+            % See also
+            % --------
+            % :meth:`.AbstractCharge.Fmatrix`
             if a.fusionstyle == FusionStyle.Unique
                 if nargin < 5, e = a * b; end
                 if nargin < 6, f = b * c; end

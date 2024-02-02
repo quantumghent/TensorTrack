@@ -1,8 +1,9 @@
 classdef ZN < AbstractCharge & uint8
-    % ZN - Irreducible representations of ZN.
-    %   This class represents representations of the cyclic group of order N.
-    %   
-    %   See also AbstractCharge, Z2, Z3, Z4
+    % Irreducible representations of :math:`Z_N`.
+    %
+    % This class implements the representations of the cyclic group of order :math:`N`,
+    % represented using unteger labels where fusion is given by addition modulo
+    % :math:`N`.
     
     properties
         N (1,1) uint8 = uint8(1)

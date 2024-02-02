@@ -1,7 +1,10 @@
 classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) MpoTensor < AbstractTensor
-    % Matrix product operator building block
-    %   This object represents the MPO tensor at a single site as the sum of rank (2,2)
-    %   (sparse) tensors and some scalars, which will be implicitly used as unit tensors.
+    % Matrix product operator building block.
+    % 
+    % This object represents the MPO tensor at a single site as the sum of rank (2,2)
+    % (sparse) tensors and some scalars, which will be implicitly used as unit tensors.
+    %
+    % .. code-block::
     %
     %                               4
     %                               ^
