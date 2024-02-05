@@ -1,35 +1,40 @@
 classdef AbstractTensor
-    
+    % Abstract base class for representing tensors.
+    %
+    % See Also
+    % --------
+    % :class:`.Tensor`, :class:`.SparseTensor`, :class:`.MpsTensor` and
+    % :class:`.MpoTensor`
     
     methods
         function varargout = linsolve(A, b, x0, M1, M2, options)
-            % Find a solution for a linear system `A(x) = b` or `A * x = b`.
+            % Find a solution for a linear system :code:`A(x) = b` or :code:`A * x = b`.
             %
             % Arguments
             % ---------
-            % A : operator
+            % A : :class:`.AbstractTensor` or :class:`function_handle`
             %   either a function handle implementing or an object that supports
             %   right multiplication.
             %
-            % b : :class:`Tensor`
+            % b : :class:`.AbstractTensor`
             %   right-hand side of the equation, interpreted as vector.
             %
-            % x0 : :class:`Tensor`
+            % x0 : :class:`.AbstractTensor`
             %   optional initial guess for the solution.
             %
-            % M1, M2 : operator
-            %   preconditioner M = M1 or M = M1 * M2 to effectively solve the system A *
-            %   inv(M) * y = b with y = M * x.
-            %   M is either a function handle implementing or an object that supports
-            %   left division.
+            % M1, M2 : :class:`.AbstractTensor` or :class:`function_handle`
+            %   preconditioner :code:`M = M1` or :code:`M = M1 * M2` to effectively solve
+            %   the system :code:`A * inv(M) * y = b` with :code:`y = M * x`.
+            %   :code:`M` is either a function handle implementing or an object that
+            %   supports left division.
             %
             % Keyword Arguments
             % -----------------
-            % Tol : numeric
+            % Tol : :class:`numeric`
             %   specifies the tolerance of the method, by default this is the square root of
             %   eps.
             %
-            % Algorithm : char
+            % Algorithm : :class:`char`
             %   specifies the algorithm used. Can be either one of the following:
             %
             %   - 'bicgstab'
@@ -37,13 +42,13 @@ classdef AbstractTensor
             %   - 'gmres'
             %   - 'pcg'
             %
-            % MaxIter : int
+            % MaxIter : :class:`int`
             %   Maximum number of iterations.
             %
-            % Restart : int
+            % Restart : :class:`int`
             %   For 'gmres', amount of iterations after which to restart.
             %
-            % Verbosity : int
+            % Verbosity : :class:`int`
             %   Level of output information, by default nothing is printed if `flag` is
             %   returned, otherwise only warnings are given.
             %
@@ -53,10 +58,10 @@ classdef AbstractTensor
             %
             % Returns
             % -------
-            % x : :class:`Tensor`
+            % x : :class:`.AbstractTensor`
             %   solution vector.
             %
-            % flag : int
+            % flag : :class:`int`
             %   a convergence flag:
             %
             %   - 0 : linsolve converged to the desired tolerance.
@@ -65,13 +70,13 @@ classdef AbstractTensor
             %   - 3 : linsolve stagnated.
             %   - 4 : one of the scalar quantities calculated became too large or too small.
             %
-            % relres : numeric
+            % relres : :class:`numeric`
             %   relative residual, norm(b - A * x) / norm(b).
             %
-            % iter : int
+            % iter : :class:`int`
             %   iteration number at which x was computed.
             %
-            % resvec : numeric
+            % resvec : :class:`numeric`
             %   vector of estimated residual norms at each part of the iteration.
             
             arguments
@@ -159,28 +164,29 @@ classdef AbstractTensor
             % Usage
             % -----
             % :code:`[V, D, flag] = eigsolve(A, x0, howmany, sigma, kwargs)`
+            %
             % :code:`D = eigsolve(A, x0, ...)`
             %
             % Arguments
             % ---------
-            % A : :class:`Tensor` or function_handle
+            % A : :class:`.AbstractTensor` or :class:`function_handle`
             %   A square tensormap interpreted as matrix.
             %   A function handle which implements one of the following, depending on sigma:
             %
-            %   - A \ x, if `sigma` is 0 or 'smallestabs'
-            %   - (A - sigma * I) \ x, if sigma is a nonzero scalar
-            %   - A * x, for all other cases
+            %   - :code:`A \ x`, if `sigma` is 0 or 'smallestabs'
+            %   - :code:`(A - sigma * I) \ x`, if sigma is a nonzero scalar
+            %   - :code:`A * x`, for all other cases
             %
-            % x0 : :class:`Tensor`
-            %   initial guess for the eigenvector. If A is a :class:`Tensor`, this defaults
-            %   to a random complex :class:`Tensor`, for function handles this is a required
+            % x0 : :class:`.AbstractTensor`
+            %   initial guess for the eigenvector. If A is a :class:`.Tensor`, this defaults
+            %   to a random complex :class:`.Tensor`, for function handles this is a required
             %   argument.
             %
-            % howmany : int
+            % howmany : :class:`int`
             %   amount of eigenvalues and eigenvectors that should be computed. By default
             %   this is 1, and this should not be larger than the total dimension of A.
             %
-            % sigma : `char` or numeric
+            % sigma : :class:`char` or :class:`numeric`
             %   selector for the eigenvalues, should be either one of the following:
             %
             %   - 'largestabs', 'lm': default, eigenvalues of largest magnitude
@@ -197,28 +203,28 @@ classdef AbstractTensor
             %
             % Keyword Arguments
             % -----------------
-            % Tol : numeric
+            % Tol : :class:`numeric`
             %   tolerance of the algorithm.
             %
-            % Algorithm : char
+            % Algorithm : :class:`char`
             %   choice of eigensolver algorithm. Currently there is a choice between the use
             %   of Matlab's buitin `eigs` specified by the identifiers 'eigs' or
-            %   'KrylovSchur', or the use of a custom Arnolid algorithm specified by
+            %   'KrylovSchur', or the use of a custom Arnoldi algorithm specified by
             %   the identifier 'Arnoldi'.
             %
-            % MaxIter : int
+            % MaxIter : :class:`int`
             %   maximum number of iterations, 100 by default.
             %
-            % KrylovDim : int
+            % KrylovDim : :class:`int`
             %   number of vectors kept in the Krylov subspace.
             %
-            % IsSymmetric : logical
+            % IsSymmetric : :class:`logical`
             %   flag to speed up the algorithm if the operator is symmetric, false by
             %   default.
             %
-            % Verbosity : int
-            %   Level of output information, by default nothing is printed if `flag` is
-            %   returned, otherwise only warnings are given.
+            % Verbosity : :class:`int`
+            %   Level of output information, by default nothing is printed if :code:`flag`
+            %   is returned, otherwise only warnings are given.
             %
             %   - 0 : no information
             %   - 1 : information at failure
@@ -227,15 +233,15 @@ classdef AbstractTensor
             %
             % Returns
             % -------
-            % V : (1, howmany) :class:`Tensor`
+            % V : (1, :code:`howmany`) :class:`.AbstractTensor`
             %   vector of eigenvectors.
             %
-            % D : numeric
+            % D : :class:`numeric`
             %   vector of eigenvalues if only a single output argument is asked, diagonal
             %   matrix of eigenvalues otherwise.
             %
-            % flag : int
-            %   if flag = 0 then all eigenvalues are converged, otherwise not.
+            % flag : :class:`int`
+            %   if :code:`flag = 0` then all eigenvalues are converged, otherwise not.
             
             arguments
                 A
@@ -411,11 +417,11 @@ classdef AbstractTensor
             %
             % Arguments
             % ---------
-            % A, B : :class:`Tensor`
+            % A, B : :class:`.AbstractTensor`
             %
             % Returns
             % -------
-            % d : numeric
+            % d : :class:`numeric`
             %   Euclidean distance, defined as the norm of the distance.
             
             n = max(ndims(A), ndims(B));
@@ -438,14 +444,14 @@ classdef AbstractTensor
             %
             % Arguments
             % ---------
-            % H : :class:`AbstractTensor`
+            % H : :class:`.AbstractTensor`
             %   tensor representing a local operator on N sites.
             %
             % Keyword Arguments
             % -----------------
-            % 'Trunc' : cell
+            % 'Trunc' : :class:`cell`
             %   optional truncation method for the decomposition. See also
-            %   :meth:`Tensor.tsvd`
+            %   :meth:`.Tensor.tsvd`
             arguments
                 H
                 kwargs.Trunc = {'TruncBelow', 1e-12}

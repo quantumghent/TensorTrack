@@ -1,5 +1,20 @@
 classdef Tensor < AbstractTensor
-    % Tensor - Base implementation of a dense tensor array with optional symmetries.
+    % Base implementation of a dense tensor array with optional symmetries.
+    %
+    % Properties
+    % ----------
+    % codomain
+    %   codomain vector space represented as tensor product space.
+    %
+    % domain
+    %   codomain vector space represented as tensor product space.
+    %
+    % var
+    %   block sparse representation of tensor data.
+    %
+    % Todo
+    % ----
+    % Document all methods.
     
     properties
         codomain
@@ -23,10 +38,10 @@ classdef Tensor < AbstractTensor
             %
             % Arguments
             % ---------
-            % array : numeric
+            % array : :class:`numeric`
             %   numeric input array to convert to a :class:`Tensor`
             %
-            % codomain, domain : :class:`AbstractSpace`
+            % codomain, domain : (1, :) :class:`.AbstractSpace`
             %   spaces that define the structure of the output tensor.
             %
             % Returns
@@ -109,21 +124,21 @@ classdef Tensor < AbstractTensor
             %
             % Arguments
             % ---------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   input tensor to fill into.
             %
-            % matrices : cell or numeric
+            % matrices : :class:`cell` or :class:`numeric`
             %   list of matrices or single matrix to fill with.
             %
             % fun : :class:`function_handle`
             %   function of signature :code:`fun(dims, charge)` to fill with.
             %
-            % charges : :class:`AbstractCharge`
+            % charges : :class:`.AbstractCharge`
             %   optional list of charges to identify the matrix blocks.
             %
             % Returns
             % -------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   filled tensor.
             
             arguments
@@ -160,10 +175,10 @@ classdef Tensor < AbstractTensor
             %
             % Arguments
             % ---------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   input tensor to fill into.
             %
-            % tensors : cell or numeric
+            % tensors : :class:`cell` or :class:`numeric`
             %   list of tensors or single tensor to fill with.
             %
             % fun : :class:`function_handle`
@@ -171,7 +186,7 @@ classdef Tensor < AbstractTensor
             %
             % Returns
             % -------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   filled tensor.
             
             arguments
@@ -208,7 +223,7 @@ classdef Tensor < AbstractTensor
             %
             % Repeating Arguments
             % -------------------
-            % tensors : :class:`Tensor`
+            % tensors : :class:`.Tensor`
             %   input tensors used to copy legs.
             %
             % indices : int
@@ -216,22 +231,22 @@ classdef Tensor < AbstractTensor
             %
             % Keyword Arguments
             % -----------------
-            % Rank : (1, 2) int
+            % Rank : (1, 2) :class:`int´
             %   rank of the output tensor, by default this is :code:`[nspaces(t) 0]`.
             %
-            % Conj : logical
+            % Conj : :class:`logical`
             %   flag to indicate whether the space should be equal to the input space, or
             %   fit onto the input space. This can be either an array of size(tensors), or a
             %   scalar, in which case it applies to all tensors.
             %
-            % Mode : 'tensor' or 'matrix'
+            % Mode : :class:`char`, 'tensor' or 'matrix'
             %   method of filling the tensor data. By default this is matrix, where the
             %   function should be of signature :code:`fun(dims, charge)`, for 'tensor' this
             %   should be of signature :code:`fun(dims, tree)`.
             %
             % Returns
             % -------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   output tensor.
             %
             % Examples
@@ -300,39 +315,39 @@ classdef Tensor < AbstractTensor
             %   function of signature :code:`fun(dims, id)` where id is determined by Mode.
             %   If this is left empty, the tensor data will be uninitialized.
             %
-            % dims : int
+            % dims : :class:`int`
             %   list of dimensions for non-symmetric tensors.
             %
-            % arrows : logical
+            % arrows : :class:`logical`
             %   optional list of arrows for tensor legs.
             %
-            % tensor : :class:`Tensor`
+            % tensor : :class:`.Tensor`
             %   input tensor to copy structure.
             %
             % Repeating Arguments
             % -------------------
-            % charges : cell
+            % charges : :class:`cell`
             %   list of charges for each tensor index.
             %
-            % degeneracies : cell
+            % degeneracies : :class:`cell`
             %   list of degeneracies for each tensor index.
             %
-            % arrow : logical
+            % arrow : :class:`logical`
             %   arrow for each tensor index.
             %
             % Keyword Arguments
             % -----------------
-            % Rank : int (1, 2)
-            %   rank of the constructed tensor. By default this is [nspaces(t) 0].
+            % Rank : (1, 2) :class:`int`
+            %   rank of the constructed tensor. By default this is :code:`[nspaces(t) 0]`.
             %
-            % Mode : 'matrix' or 'tensor'
+            % Mode : :class:`char`, 'matrix' or 'tensor'
             %   method of filling the resulting tensor. When this is 'matrix' (default),
             %   the function signature is :code:`fun(dims, charge)`, while for 'tensor' the
             %   signature should be :code:`fun(dims, tree)`.
             %
             % Returns
             % -------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   output tensor.
             
             arguments
@@ -495,7 +510,7 @@ classdef Tensor < AbstractTensor
         end
         
         function tdst = insert_onespace(tsrc, i, dual)
-            % insert a trivial space at position i.
+            % Insert a trivial space at position :code:`i`.
             arguments
                 tsrc
                 i = nspaces(tsrc) + 1
@@ -516,7 +531,7 @@ classdef Tensor < AbstractTensor
         end
         
         function tdst = embed(tsrc, tdst)
-            % embed a tensor in a different tensor.
+            % Embed a tensor in a different tensor.
             
             assert(isequal(rank(tsrc), rank(tdst)), 'tensors:argerror', ...
                 'tensors must have the same rank');
@@ -553,12 +568,12 @@ classdef Tensor < AbstractTensor
             %
             % Arguments
             % ---------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   input tensor.
             %
             % Returns
             % -------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   conjugate tensor.
             
             for i = 1:numel(t)
@@ -573,16 +588,17 @@ classdef Tensor < AbstractTensor
             % Usage
             % -----
             % :code:`t = ctranspose(t)`
+            %
             % :code:`t = t'`
             %
             % Arguments
             % ---------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   input tensor.
             %
             % Returns
             % -------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   adjoint tensor.
             
             for i = 1:numel(t)
@@ -600,12 +616,12 @@ classdef Tensor < AbstractTensor
             %
             % Arguments
             % ---------
-            % t1, t2 : :class:`Tensor`
+            % t1, t2 : :class:`.Tensor`
             %   tensors of equal structure.
             %
             % Returns
             % -------
-            % d : double
+            % d : :class:`double`
             %   scalar dot product of the two tensors.
             
             assert(isequal(size(t1), size(t2)), 'tensors:dimerror', ...
@@ -631,12 +647,12 @@ classdef Tensor < AbstractTensor
             %
             % Arguments
             % ---------
-            % t1, t2 : :class:`Tensor` or numeric
+            % t1, t2 : :class:`.Tensor` or :class:`numeric`
             %   input tensors, scalars are interpreted as scalar * eye.
             %
             % Returns
             % -------
-            % t1 : :class:`Tensor`
+            % t1 : :class:`.Tensor`
             %   output tensor
             
             if isnumeric(t1), t1 = t1 + (-t2); return; end
@@ -672,12 +688,12 @@ classdef Tensor < AbstractTensor
             %
             % Arguments
             % ---------
-            % t1, t2 : :class:`Tensor` or numeric
+            % t1, t2 : :class:`.Tensor` or :class:`numeric`
             %   input tensor or scalar.
             %
             % Returns
             % -------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   output tensor.
             
             t = inv(t1) * t2;
@@ -694,12 +710,12 @@ classdef Tensor < AbstractTensor
             %
             % Arguments
             % ---------
-            % t1, t2 : :class:`Tensor` or numeric
+            % t1, t2 : :class:`.Tensor` or :class:`numeric`
             %   input tensor or scalar.
             %
             % Returns
             % -------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   output tensor.
             
             t = t1 * inv(t2);
@@ -716,12 +732,12 @@ classdef Tensor < AbstractTensor
             %
             % Arguments
             % ---------
-            % A, B : :class:`Tensor`
-            %   input tensors, satisfying A.domain = B.codomain.
+            % A, B : :class:`.Tensor`
+            %   input tensors, satisfying :code:`A.domain == B.codomain`.
             %
             % Returns
             % -------
-            % C : :class:`Tensor`
+            % C : :class:`.Tensor`
             %   output tensor.
             
             if isscalar(A) || isscalar(B)
@@ -793,10 +809,10 @@ classdef Tensor < AbstractTensor
             %
             % Arguments
             % ---------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   input tensor, considered as a matrix from domain to codomain.
             %
-            % p : 1, 2, inf or 'fro'
+            % p : 1, 2, 'inf' or 'fro'
             %   type of norm to compute
             %
             % Returns
@@ -883,18 +899,18 @@ classdef Tensor < AbstractTensor
             %
             % Arguments
             % ---------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   input tensor.
             %
-            % p : (1, :) int
+            % p : (1, :) :class:`int`
             %   permutation vector, by default a trivial permutation.
             %
-            % r : (1, 2) int
+            % r : (1, 2) :class:`int`
             %   rank of the output tensor, by default equal to the rank of the input tensor.
             %
             % Returns
             % -------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   permuted tensor with desired rank.
             
             arguments
@@ -949,10 +965,11 @@ classdef Tensor < AbstractTensor
             %
             % Arguments
             % ---------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   input tensor.
             %
-            % r : (1, 2) int
+            % r : (1, 2) :class:`int`
+            %   rank of the output tensor, by default equal to :code:`[nspaces(t) 0]`.
             %
             % Returns
             % -------
@@ -982,10 +999,10 @@ classdef Tensor < AbstractTensor
             %
             % Arguments
             % ---------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   input tensor.
-            % uminus
-            % a : numeric
+            %
+            % a : :class:`numeric`
             %   input scalar.
             %
             % Returns
@@ -1047,20 +1064,20 @@ classdef Tensor < AbstractTensor
             %
             % Arguments
             % ---------
-            % A, B : :class:`Tensor`
-            %   input tensors, must satisfy space(A, dimA) = conj(space(B, dimB)).
+            % A, B : :class:`.Tensor`
+            %   input tensors, must satisfy :code:`space(A, dimA) == conj(space(B, dimB))`.
             %
-            % dimA, dimB : (1, :) int
+            % dimA, dimB : (1, :) :class:`int`
             %   selected indices to contract.
             %
             % Keyword Arguments
             % -----------------
-            % NumDimensionsA : int
+            % NumDimensionsA : :class:`int`
             %   number of spaces of A, to satisfy builtin tensorprod syntax.
             %
             % Returns
             % -------
-            % C : :class:`Tensor` or numeric
+            % C : :class:`.Tensor` or :class:`numeric`
             %   output tensor, with the uncontracted spaces of A as codomain, and the
             %   uncontracted spaces of B as domain, or output scalar, if no uncontracted
             %   spaces remain.
@@ -1221,20 +1238,20 @@ classdef Tensor < AbstractTensor
             % Usage
             % -----
             % :code:`t = times(t, a)`
-            % :code:`t uminus= t .* a`
+            %
             % :code:`t = a .* t`
             %
             % Arguments
             % ---------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   input tensor.
             %
-            % a : numeric
+            % a : :class:`numeric`
             %   input scalar.
             %
             % Returns
             % -------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   output tensor.
             
             if isscalar(A) && ~isscalar(B)
@@ -1289,12 +1306,12 @@ classdef Tensor < AbstractTensor
             %
             % Arguments
             % ---------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   input tensor, considered as a matrix from domain to codomain.
             %
             % Returns
             % -------
-            % tr : double
+            % tr : :class:`double`
             %   matrix trace of the tensor.
             
             tr = 0;
@@ -1314,22 +1331,23 @@ classdef Tensor < AbstractTensor
             % Usage
             % -----
             % :code:`t = transpose(t, p, rank)`
+            %
             % :code:`t = t.'`
             %
             % Arguments
             % ---------
-            % t : :class:`Tensor`
+            % t : :class:`:Tensor`
             %   input tensor.
             %
-            % p : (1, :) int
+            % p : (1, :) :class:`int`
             %   permutation vector, which must be cyclic. By default this is no permutation.
             %
-            % r : (1, 2) int
+            % r : (1, 2) :class:`int`
             %   rank of the output tensor, by default equal to the rank of the input tensor.
             %
             % Returns
             % -------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   transposed output tensor.
             if nargin < 2
                 p = circshift(1:nspaces(t), length(t.domain));
@@ -1349,18 +1367,18 @@ classdef Tensor < AbstractTensor
             %
             % Arguments
             % ---------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   input tensor.
             %
-            % i : (1, :) int or logical
+            % i : (1, :) :class:`int` or :class:`logical`
             %   indices to twist.
             %
-            % inv : logical
+            % inv : :class:`logical`
             %   flag to indicate inverse twisting.
             %
             % Returns
             % -------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   twisted tensor with desired rank.
             
             arguments
@@ -1403,18 +1421,18 @@ classdef Tensor < AbstractTensor
             %
             % Arguments
             % ---------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   input tensor.
             %
-            % i : (1, :) int or logical
+            % i : (1, :) :class:`int` or :class:`logical`
             %   indices to twist.
             %
-            % inv : logical
+            % inv : :class:`logical`
             %   flag to indicate inverse twisting.
             %
             % Returns
             % -------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   twisted tensor with desired rank.
             arguments
                 t
@@ -1455,19 +1473,19 @@ classdef Tensor < AbstractTensor
             %
             % Arguments
             % ---------
-            % A : :class:`Tensor`
+            % A : :class:`.Tensor`
             %   square input tensor.
             %
             % Returns
             % -------
-            % D : (:,:) :class:`Tensor`
+            % D : (:, :) :class:`.Tensor`
             %   diagonal matrix of eigenvalues.
             %
-            % V : (1,:) :class:`Tensor`
-            %   row vector of right eigenvectors such that A * V = V * D.
+            % V : (1, :) :class:`.Tensor`
+            %   row vector of right eigenvectors such that :code:`A * V = V * D`.
             %
-            % W : (1,:) :class:`Tensor`
-            %   row vector of left eigenvectors such that W' * A = D * W'.
+            % W : (1, :) :class:`Tensor`
+            %   row vector of left eigenvectors such that :code:`W' * A = D * W'`.
             
             assert(isequal(A.codomain, A.domain), 'tensors:ArgumentError', ...
                 'Input should be square.');
@@ -1526,14 +1544,14 @@ classdef Tensor < AbstractTensor
             %
             % Arguments
             % ---------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   input tensor to factorize.
             %
-            % p1, p2 : int
+            % p1, p2 : :class:`int`
             %   partition of left and right indices, by default this is the partition of the
             %   input tensor.
             %
-            % alg : char or string
+            % alg : :class:`char` or :class:`string`
             %   selection of algorithms for the decomposition:
             %
             %   - 'qr' produces an upper triangular remainder R
@@ -1545,10 +1563,10 @@ classdef Tensor < AbstractTensor
             %
             % Returns
             % -------
-            % Q : :class:`Tensor`
+            % Q : :class:`.Tensor`
             %   Orthonormal basis tensor
             %
-            % R : :class:`Tensor`
+            % R : :class:`.Tensor`
             %   Remainder tensor, depends on selected algorithm.
             
             arguments
@@ -1607,14 +1625,14 @@ classdef Tensor < AbstractTensor
             %
             % Arguments
             % ---------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   input tensor to factorize.
             %
-            % p1, p2 : int
+            % p1, p2 : :class:`int`
             %   partition of left and right indices, by default this is the partition of the
             %   input tensor.
             %
-            % alg : char or string
+            % alg : :class:`char` or :class:`string`
             %   selection of algorithms for the decomposition:
             %
             %   - 'rq' produces an upper triangular remainder R
@@ -1626,10 +1644,10 @@ classdef Tensor < AbstractTensor
             %
             % Returns
             % -------
-            % R : :class:`Tensor`
+            % R : :class:`.Tensor`
             %   Remainder tensor, depends on selected algorithm.
             %
-            % Q : :class:`Tensor`
+            % Q : :class:`.Tensor`
             %   Orthonormal basis tensor.
             
             arguments
@@ -1683,14 +1701,14 @@ classdef Tensor < AbstractTensor
             %
             % Arguments
             % ---------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   input tensor to compute the nullspace.
             %
-            % p1, p2 : int
+            % p1, p2 : :class:`int`
             %   partition of left and right indices, by default this is the partition of the
             %   input tensor.
             %
-            % alg : char or string
+            % alg : :class:`char` or :class:`string`
             %   selection of algorithms for the nullspace:
             %
             %   - 'svd'
@@ -1698,7 +1716,7 @@ classdef Tensor < AbstractTensor
             %
             % Returns
             % -------
-            % N : :class:`Tensor`
+            % N : :class:`.Tensor`
             %   orthogonal basis for the left nullspace.
             
             arguments
@@ -1753,14 +1771,14 @@ classdef Tensor < AbstractTensor
             %
             % Arguments
             % ---------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   input tensor to compute the nullspace.
             %
-            % p1, p2 : int
+            % p1, p2 : :class:`int`
             %   partition of left and right indices, by default this is the partition of the
             %   input tensor.
             %
-            % alg : char or string
+            % alg : :class:`char` or :class:`string`
             %   selection of algorithms for the nullspace:
             %
             %   - 'svd'
@@ -1768,7 +1786,7 @@ classdef Tensor < AbstractTensor
             %
             % Returns
             % -------
-            % N : :class:`Tensor`
+            % N : :class:`.Tensor`
             %   orthogonal basis for the right nullspace.
             
             arguments
@@ -1846,41 +1864,43 @@ classdef Tensor < AbstractTensor
             %
             % Usage
             % -----
-            % [U, S, V] = tsvd(t, p1, p2)
-            % [U, S, V, eta] = tsvd(t, p1, p2, trunc, tol)
-            % S = tsvd(t, ...)
+            % :code:`[U, S, V] = tsvd(t, p1, p2)`
+            %
+            % :code:`[U, S, V, eta] = tsvd(t, p1, p2, trunc, tol)`
+            %
+            % :code:`S = tsvd(t, ...)`
             %
             % Arguments
             % ---------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   input tensor.
             %
-            % p1, p2 : int
+            % p1, p2 : :class:`int`
             %   partition of left and right indices, by default this is the partition of the
             %   input tensor.
             %
             % Keyword Arguments
             % -----------------
-            % TruncDim : int
+            % TruncDim : :class:`int`
             %   truncate such that the dim of S is not larger than this value for any given
             %   charge.
             %
-            % TruncTotalDim : int
+            % TruncTotalDim : :class:`int`
             %   truncate such that the total dim of S is not larger than this value.
             %
-            % TruncBelow : numeric
+            % TruncBelow : :class:`numeric`
             %   truncate such that there are no singular values below this value.
             %
-            % TruncSpace : :class:`AbstractSpace`
+            % TruncSpace : :class:`.AbstractSpace`
             %   truncate such that the space of S is smaller than this value.
             %
             % Returns
             % -------
-            % U, S, V : :class:`Tensor`
+            % U, S, V : :class:`.Tensor`
             %   left isometry U, non-negative diagonal S and right isometry V that satisfy
             %   :code:`U * S * V = tpermute(t, [p1 p2], [length(p1) length(p2)])`.
             %
-            % eta : numeric
+            % eta : :class:`numeric`
             %   truncation error.
             
             arguments
@@ -1999,12 +2019,12 @@ classdef Tensor < AbstractTensor
             %
             % Arguments
             % ---------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   input tensor.
             %
             % Returns
             % -------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   output tensor.
             
             assert(isequal(t.codomain, t.domain), 'tensors:ArgumentError', ...
@@ -2018,16 +2038,17 @@ classdef Tensor < AbstractTensor
         end
         
         function t = inv(t)
-            % Compute the matrix inverse of a square tensor, such that t * inv(t) = I.
+            % Compute the matrix inverse of a square tensor, such that
+            % :code:`t * inv(t) = I`.
             %
             % Arguments
             % ---------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   input tensor.
             %
             % Returns
             % -------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   output tensor.
             
             assert(isisometric(t.codomain, t.domain), 'tensors:ArgumentError', ...
@@ -2051,22 +2072,22 @@ classdef Tensor < AbstractTensor
             %
             % Usage
             % -----
-            % :class:`A = x^Y`
+            % :code:`A = x^Y`
             %
-            % :class:`A = X^y`
+            % :code:`A = X^y`
             %
             % Arguments
             % ---------
-            % X, Y : :class:`Tensor`
-            %   Square input tensor.
+            % X, Y : :class:`.Tensor`
+            %   square input tensor.
             %
-            % x, y : numeric
-            %   Input scalars.
+            % x, y : :class:`numeric`
+            %   input scalars.
             %
             % Returns
             % -------
-            % A : :class:`Tensor`
-            %   Output tensor.
+            % A : :class:`.Tensor`
+            %   output tensor.
             
             % tensor to a scalar power
             if isnumeric(Y) && isscalar(Y)
@@ -2100,22 +2121,23 @@ classdef Tensor < AbstractTensor
         
         function [A, resnorm] = sqrtm(A)
             % Compute the principal square root of a square tensor. This is the unique root
-            % for which every eigenvalue has nonnegative real part. If `t` is singular, then
-            % the result may not exist.
+            % for which every eigenvalue has nonnegative real part. If :code:`t` is
+            % singular, then the result may not exist.
             %
             % Arguments
             % ---------
-            % A : :class:`Tensor`
+            % A : :class:`.Tensor`
             %   input tensor.
             %
             % Returns
             % -------
-            % X : :class:`Tensor`
-            %   principal square root of the input, which has X^2 = A.
+            % X : :class:`.Tensor`
+            %   principal square root of the input, which has :code:`X^2 = A`.
             %
-            % resnorm : numeric
-            %   the relative residual, norm(A - X^2, 1) / norm(A, 1). If this argument is
-            %   returned, no warning is printed if exact singularity is detected.
+            % resnorm : :class:`numeric`
+            %   the relative residual, :code:`norm(A - X^2, 1) / norm(A, 1)`. If this
+            %   argument is returned, no warning is printed if exact singularity is
+            %   detected.
             
             assert(isequal(A.codomain, A.domain), 'tensors:ArgumentError', ...
                 'Input should be square.');
@@ -2145,19 +2167,19 @@ classdef Tensor < AbstractTensor
             % nonzero complex column vector `z`.
             % This is equivalent to any of the following conditions:
             %
-            % - M is Hermitian and all eigenvalues are real and positive.
-            % - M is congruent with a diagonal matrix with positive real entries.
-            % - There exists an invertible B such that `M = B' * B`.
+            % - `M` is Hermitian and all eigenvalues are real and positive.
+            % - `M` is congruent with a diagonal matrix with positive real entries.
+            % - There exists an invertible `B` such that `M = B' * B`.
             %
             % Arguments
             % ---------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   input tensor.
             %
             % Returns
             % -------
-            % bool : logical
-            %   true if `t` is positive definite.
+            % bool : :class:`logical`
+            %   true if :code:`t` is positive definite.
             
             mblocks = matrixblocks(t);
             for i = 1:length(mblocks)
@@ -2175,21 +2197,21 @@ classdef Tensor < AbstractTensor
             %
             % Arguments
             % ---------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   input tensor.
             %
-            % side : char
+            % side : :class:`char`
             %   either 'left', 'right' or 'both' (default).
             %
             % Keyword Arguments
             % -----------------
-            % AbsTol, RelTol : numeric
-            %   `norm(M * M' - eye(size(M))) < max(AbsTol, RelTol * norm(M))`.
-            %   By default `AbsTol = 0` and `RelTol = eps`.
+            % AbsTol, RelTol : :class:`numeric`
+            %   :code:`norm(t * t' - eye(size(t))) < max(AbsTol, RelTol * norm(t))`.
+            %   By default :code:`AbsTol = 0` and :code:`RelTol = eps`.
             %
             % Returns
             % -------
-            % bool : logical
+            % bool : :class:`logical`
             %   true if t is isometric.
             
             arguments
@@ -2271,7 +2293,7 @@ classdef Tensor < AbstractTensor
             %
             % Arguments
             % ---------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   input tensor.
             %
             % p : 1, 2, inf or 'fro'
@@ -2300,16 +2322,16 @@ classdef Tensor < AbstractTensor
             %
             % Arguments
             % ---------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   input tensor.
             %
-            % type : 'real' or 'complex'
+            % type : :class:`char`, 'real' or 'complex'
             %   optionally specify if complex entries should be seen as 1 or 2 parameters.
             %   Defaults to 'complex', with complex parameters.
             %
             % Returns
             % -------
-            % v : numeric
+            % v : :class:`numeric`
             %   real or complex vector containing the parameters of the tensor.
             
             arguments
@@ -2325,19 +2347,19 @@ classdef Tensor < AbstractTensor
             %
             % Arguments
             % ---------
-            % v : numeric
+            % v : :class:`numeric`
             %   real or complex vector containing the parameters of the tensor.
             %
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   input tensor.
             %
-            % type : 'real' or 'complex'
+            % type : :class:`char`, 'real' or 'complex'
             %   optionally specify if complex entries should be seen as 1 or 2 parameters.
             %   Defaults to 'complex', with complex parameters.
             %
             % Returns
             % -------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   output tensor, filled with the parameters.
             
             arguments
@@ -2366,11 +2388,11 @@ classdef Tensor < AbstractTensor
             %
             % Arguments
             % ---------
-            % t : Tensor
+            % t : :class:`Tensor`
             %
             % Returns
             % -------
-            % a : double
+            % a : :class:`double`
             
             if isa(t.var, 'TrivialBlock')
                 blocks = tensorblocks(t);

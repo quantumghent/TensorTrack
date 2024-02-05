@@ -1,6 +1,11 @@
 classdef MatrixBlock < AbstractBlock
-    %MATRIXBLOCK Summary of this class goes here
-    %   Detailed explanation goes here
+    % Structure for storing symmetric tensor data.
+    %
+    % This represents the blocks in the block-diagonal decomposition of a tensor defined
+    % over graded vector spaces.
+    %
+    % .. todo::
+    %   Document properties and behavior.
     
     %#ok<*INUSD>
     properties
@@ -615,17 +620,18 @@ classdef MatrixBlock < AbstractBlock
             %
             % Usage
             % -----
-            % X = ctranspose(X)
-            % X = X'
+            % :code:`X = ctranspose(X)`
+            %
+            % :code:`X = X'`
             %
             % Arguments
             % ---------
-            % X : :class:`MatrixBlock`
+            % X : :class:`.MatrixBlock`
             %   list of input matrices.
             %
             % Returns
             % -------
-            % X : :class:`MatrixBlock`
+            % X : :class:`.MatrixBlock`
             %   list of adjoint output matrices.
             
             X.rank = fliplr(X.rank);

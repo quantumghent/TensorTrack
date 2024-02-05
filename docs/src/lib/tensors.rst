@@ -81,15 +81,20 @@ Helper classes
 .. autoclass::  src.tensors.spaces.Arrow
 
 
-
-
 Kernels
 -------
 
-.. automodule:: src.tensors.kernels
+.. autoclass:: src.tensors.kernels.AbstractBlock
+.. autoclass:: src.tensors.kernels.TrivialBlock
+   :no-members:
+.. autoclass:: src.tensors.kernels.MatrixBlock
+   :no-members:
+.. autoclass:: src.tensors.kernels.AbelianBlock
+   :no-members:
 
 
 Tensors
 -------
 
+.. autoclass:: src.tensors.AbstractTensor
 .. autoclass:: src.tensors.Tensor
