@@ -8,10 +8,18 @@ classdef O2 < AbstractCharge
     %   of :math:`\mathrm{U}(1)` and charge conjugation respectively. This leads to two
     %   1-dimensional representations :math:`(0, 0)` and :math:`(0, 1)`, and for any
     %   non-negative :math:`j` a two-dimensional representation :math:`(j, 2)`.
+    %
+    % Properties
+    % ----------
+    % j : :class:`uint8`
+    %   :math:`\mathrm{U}(1)` label
+    %
+    % s : :class:`uint8`
+    %   indicator for type of representation
     
     properties
-        j uint8 % (:class:`uint8`) :math:`\mathrm{U}(1)` label.
-        s uint8 % (:class:`uint8`) indicator for type of representation.
+        j uint8
+        s uint8
     end
     
     methods

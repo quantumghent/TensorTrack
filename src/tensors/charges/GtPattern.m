@@ -262,7 +262,7 @@ classdef GtPattern
             %
             % Note
             % ----
-            % This is a generalization of the m-quantum number for angular momentum.
+            % This is a generalization of the :math:`m`-quantum number for angular momentum.
 
             sigma = [0 arrayfun(@(l) rowsum(p, l), 1:p.N)];
             w = sigma(2:end-1) - (sigma(1:end-2) + sigma(3:end))/2;

@@ -69,7 +69,7 @@ classdef (Abstract) AbstractCharge
             %
             % Returns
             % -------
-            % c : :class:`.AbstractCharge` (1, \*)
+            % c : (1, :) :class:`.AbstractCharge`
             %   the unique elements in the decomposition of the tensor product of ``a`` and
             %   ``b``
             error('AbstractCharge:requiredMethod', ...
@@ -109,7 +109,7 @@ classdef (Abstract) AbstractCharge
             %
             % Returns
             % -------
-            % F : :class:`double` (\*, \*, \*, \*)
+            % F : (:, :, :, :) :class:`double`
             %   recoupling coefficients
             error('AbstractCharge:requiredMethod', ...
                     'Error. \nMethod must be overloaded.')
@@ -177,7 +177,7 @@ classdef (Abstract) AbstractCharge
             %
             % Returns
             % -------
-            % C : :class:`double` (\*, \*, \*, \*)
+            % C : (:, :, :, :) :class:`double`
             %   fusion tensor
             error('AbstractCharge:optionalMethod', ...
                     'Error. \nMethod must be overloaded.')
@@ -211,7 +211,7 @@ classdef (Abstract) AbstractCharge
             %
             % Returns
             % -------
-            % R : :class:`double` (\*, \*)
+            % R : (:, :) :class:`double`
             %   braiding coefficients
             error('AbstractCharge:optionalMethod', ...
                     'Error. \nMethod must be overloaded.')
@@ -311,7 +311,7 @@ classdef (Abstract) AbstractCharge
             %
             % Returns
             % -------
-            % F : :class:`double` (\*, \*)
+            % F : (:, :) :class:`double`
             %   matrix-representation of an arrowflip
             F = conj(sqrt(qdim(a)) .* fusiontensor(conj(a), a, one(a)));
         end
@@ -333,14 +333,14 @@ classdef (Abstract) AbstractCharge
             %   charges being fused
             % d : :class:`.AbstractCharge`
             %   total charges
-            % e : :class:`.AbstractCharge` (1, \*)
+            % e : (1, :) :class:`.AbstractCharge`
             %   intermediate charges before recoupling
-            % f : :class:`.AbstractCharge` (1, \*)
+            % f : (1, :) :class:`.AbstractCharge`
             %   intermediate charge after recoupling
             %
             % Returns
             % -------
-            % F : :class:`double` (\*, \*, \*, \*)
+            % F : (:, :, :, :) :class:`double`
             %   recoupling matrix between all allowed channels
             if a.fusionstyle == FusionStyle.Unique
                 if nargin < 5, e = a * b; end
@@ -567,7 +567,7 @@ classdef (Abstract) AbstractCharge
             %
             % Arguments
             % ---------
-            % a: :class:`.AbstractCharge` (\*, \*)
+            % a: (:, :) :class:`.AbstractCharge`
             %
             % Returns
             % -------

@@ -8,15 +8,15 @@ classdef ComplexSpace < AbstractSpace
             %
             % Repeating Arguments
             % -------------------
-            % dimensions : (1, 1) int
+            % dimensions : (1, 1) :class:`int`
             %   dimension of the vector space.
             %
-            % isdual : (1, 1) logical
+            % isdual : (1, 1) :class:`logical`
             %   flag to denote dual spaces.
             %
             % Returns
             % -------
-            % spaces : :class:`ComplexSpace`
+            % spaces : (1, :) :class:`.ComplexSpace`
             %   array of complex spaces.
             
             arguments (Repeating)
@@ -41,15 +41,15 @@ classdef ComplexSpace < AbstractSpace
             %
             % Repeating Arguments
             % -------------------
-            % dimensions : int or struct
+            % dimensions : :class:`int` or :class:`struct`
             %   a variable which represents the internal dimension of the space.
             %
-            % isdual : logical
+            % isdual : :class:`logical`
             %   a variable which indicates if a space is dual.
             %
             % Returns
             % -------
-            % spaces : :class:`ComplexSpace`
+            % spaces : :class:`.ComplexSpace`
             %   array of spaces.
             
             arguments (Repeating)
@@ -80,13 +80,13 @@ classdef ComplexSpace < AbstractSpace
             %
             % Arguments
             % ---------
-            % spaces : (1, :) :class:`CartesianSpace`
+            % spaces : (1, :) :class:`.ComplexSpace`
             %   input spaces.
             %
             % Returns
             % -------
-            % c : []
-            %   empty result.
+            % c : (1, :) :class:`.Z1`
+            %   array of trivial spaces of corresponding length.
             
             c = repmat(Z1, length(spaces), 1);
         end
@@ -96,12 +96,12 @@ classdef ComplexSpace < AbstractSpace
             %
             % Arguments
             % ---------
-            % spaces : (1, :) :class:`ComplexSpace`
+            % spaces : (1, :) :class:`.ComplexSpace`
             %   input spaces.
             %
             % Returns
             % -------
-            % d : (1, :) int
+            % d : (1, :) :class:`int`
             %   list of degeneracy combinations, with 1 element.
             
             d = [spaces.dimensions];
@@ -112,12 +112,12 @@ classdef ComplexSpace < AbstractSpace
             %
             % Arguments
             % ---------
-            % spaces : (1, :) :class:`ComplexSpace`
+            % spaces : (1, :) :class:`.ComplexSpace`
             %   input spaces.
             %
             % Returns
             % -------
-            % d : (1, :) int
+            % d : (1, :) :class:`int`
             %   total dimension of each of the input spaces.
             
             d = [spaces.dimensions];
@@ -128,13 +128,13 @@ classdef ComplexSpace < AbstractSpace
             %
             % Arguments
             % ---------
-            % codomain, domain : (1, :) :class:`ComplexSpace`
+            % codomain, domain : (1, :) :class:`.ComplexSpace`
             %   input spaces.
             %
             % Returns
             % -------
-            % style : :class:`BraidingStyle`
-            %   Trivial braiding style
+            % style : :class:`.BraidingStyle`
+            %   trivial braiding style, :code:`BraidingStyle.Abelian`.
             
             style = BraidingStyle.Abelian;
         end
@@ -144,13 +144,13 @@ classdef ComplexSpace < AbstractSpace
             %
             % Arguments
             % ---------
-            % codomain, domain : (1, :) :class:`ComplexSpace`
+            % codomain, domain : (1, :) :class:`.ComplexSpace`
             %   input spaces.
             %
             % Returns
             % -------
-            % style : :class:`FusionStyle`
-            %   fusion style of the internal structure.
+            % style : :class:`.FusionStyle`
+            %   fusion style of the internal structure, :code:`FusionStyle.Unique`.
             
             style = FusionStyle.Unique;
         end
@@ -168,12 +168,12 @@ classdef ComplexSpace < AbstractSpace
             %
             % Arguments
             % ---------
-            % space1, space2 : (1, 1) :class:`ComplexSpace`
+            % space1, space2 : (1, 1) :class:`.ComplexSpace`
             %   input spaces.
             % 
             % Returns
             % -------
-            % space : (1, 1) :class:`ComplexSpace`
+            % space : (1, 1) :class:`.ComplexSpace`
             %   fused space.
             
             space.dimensions = space.dimensions * space2.dimensions;
@@ -185,12 +185,12 @@ classdef ComplexSpace < AbstractSpace
             %
             % Arguments
             % ---------
-            % spaces : (1, :) :class:`ComplexSpace`
+            % spaces : (1, :) :class:`.ComplexSpace`
             %   Array of input spaces.
             %
             % Returns
             % -------
-            % space : (1, 1) :class:`ComplexSpace`
+            % space : (1, 1) :class:`.ComplexSpace`
             %   Fused space which is isomorphic to the input product space.
             arguments
                 spaces
@@ -227,12 +227,12 @@ classdef ComplexSpace < AbstractSpace
             %
             % Arguments
             % ---------
-            % spaces1, spaces2 : (1, :) :class:`ComplexSpace`
+            % spaces1, spaces2 : (1, :) :class:`.ComplexSpace`
             %   input spaces, either of equal size or scalar.
             %
             % Returns
             % -------
-            % bools : (1, :) logical
+            % bools : (1, :) :class:`logical`
             %   flags that indicate if the element spaces are equal.
             
             bools = [spaces1.dimensions] == [spaces2.dimensions] & ...
@@ -250,17 +250,17 @@ classdef ComplexSpace < AbstractSpace
         
         function hashable = GetMD5_helper(spaces)
             % Helper function for hash algorithm. This converts the space object to a data
-            % structure which can be processed by :func:`GetMD5`.
+            % structure which can be processed by :func:`.GetMD5`.
             %
             % Arguments
             % ---------
-            % spaces : (1, :) :class:`ComplexSpace`
+            % spaces : (1, :) :class:`.ComplexSpace`
             %   input spaces.
             %
             % Returns
             % -------
-            % hashable : (1, :) int
-            %   data which can be accepted by :func:`GetMD5`.
+            % hashable : (1, :) :class:`int`
+            %   data which can be accepted by :func:`.GetMD5`.
             
             hashable = [spaces.dimensions spaces.isdual];
         end

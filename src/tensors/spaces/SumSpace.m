@@ -1,10 +1,20 @@
 classdef (InferiorClasses = {?GradedSpace, ?CartesianSpace, ?ComplexSpace}) SumSpace < AbstractSpace
-    % Direct product structure for a tensor index.
+    % Direct sum structure for a tensor index.
     
     %% Constructors
     methods
         function spaces = SumSpace(subspaces)
-            % Construct an array of vector spaces.
+            % Construct a direct sum of vector spaces array of vector spaces.
+            %
+            % Repeating Arguments
+            % -------------------
+            % subspace : :class:`.AbstractSpace`
+            %   individual subspaces of sum space.
+            %
+            % Returns
+            % -------
+            % spaces : :class:`.SumSpace`
+            %   array of spaces representing a direct sum of vector spaces.
             
             arguments (Repeating)
                 subspaces
@@ -16,7 +26,7 @@ classdef (InferiorClasses = {?GradedSpace, ?CartesianSpace, ?ComplexSpace}) SumS
                 dual = cell(size(subspaces));
                 for i = 1:length(subspaces)
                     dual{i} = isdual(subspaces{i}(1));
-                    assert(all(isdual(subspaces{i}) == dual{i}), 'Direct product structure should have all dual or all regular spaces.');
+                    assert(all(isdual(subspaces{i}) == dual{i}), 'Direct sum structure should have all dual or all regular spaces.');
                 end
                 args = [subspaces; dual];
             end
@@ -57,12 +67,12 @@ classdef (InferiorClasses = {?GradedSpace, ?CartesianSpace, ?ComplexSpace}) SumS
             %
             % Arguments
             % ---------
-            % space1, space2 : (1,1) :class:`AbstractSpace`
+            % space1, space2 : (1, 1) :class:`.SumSpace`
             %   input spaces.
             %
             % Returns
             % -------
-            % space : (1,1) :class:`AbstractSpace`
+            % space : (1, 1) :class:`.SumSpace`
             %   fused space.
             arguments
                 space1 SumSpace

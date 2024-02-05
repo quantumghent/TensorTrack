@@ -52,7 +52,35 @@ Fusion trees
 Spaces
 ------
 
-.. automodule:: src.tensors.spaces
+Type hierarchy
+``````````````
+
+.. autoclass::  src.tensors.spaces.AbstractSpace
+.. autoclass::  src.tensors.spaces.SumSpace
+
+
+Concrete space types
+````````````````````
+
+.. autoclass::  src.tensors.spaces.CartesianSpace
+.. autoclass::  src.tensors.spaces.ComplexSpace
+.. autoclass::  src.tensors.spaces.GradedSpace
+
+
+Convenience constructor wrappers
+````````````````````````````````
+
+.. autofunction::  src.tensors.spaces.Z2Space
+.. autofunction::  src.tensors.spaces.fZ2Space
+.. autofunction::  src.tensors.spaces.U1Space
+.. autofunction::  src.tensors.spaces.SU2Space
+
+Helper classes
+``````````````
+
+.. autoclass::  src.tensors.spaces.Arrow
+
+
 
 
 Kernels

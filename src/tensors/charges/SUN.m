@@ -3,6 +3,11 @@ classdef SUN < AbstractCharge
     %
     % .. todo::
     %   Explain irrep labeling and give some references.
+    %
+    % Properties
+    % ----------
+    % I : (1, :) :class:`uint8`
+    %   integer vector representation label
     
     properties
         I (1,:) uint8

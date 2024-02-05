@@ -4,6 +4,11 @@ classdef ZN < AbstractCharge & uint8
     % This class implements the representations of the cyclic group of order :math:`N`,
     % represented using unteger labels where fusion is given by addition modulo
     % :math:`N`.
+    %
+    % Properties
+    % ----------
+    % N : :class:`uint8`
+    %   integer representation label
     
     properties
         N (1,1) uint8 = uint8(1)
