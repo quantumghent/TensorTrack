@@ -1,5 +1,5 @@
 function varargout = simulunique(varargin)
-%SIMULUNIQUE Set unique over multiple arrays.
+% Set unique over multiple arrays.
 
 
 nlhs = max(1, nargout);

@@ -1,17 +1,17 @@
 function m = mod1(x, y)
-% Modulus after division, counting from 1:y.
+% Modulus after division, counting from :code:`1:y`.
 %
 % Arguments
 % ---------
-% x : int
+% x : :class:`int`
 %   numerator.
 %
-% y : int
+% y : :class:`int`
 %   divisor.
 %
 % Returns
 % -------
-% m : int
+% m : :class:`int`
 %   remainder after division, where a value of 0 is replaced with y.
 
 m = mod(x-1, y) + 1;

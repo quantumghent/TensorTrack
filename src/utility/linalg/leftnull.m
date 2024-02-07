@@ -1,20 +1,21 @@
 function N = leftnull(A, alg, atol)
-% Compute the left nullspace of a matrix, such that N' * A = 0.
+% Compute the left nullspace of a matrix, such that :code:`N' * A == 0`.
 %
 % Arguments
 % ---------
-% A : numeric
+% A : :class:`numeric`
 %   input matrix.
 %
-% alg : 'qr' or 'svd'
+% alg : :class:`char`, 'qr' or 'svd'
 %   choice of algorithm, default 'svd'.
 %
-% atol : double
-%   absolute tolerance for the null space, defaults to max(size(A)) * eps(max(svd(A))).
+% atol : :class:`double`
+%   absolute tolerance for the null space, defaults to
+%   :code:`max(size(A)) * eps(max(svd(A)))`.
 %
 % Returns
 % -------
-% N : numeric
+% N : :class:`numeric`
 %   orthonormal basis for the orthogonal complement of the support of the row space of A.
 
 arguments

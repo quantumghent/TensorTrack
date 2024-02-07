@@ -1,5 +1,42 @@
 classdef IDmrg
-    % Infinite Density Matrix Renormalization Group algorithm
+    % `Infinite Density Matrix Renormalization Group algorithm <https://arxiv.org/abs/0804.2509>`_.
+    %
+    % Properties
+    % ----------
+    % tol : :class:`double`
+    %   tolerance for convergence criterion, defaults to :code:`1e-10`.
+    %
+    % miniter : :class:`int`
+    %   minimum number of iteration, defaults to 5.
+    %
+    % maxiter : :class:`int`
+    %   maximum number of iteration, defaults to 100.
+    %
+    % verbosity : :class:`.Verbosity`
+    %   verbosity level of the algorithm, defaults to :code:`Verbosity.iter`.
+    %
+    % which : :class:`char`
+    %   eigenvalue selector (passed as the :code:`sigma` argument to :func:`.eigsolve`),
+    %   defaults to :code:`'largestabs'`.
+    %
+    % dynamical_tols : :class:`logical`
+    %   indicate whether or not to use a dynamical tolerance scaling for the algorithm's
+    %   subroutines based on the current error measure, defaults to :code:`false`
+    %
+    % tol_min : :class:`double`
+    %   smallest allowed convergence tolerance for soubroutines, defaults to :code:`1e-12`.
+    %
+    % tol_max : :class:`double`
+    %   highest allowed convergence tolerance for soubroutines, defaults to :code:`1e-6`.
+    %
+    % eigs_tolfactor : :class:`double`
+    %   relative scaling factor for determining the convergence tolerance of the local
+    %   update solver subroutine based on the current error measure, defaults to
+    %   :code:`1e-4`.
+    %
+    % alg_eigs : :class:`.KrylovSchur` or :class:`.Arnoldi`
+    %   algorithm used for the eigsolver subroutines, defaults to
+    %   :code:`Arnoldi('MaxIter', 100, 'KrylovDim', 20)`.
     
     properties
         tol = 1e-10
@@ -40,6 +77,37 @@ classdef IDmrg
         end
         
         function [mps, lambda, GL, GR] = fixedpoint(alg, mpo, mps)
+            % Find the fixed point MPS of an infinite MPO, given an initial guess.
+            %
+            % Usage
+            % -----
+            % :code:`[mps, lambda, GL, GR] = fixedpoint(alg, mpo, mps)`
+            %
+            % Arguments
+            % ---------
+            % alg : :class:`.IDmrg`
+            %   IDMRG algorithm.
+            %
+            % mpo : :class:`.InfMpo`
+            %   matrix product operator.
+            %
+            % mps : :class:`.UniformMps`
+            %   initial guess for MPS fixed point.
+            %
+            % Returns
+            % -------
+            % mps : :class:`.UniformMps`
+            %   MPS fixed point.
+            %
+            % lambda : :class:`double`
+            %   eigenvalue.
+            %
+            % GL : :class:`cell` of :class:`.MpsTensor`
+            %   left environment tensors.
+            %
+            % GR : :class:`cell` of :class:`.MpsTensor`
+            %   right environment tensors.
+            
             if period(mpo) ~= period(mps)
                 error('idmrg:argerror', ...
                     'periodicity of mpo (%d) should be equal to that of the mps (%d)', ...

@@ -1,4 +1,18 @@
 function S = sigma_plus(spin, symmetry)
+% Spin raising operator.
+%
+% Arguments
+% ---------
+% spin : :class:`double`
+%   halfinteger or integer spin label, defaults to :code:`1/2`.
+%
+% symmetry : :class:`char`
+%   symmetry group ('Z1' or 'U1'), defaults to :code:`'Z1'`.
+%
+% Returns
+% S : :class:`.Tensor`
+%   raising operator represented as a 3-leg tensor.
+
 arguments
     spin = 1/2
     symmetry = 'Z1'

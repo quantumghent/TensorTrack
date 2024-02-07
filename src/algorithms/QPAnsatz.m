@@ -1,5 +1,22 @@
 classdef QPAnsatz
-    % Quasi-Particle excitation ansatz
+    % `Quasi-Particle excitation ansatz <https://journals.aps.org/prb/abstract/10.1103/PhysRevB.85.100408>`_.
+    %
+    % Properties
+    % ----------
+    % alg_eigs : :class:`.KrylovSchur` or :class:`.Arnoldi`
+    %   algorithm used for the eigsolver subroutines, defaults to
+    %   :code:`Arnoldi('MaxIter', 100, 'KrylovDim', 30, 'Tol', 1e-8)`.
+    %
+    % alg_environments : :class:`.struct`
+    %   algorithm used for the environment subroutines (see :meth:`.AbstractTensor.linsolve`
+    %   for details), defaults to :code:`struct('Tol', 1e-10, 'Algorithm', 'bicgstabl')`.
+    %
+    % howmany : :class:`int`
+    %   number of excitations to compute.
+    %
+    % which : :class:`char`
+    %   eigenvalue selector (passed as the :code:`sigma` argument to :func:`.eigsolve`),
+    %   defaults to :code:`'largestabs'`.
     
     properties
         alg_eigs = Arnoldi('MaxIter', 100, 'KrylovDim', 30, 'Tol', 1e-8, 'Verbosity', Verbosity.diagnostics)
@@ -29,6 +46,31 @@ classdef QPAnsatz
         end
         
         function [qp, mu] = excitations(alg, mpo, qp)
+            % Find excitations
+            %
+            % Usage
+            % -----
+            % :code:`[qp, mu] = excitations(alg, mpo, qp)`
+            %
+            % Arguments
+            % ---------
+            % alg : :class:`.QPAnsatz`
+            %   Quasi-particle ansatz algorithm.
+            %
+            % mpo : :class:`.InfMpo`
+            %   matrix product operator.
+            %
+            % mps : :class:`.UniformMps`
+            %   initial guess for MPS fixed point.
+            %
+            % Returns
+            % -------
+            % qp : :class:`.InfQP`
+            %   vector of quasiparticle states.
+            %
+            % mu : :class:`double`
+            %   vector of corresponding eigenvalues.
+            
             if period(mpo) ~= period(qp)
                 error('QPAnsatz:argerror', ...
                     'periodicity of mpo (%d) should be equal to that of the mps (%d)', ...

@@ -8,4 +8,5 @@ Sparse
 
 This section contains the API documentation for the :mod:`.sparse` module.
 
-.. automodule:: src.sparse
+.. autoclass:: src.sparse.SparseTensor
+    :no-members:

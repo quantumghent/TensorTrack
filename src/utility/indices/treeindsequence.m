@@ -7,12 +7,12 @@ function n = treeindsequence(n)
 % 
 % Arguments
 % ---------
-% n : int
+% n : :class:`int`
 %   number of external edges
 %
 % Returns
 % -------
-% t : int
+% t : :class:`int`
 %   total number of edges
 %
 % Example

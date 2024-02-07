@@ -8,5 +8,5 @@ Environments
 
 This section contains the API documentation for the :mod:`.environments` module.
 
-.. automodule:: src.environments
+.. autoclass:: src.environments.FiniteEnvironment
 

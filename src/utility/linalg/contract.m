@@ -11,23 +11,23 @@ function C = contract(tensors, indices, kwargs)
 %
 % Repeating Arguments
 % -------------------
-% tensors : :class:`Tensor`
+% tensors : :class:`.Tensor`
 %   list of tensors that constitute the vertices of the network.
 %
-% indices : int
-%   list of indices that define the links and contraction order, using ncon-like syntax.
+% indices : (1, :) :class:`int`
+%   list of indices that define the links and contraction order, using `ncon-like syntax <https://arxiv.org/abs/1402.0939>`_.
 %
 % Keyword Arguments
 % -----------------
-% Conj : (1, :) logical
+% Conj : (1, :) :class:`logical`
 %   optional list to flag that tensors should be conjugated.
 %
-% Rank : (1, 2) int
+% Rank : (1, 2) :class:`int`
 %   optionally specify the rank of the resulting tensor.
 %
 % Returns
 % -------
-% C : :class:`Tensor` or numeric
+% C : :class:`.Tensor` or :class:`numeric`
 %   result of the tensor network contraction.
 
 % TODO contraction order checker, order specifier.

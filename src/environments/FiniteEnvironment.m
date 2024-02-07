@@ -1,6 +1,17 @@
 classdef FiniteEnvironment
-    %FINITEENVIRONMENT Summary of this class goes here
-    %   Detailed explanation goes here
+    % Data structure for managing the environments in finite MPS algorithms.
+    %
+    % Properties
+    % ----------
+    % GL : :class:`cell` of :class:`.MpsTensor`
+    %   environment tensors corresponding to the left-gauged part of the MPS.
+    %
+    % GR : :class:`cell` of :class:`.MpsTensor`
+    %   environment tensors corresponding to the right-gauged part of the MPS.
+    %
+    % Todo
+    % ----
+    % Document
     
     properties
         GL
@@ -9,8 +20,6 @@ classdef FiniteEnvironment
     
     methods
         function envs = FiniteEnvironment(varargin)
-            %FINITEENVIRONMENT Construct an instance of this class
-            %   Detailed explanation goes here
             if nargin == 0, return; end
             if nargin == 2
                 envs.GL = varargin{1};

@@ -1,5 +1,9 @@
 classdef InfJMpo < InfMpo
-    % Infinite Mpo with a Jordan block structure
+    % Infinite translation invariant matrix product operator with a Jordan block structure.
+    %
+    % Todo
+    % ----
+    % Document.
     
     methods
         function mpo = InfJMpo(varargin)

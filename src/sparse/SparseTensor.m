@@ -1,5 +1,9 @@
 classdef (InferiorClasses = {?Tensor}) SparseTensor < AbstractTensor
     % Class for multi-dimensional sparse objects.
+    %
+    % Todo
+    % ----
+    % Document properties, behavior and methods.
     
     %#ok<*PROPLC>
     

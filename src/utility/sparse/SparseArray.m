@@ -1,7 +1,7 @@
 classdef SparseArray
     % Class for multi-dimensional sparse arrays.
     %
-    %   Limited to arrays with a total number of elements of at most 2^48-1.
+    % Limited to arrays with a total number of elements of at most 2^48-1.
     
     %% Properties
     properties (Access = private)
@@ -33,11 +33,11 @@ classdef SparseArray
             %   Empty constructor.
             %
             % :code:`a = SparseArray(b)`
-            %   Copies/converts :code:`b` if it is a :class:`SparseArray`, a dense array or
+            %   Copies/converts :code:`b` if it is a :class:`.SparseArray`, a dense array or
             %   a sparse matrix.
             %
             % :code:`a = SparseArray(b, sz)`
-            %   Copies/converts :code:`b` if it is a :class:`SparseArray`, a dense array or
+            %   Copies/converts :code:`b` if it is a :class:`.SparseArray`, a dense array or
             %   a sparse matrix, and sets the size of :code:`a` to :code:`sz`
             % 
             % Example
@@ -145,12 +145,12 @@ classdef SparseArray
             %
             % Arguments
             % ---------
-            % a : :class:`SparseArray`
+            % a : :class:`.SparseArray`
             %   input array.
             %
             % Returns
             % -------
-            % b : :class:`SparseArray`
+            % b : :class:`.SparseArray`
             %   output array.
             a.var = abs(a.var);
         end
@@ -161,16 +161,16 @@ classdef SparseArray
             %
             % Arguments
             % ---------
-            % a : :class:`SparseArray`
+            % a : :class:`.SparseArray`
             %   input array.
             %
-            % tol : :class:`float` , optional
+            % tol : :class:`double` , optional
             %   threshold tolerance for absolute values of entries, defaults to
             %   :code:`1e-15`.
             %
             % Returns
             % -------
-            % b : :class:`SparseArray`
+            % b : :class:`.SparseArray`
             %   sparse array with entries of absolute value below :code:`tol` set to zero.
             arguments
                 a
@@ -187,12 +187,12 @@ classdef SparseArray
             %
             % Arguments
             % ---------
-            % a : :class:`SparseArray`
+            % a : :class:`.SparseArray`
             %   input array.
             %
             % Returns
             % -------
-            % b : :class:`SparseArray`
+            % b : :class:`.SparseArray`
             %   output array.
             a.var = conj(a.var);
         end
@@ -210,12 +210,12 @@ classdef SparseArray
             %
             % Arguments
             % ---------
-            % a : :class:`SparseArray`
+            % a : :class:`.SparseArray`
             %   input array.
             %
             % Returns
             % -------
-            % b : :class:`SparseArray`
+            % b : :class:`.SparseArray`
             %   output array.
             assert(ismatrix(a), 'sparse:RankError', 'ctranspose is only defined for 2D sparse arrays.');
             a = permute(conj(a), [2, 1]);
@@ -292,7 +292,7 @@ classdef SparseArray
             %
             % Arguments
             % ---------
-            % a : :class:`SparseArray`
+            % a : :class:`.SparseArray`
             %   input array
             %
             % Returns
@@ -318,7 +318,7 @@ classdef SparseArray
             %
             % Arguments
             % ---------
-            % a : :class:`SparseArray`
+            % a : :class:`.SparseArray`
             %   input array.
             %
             % Returns
@@ -333,7 +333,7 @@ classdef SparseArray
             %
             % Arguments
             % ---------
-            % a : :class:`SparseArray`
+            % a : :class:`.SparseArray`
             %   input array.
             % g : (1, :) :class:`int`
             %   list of number of contiguous indices to be grouped in each index of the
@@ -341,7 +341,7 @@ classdef SparseArray
             %
             % Returns
             % -------
-            % b : :class:`SparseArray`
+            % b : :class:`.SparseArray`
             %   output array with grouped indices.
             %
             % Example
@@ -365,12 +365,12 @@ classdef SparseArray
             %
             % Arguments
             % ---------
-            % a : :class:`SparseArray`
+            % a : :class:`.SparseArray`
             %   input array.
             %
             % Returns
             % -------
-            % b : :class:`SparseArray`
+            % b : :class:`.SparseArray`
             %   output array with real entries corresponding to the imaginary part of the
             %   entries of :code:`a`.
             a.var = imag(a.var);
@@ -385,7 +385,7 @@ classdef SparseArray
             % 
             % Arguments
             % ---------
-            % a : :class:`SparseArray`
+            % a : :class:`.SparseArray`
             %   input array.
             %
             % Returns
@@ -400,13 +400,13 @@ classdef SparseArray
             % 
             % Arguments
             % ---------
-            % a : :class:`SparseArray`
+            % a : :class:`.SparseArray`
             %   input array.
             %
             % Returns
             % -------
             % bool : :class:`logical`
-            %   defaults to :code:`false` for :class:`SparseArray`.
+            %   defaults to :code:`false` for :class:`.SparseArray`.
             bool = false;
         end
         
@@ -415,7 +415,7 @@ classdef SparseArray
             % 
             % Arguments
             % ---------
-            % a : :class:`SparseArray`
+            % a : :class:`.SparseArray`
             %   input array.
             %
             % Returns
@@ -435,18 +435,23 @@ classdef SparseArray
         function c = ldivide(a, b)
             % Elementwise left division for sparse arrays.
             %
-            % :code:`ldivide(a, b)` is called for the syntax :code:`a .\ b` where :code:`a`
-            % or :code:`b` is a :class:`SparseArray`. :code:`a`and :code:`b` must have the
-            % same size, unless one is a scalar. 
+            % Usage
+            % -----
+            % :code:`ldivide(a, b)`
+            %
+            % :code:`a .\ b`
+            % 
+            % where :code:`a` or :code:`b` is a :class:`SparseArray`. :code:`a`and :code:`b`
+            % must have the same size, unless one is a scalar. 
             %
             % Arguments
             % ---------
-            % a, b : :class:`SparseArray` or :class:`double`
+            % a, b : :class:`.SparseArray` or :class:`double`
             %   input arrays to be divided.
             %
             % Returns
             % -------
-            % c : :class:`SparseArray`
+            % c : :class:`.SparseArray`
             %   elementwise left division of :code:`b` by :code:`a`.
             c = rdivide(b, a);
         end
@@ -454,19 +459,24 @@ classdef SparseArray
         function c = minus(a, b)
             % Elementwise subtraction for sparse arrays. 
             %
-            % :code:`minus(a, b)` is called for the syntax :code:`a - b` where :code:`a`
-            % or :code:`b` is a :class:`SparseArray`. :code:`a`and :code:`b` must have the
-            % same size, unless one of the is scalar. Scalar can be subtracted from a sparse
-            % array of any size, resulting in a dense array.
+            % Usage
+            % -----
+            % :code:`minus(a, b)`
+            %
+            % :code:`a - b`
+            % 
+            % where :code:`a`or :code:`b` is a :class:`.SparseArray`. :code:`a`and :code:`b`
+            % must have the same size, unless one of the is scalar. Scalar can be subtracted
+            % from a sparse array of any size, resulting in a dense array.
             %
             % Arguments
             % ---------
-            % a, b : :class:`SparseArray` or :class:`double`
+            % a, b : :class:`.SparseArray` or :class:`double`
             %   intput arrays.
             %
             % Returns
             % -------
-            % c : :class:`SparseArray` or :class:`double`
+            % c : :class:`.SparseArray` or :class:`double`
             %   output array.
             %
             % Example
@@ -493,14 +503,15 @@ classdef SparseArray
             %
             % Arguments
             % ---------
-            % a : :class:`SparseArray`
+            % a : :class:`.SparseArray`
             %   intput array.
+            %
             % b : :class:`double`
             %   scalar to divide by.
             %
             % Returns
             % -------
-            % c : :class:`SparseArray`
+            % c : :class:`.SparseArray`
             %   output array.
             %
             % Example
@@ -518,8 +529,13 @@ classdef SparseArray
         function c = mtimes(a, b)
             % Matrix multiplication for 2D sparse arrays.
             %
-            % :code:`mtimes(a, b)` is called for the syntax :code:`a * b` where :code:`a`
-            % or :code:`b` is a :class:`SparseArray`.
+            % Usage
+            % -----
+            % :code:`mtimes(a, b)`
+            %
+            % :code:`a * b`
+            %
+            % where :code:`a` or :code:`b` is a :class:`.SparseArray`.
             %
             % See Also
             % --------
@@ -622,17 +638,18 @@ classdef SparseArray
             %
             % :code:`a + b`
             %
-            % :code:`a` and :code:`b` must have the same size,
+            % where :code:`a` and :code:`b` must have the same size,
             % unless one is a scalar. A scalar can be added to a sparse array of any size.   
             %
             % Arguments
             % ---------
-            % a, b : :class:`SparseArray` or :class:`double`
+            % a, b : :class:`.SparseArray` or :class:`double`
             %   input arrays.
             %
             % Returns
             % -------
-            % 
+            % c : :class:`.SparseArray`
+            %   output array.
             %
             % Example
             % -------
@@ -687,18 +704,23 @@ classdef SparseArray
         function c = rdivide(a, b)
             % Elementwise right division for sparse arrays.
             %
-            % :code:`rdivide(a, b)` is called for the syntax :code:`a ./ b` where :code:`a`
-            % or :code:`b` is a :class:`SparseArray`. :code:`a`and :code:`b` must have the
-            % same size, unless one is a scalar. 
+            % Usage
+            % -----
+            % :code:`rdivide(a, b)`
+            %
+            % :code:`a ./ b`
+            %
+            % where :code:`a` or :code:`b` is a :class:`.SparseArray`. :code:`a`and
+            % :code:`b` must have the same size, unless one is a scalar. 
             %
             % Arguments
             % ---------
-            % a, b : :class:`SparseArray` or :class:`double`
+            % a, b : :class:`.SparseArray` or :class:`double`
             %   input arrays to be divided.
             %
             % Returns
             % -------
-            % c : :class:`SparseArray`
+            % c : :class:`.SparseArray`
             %   elementwise left division of :code:`a` by :code:`b`.
             %
             % Example
@@ -727,12 +749,12 @@ classdef SparseArray
             %
             % Arguments
             % ---------
-            % a : :class:`SparseArray`
+            % a : :class:`.SparseArray`
             %   input array.
             %
             % Returns
             % -------
-            % b : :class:`SparseArray`
+            % b : :class:`.SparseArray`
             %   output array with real entries corresponding to the real part of the
             %   entries of :code:`a`.
             a.var = real(a.var);
@@ -798,9 +820,10 @@ classdef SparseArray
             %
             % Usage
             % -----
-            % :code:`b = squeeze(a)` 
-            %   returns a sparse array :code:`b` with the same elements as :code:`a` but
-            %   with all the singleton dimensions removed.
+            % :code:`b = squeeze(a)`
+            %
+            % returns a sparse array :code:`b` with the same elements as :code:`a` but
+            % with all the singleton dimensions removed.
             %
             % Example
             % -------
@@ -1006,6 +1029,7 @@ classdef SparseArray
         
         function varargout = svds(a, varargin)
             % Find a few singular values and vectors.
+            %
             % See Also
             % --------
             % `Documentation for builtin Matlab svds <https://mathworks.com/help/matlab/ref/svds.html>`_.
@@ -1017,10 +1041,15 @@ classdef SparseArray
         function c = times(a, b)
             % Array multiplication for sparse tensors.
             %
-            % :code:`c = times(a, b)` is called for the syntax :code:`a .* b` when :code:`a`
-            % or :code:`b` is a sparse array. :code:`a` and :code:`b` must have the same
-            % size, unless one is a scalar. A scalar can be be multiplied by a sparse array
-            % of any size.
+            % Usage
+            % -----
+            % :code:`c = times(a, b)`
+            %
+            % :code:`a .* b`
+            %
+            % where :code:`a` or :code:`b` is a sparse array. :code:`a` and :code:`b` must
+            % have the same size, unless one is a scalar. A scalar can be be multiplied by
+            % a sparse array of any size.
             %
             % Example
             % -------
@@ -1054,12 +1083,12 @@ classdef SparseArray
             %
             % Arguments
             % ---------
-            % a : :class:`SparseArray`
+            % a : :class:`.SparseArray`
             %   input array.
             %
             % Returns
             % -------
-            % b : :class:`SparseArray`
+            % b : :class:`.SparseArray`
             %   output array.
             assert(ismatrix(a), 'sparse:RankError', 'ctranspose is only defined for 2D sparse arrays.');
             a = permute(a, [2, 1]);
@@ -1076,12 +1105,12 @@ classdef SparseArray
             %
             % Arguments
             % ---------
-            % a : :class:`SparseArray`
+            % a : :class:`.SparseArray`
             %   input array.
             %
             % Returns
             % -------
-            % b : :class:`SparseArray`
+            % b : :class:`.SparseArray`
             %   output array.
             a.var = -a.var;
         end
@@ -1097,12 +1126,12 @@ classdef SparseArray
             %
             % Arguments
             % ---------
-            % a : :class:`SparseArray`
+            % a : :class:`.SparseArray`
             %   input array.
             %
             % Returns
             % -------
-            % b : :class:`SparseArray`
+            % b : :class:`.SparseArray`
             %   output array.
             return;
         end
@@ -1128,7 +1157,7 @@ classdef SparseArray
             %
             % Returns
             % -------
-            % a : :class:`SparseArray`
+            % a : :class:`.SparseArray`
             %   output delta-array.
             a = SparseArray(repmat(1:inddim, numinds, 1)', 1, repmat(inddim, 1, numinds));
         end
@@ -1144,6 +1173,7 @@ classdef SparseArray
             % ---------
             % sz : (1, :) :class:`int`
             %   size of the sparse array
+            %
             % density : :class:`double`
             %   density of nonzero elements (0 < :code:`density` < 1)
             a = SparseArray([], [], sz);

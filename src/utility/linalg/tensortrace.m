@@ -4,11 +4,13 @@ function C = tensortrace(A, i1, i2)
 % Usage
 % -----
 %
-% :code:`[C, ic] = tensortrace(A, ia)`
-% 	traces over the indices that appear twice in ia.
+% :code:`[C, ic] = tensortrace(A, i1)`
+% 
+% traces over the indices that appear twice in :code:`i1`.
 %
-% :code:`[C, ic] = tensortrace(A, ia, ic)`
-% 	optionally specifies the output indices' order.
+% :code:`[C, ic] = tensortrace(A, i1, i2)`
+% 
+% optionally specifies the output indices' order.
 
 if isempty(i1) && isempty(i2), C = A; return; end
 assert(length(i1) == length(i2), 'invalid indices');

@@ -1,6 +1,64 @@
 classdef Vomps
-    % Fixed point algorithm for maximizing overlap.
-    
+    % `Fixed point algorithm for maximizing overlap <https://scipost.org/SciPostPhysCore.4.1.004>`_.
+    %
+    % Properties
+    % ----------
+    % tol : :class:`double`
+    %   tolerance for convergence criterion, defaults to :code:`1e-10`.
+    %
+    % miniter : :class:`int`
+    %   minimum number of iteration, defaults to 5.
+    %
+    % maxiter : :class:`int`
+    %   maximum number of iteration, defaults to 100.
+    %
+    % verbosity : :class:`.Verbosity`
+    %   verbosity level of the algorithm, defaults to :code:`Verbosity.iter`.
+    %
+    % which : :class:`char`
+    %   eigenvalue selector (passed as the :code:`sigma` argument to :func:`.eigsolve`),
+    %   defaults to :code:`'largestabs'`.
+    %
+    % dynamical_tols : :class:`logical`
+    %   indicate whether or not to use a dynamical tolerance scaling for the algorithm's
+    %   subroutines based on the current error measure, defaults to :code:`true`
+    %
+    % tol_min : :class:`double`
+    %   smallest allowed convergence tolerance for soubroutines, defaults to :code:`1e-12`.
+    %
+    % tol_max : :class:`double`
+    %   highest allowed convergence tolerance for soubroutines, defaults to :code:`1e-6`.
+    %
+    % eigs_tolfactor : :class:`double`
+    %   relative scaling factor for determining the convergence tolerance of the local
+    %   update solver subroutine based on the current error measure, defaults to
+    %   :code:`1e-4`.
+    %
+    % canonical_tolfactor : :class:`double`
+    %   relative scaling factor for determining the convergence tolerance of the
+    %   canonicalization subroutine based on the current error measure, defaults to
+    %   :code:`1e-8`.
+    %
+    % environments_tolfactor : :class:`double`
+    %   relative scaling factor for determining the convergence tolerance of the environment
+    %   solver subroutine based on the current error measure, defaults to :code:`1e-4`.
+    %
+    % multiAC : :class:`char`
+    %   execution style for the local `AC` updates for a multi-site unit cell, options are:
+    %
+    %   - :code:`'parallel'`: (default) update all `AC` tensors simultaneously.
+    %   - :code:`'sequential'`: update one `AC` tensor at a time, sweeping through the unit
+    %     cell.
+    %
+    % dynamical_multiAC : :class:`logical`
+    %   automatically switch from :code:`'sequential'` to :code:`'parallel'` if the error
+    %   measure becomes small enough, defaults to :code:`false`.
+    %
+    % tol_multiAC : :class:`char`
+    %   tolerance for automatically switching from :code:`'sequential'` to
+    %   :code:`'parallel'` if the error measure falls below this value, defaults to
+    %   :code:`Inf`.
+
     %% Options
     properties
         tol = 1e-5
@@ -51,6 +109,38 @@ classdef Vomps
         end
         
         function [mps2, GL, GR] = approximate(alg, mpo, mps1, mps2)
+            % Approximate the product of an MPS and an MPO as an MPS.
+            %
+            % Usage
+            % -----
+            % :code:`[mps2, GL, GR] = approximate(alg, mpo, mps1, mps2)`
+            %
+            % Arguments
+            % ---------
+            % alg : :class:`.Vumps`
+            %   VUMPS algorithm.
+            %
+            % mpo : :class:`.InfMpo`
+            %   matrix product operator.
+            %
+            % mps1 : :class:`.UniformMps`
+            %   MPS to which the MPO is applied.
+            %
+            % mps2 : :class:`.UniformMps`
+            %   initial guess for MPS approximation.
+            %
+            % Returns
+            % -------
+            % mps2 : :class:`.UniformMps`
+            %   MPS approximation, such that :code:`mps2` :math:`\approx`
+            %   :code:`mpo * mps1`.
+            %
+            % GL : :class:`cell` of :class:`.MpsTensor`
+            %   left environment tensors.
+            %
+            % GR : :class:`cell` of :class:`.MpsTensor`
+            %   right environment tensors.
+
             if period(mpo) ~= period(mps1) || period(mpo) ~= period(mps2)
                 error('vumps:argerror', ...
                     'periodicitys should match: mpo (%d), mps1 (%d), mps2(%d)', ...

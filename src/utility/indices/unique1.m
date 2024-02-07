@@ -4,7 +4,7 @@ function inds = unique1(inds)
 % Usage
 % -----
 % :code:`inds = unique1(inds)`
-%	deletes all elements that appear more than once.
+% deletes all elements that appear more than once.
 
 inds = inds(sum(inds(:) == inds) == 1);
 

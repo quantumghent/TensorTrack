@@ -511,6 +511,18 @@ classdef Tensor < AbstractTensor
         
         function tdst = insert_onespace(tsrc, i, dual)
             % Insert a trivial space at position :code:`i`.
+            %
+            % Arguments
+            % ---------
+            % tsrc : :class:`.Tensor`
+            %   input tensor.
+            %
+            % i : :class:`int`
+            %   position at which to insert trivial space, defaults to the last index.
+            %
+            % dual : :class:`logical`
+            %   indicate whether or not to dualize the trivial space, defaults to
+            %   :code:`false`.
             arguments
                 tsrc
                 i = nspaces(tsrc) + 1
@@ -1564,10 +1576,10 @@ classdef Tensor < AbstractTensor
             % Returns
             % -------
             % Q : :class:`.Tensor`
-            %   Orthonormal basis tensor
+            %   orthonormal basis tensor.
             %
             % R : :class:`.Tensor`
-            %   Remainder tensor, depends on selected algorithm.
+            %   remainder tensor, depends on selected algorithm.
             
             arguments
                 t

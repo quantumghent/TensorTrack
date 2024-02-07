@@ -4,11 +4,11 @@ function j = next(i, total)
 % Usage
 % -----
 % :code:`j = next(i, total)`
-%	gives the :math:`i + 1`'th index, but loops back to 1 when :math:`j > \text{total}`.
+% gives the :math:`i + 1`'th index, but loops back to 1 when :math:`j > \text{total}`.
 %
 % See Also
 % --------
-% :func:`prev`
+% :func:`.prev`
 
 j = mod(i, total) + 1;
 

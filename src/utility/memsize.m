@@ -1,4 +1,9 @@
 function [bytes, unit] = memsize(in, unit)
+% Check memory size of object in prefered unit ('GB', 'MB', 'KB' or 'B').
+%
+% Usage
+% -----
+% :code:`[bytes, unit] = memsize(in, unit)`
 
 if isa(in, 'containers.Map')
     warning('off', 'MATLAB:structOnObject');

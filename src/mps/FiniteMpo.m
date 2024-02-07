@@ -1,5 +1,20 @@
 classdef FiniteMpo
-    % Finite Matrix product operators
+    % Finite matrix product operator.
+    %
+    % Properties
+    % ----------
+    % L : :class:`.MpsTensor`
+    %   left end tensor.
+    %
+    % O : :class:`cell` of :class:`.MpoTensor` or :class:`.PepsSandwich`
+    %   bulk MPO tensors.
+    %
+    % R : :class:`.MpsTensor`
+    %   right end tensor.
+    %
+    % Todo
+    % ----
+    % Document.
     
     properties
         L MpsTensor
@@ -60,7 +75,7 @@ classdef FiniteMpo
         end
         
         function v = initialize_fixedpoint(mpo)
-            % Initialize a dense tensor for the fixedpoint of a :class:`FiniteMPO`.
+            % Initialize a dense tensor for the fixedpoint of a :class:`.FiniteMPO`.
             
             N = prod(cellfun(@(x) size(x, 4), mpo.O));
             for i = N:-1:1
@@ -100,7 +115,7 @@ classdef FiniteMpo
         end
         
         function T = transfermatrix(mpo, mps1, mps2, sites)
-        arguments
+            arguments
                 mpo
                 mps1
                 mps2 = mps1

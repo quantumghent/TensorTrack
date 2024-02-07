@@ -1,5 +1,51 @@
 classdef Dmrg
-    % Density Matrix Renormalisation Group algorithm for marix product states.
+    % `Density Matrix Renormalisation Group algorithm <https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.69.2863>`_ for marix product states.
+    %
+    % Properties
+    % ----------
+    % tol : :class:`double`
+    %   tolerance for convergence criterion, defaults to :code:`1e-10`.
+    %
+    % miniter : :class:`int`
+    %   minimum number of iteration, defaults to 5.
+    %
+    % maxiter : :class:`int`
+    %   maximum number of iteration, defaults to 100.
+    %
+    % verbosity : :class:`.Verbosity`
+    %   verbosity level of the algorithm, defaults to :code:`Verbosity.iter`.
+    %
+    % doplot : :class:`logical`
+    %   plot progress, defaults to :code:`false`.
+    %
+    % which : :class:`char`
+    %   eigenvalue selector (passed as the :code:`sigma` argument to :func:`.eigsolve`),
+    %   defaults to :code:`'largestabs'`.
+    %
+    % dynamical_tols : :class:`logical`
+    %   indicate whether or not to use a dynamical tolerance scaling for the algorithm's
+    %   subroutines based on the current error measure, defaults to :code:`false`
+    %
+    % tol_min : :class:`double`
+    %   smallest allowed convergence tolerance for soubroutines, defaults to :code:`1e-12`.
+    %
+    % tol_max : :class:`double`
+    %   highest allowed convergence tolerance for soubroutines, defaults to :code:`1e-10`.
+    %
+    % eigs_tolfactor : :class:`double`
+    %   relative scaling factor for determining the convergence tolerance of the eigensolver
+    %   subroutine based on the current error measure, defaults to :code:`1e-6`
+    %
+    % sweepstyle : :class:`char`
+    %   sweep style indicating how to sweep through the MPS at each iteration, options are:
+    %
+    %   - :code:`'f2f'`: (default) front-to-front, sweeping from site 1 to the end and back.
+    %   - :code:`'b2b'`: back-to-back, sweeping from site N to the start and back.
+    %   - :code:`'m2m'`: mid-to-mid, sweeping from the middle site to both ends and back.
+    %
+    % alg_eigs : :class:`.KrylovSchur` or :class:`.Arnoldi`
+    %   algorithm used for the local eigsolver updates, defaults to
+    %   :code:`KrylovSchur('MaxIter', 100, 'KrylovDim', 20)`.
     
     %% Options
     properties
@@ -22,7 +68,7 @@ classdef Dmrg
         saveMethod = 'full'
         name = 'DMRG'
         
-        alg_eigs = KrylovSchur('MaxIter', 100, 'KrylovDim', 20) % TODO: Arnoldi has issues for DMRG specifically, need to figure out why
+        alg_eigs = KrylovSchur('MaxIter', 100, 'KrylovDim', 20)
     end
     
     properties (Access = private)
@@ -49,6 +95,37 @@ classdef Dmrg
         end
         
         function [mps, envs, eta] = fixedpoint(alg, mpo, mps, envs)
+            % Find the fixed point MPS of a finite MPO, given an initial guess.
+            %
+            % Usage
+            % -----
+            % :code:`[mps, envs, eta] = fixedpoint(alg, mpo, mps, envs)`
+            %
+            % Arguments
+            % ---------
+            % alg : :class:`.Dmrg`
+            %   DMRG algorithm.
+            %
+            % mpo : :class:`.FiniteMpo`
+            %   matrix product operator.
+            %
+            % mps : :class:`.FiniteMps`
+            %   initial guess for MPS fixed point.
+            %
+            % envs : :class:`.FiniteEnvironment`
+            %   initial guess for the environments.
+            %
+            % Returns
+            % -------
+            % mps : :class:`.FiniteMps`
+            %   MPS fixed point.
+            %
+            % envs : :class:`.FiniteEnvironment`
+            %   corresponding environments.
+            %
+            % eta : :class:`double`
+            %   final error measure at convergence.
+            
             arguments
                 alg
                 mpo

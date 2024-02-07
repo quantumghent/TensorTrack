@@ -7,12 +7,16 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) MpoTensor < Ab
     % .. code-block::
     %
     %                               4
-    %                               ^
+    %                               v
     %                               |
-    %                        1 ->-- O -->- 3
+    %                        1 -<-- O --<- 3
     %                               |
-    %                               ^
+    %                               v
     %                               2
+    %
+    % Todo
+    % ----
+    % Document.
 
     properties
         tensors = []
@@ -443,7 +447,7 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) MpoTensor < Ab
         end
         
         function local_operators = decompose_local_operator(H, kwargs)
-            % convert a tensor into a product of local operators.
+            % Convert a tensor into a product of local operators.
             %
             % Usage
             % -----
@@ -451,14 +455,14 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) MpoTensor < Ab
             %
             % Arguments
             % ---------
-            % H : :class:`AbstractTensor`
+            % H : :class:`.AbstractTensor`
             %   tensor representing a local operator on N sites.
             %
             % Keyword Arguments
             % -----------------
-            % 'Trunc' : cell
+            % 'Trunc' : :class:`cell`
             %   optional truncation method for the decomposition. See also
-            %   :meth:`Tensor.tsvd`
+            %   :meth:`.Tensor.tsvd`
             arguments
                 H
                 kwargs.Trunc = {'TruncBelow', 1e-14}

@@ -1,10 +1,37 @@
 function mpo = quantum1dHeisenberg(kwargs)
+% Hamiltonian for the 1D Heisenberg model.
+%
+% .. math::
+%   H = J \sum_{\langle ij \rangle} \vec{S}_i \cdot \vec{S}_j + h \sum_{i} S_i^z
+%
+% Keyword arguments
+% -----------------
+% 'Spin' : :class:`double`
+%   halfinteger or integer spin label, defaults to :code:`1`.
+%
+% 'J' : :class:`double`
+%   exchange coupling, defaults to :code:`1`.
+%
+% 'h' : :class:`double`
+%   magnetic field, defaults to :code:`0`.
+%
+% 'L' : :class:`int`
+%   system size, defaults to :code:`Inf`.
+%
+% 'Symmetry' : :class:`char`
+%   symmetry group ('U1' or 'SU2'), defaults to :code:`'SU2'`.
+%
+% Returns
+% -------
+% mpo : :class:`.InfJMpo`
+%   Heisenberg Hamiltonian as a Jordan block MPO.
+
 arguments
     kwargs.Spin = 1
     kwargs.J = 1
     kwargs.h = 0
     kwargs.L = Inf     % size of system
-    kwargs.Symmetry {mustBeMember(kwargs.Symmetry, {'Z1', 'U1', 'SU2'})} = 'Z1'
+    kwargs.Symmetry {mustBeMember(kwargs.Symmetry, {'Z1', 'U1', 'SU2'})} = 'SU2'
 end
 
 J = kwargs.J;

@@ -1,22 +1,28 @@
 classdef UniformMps
-    % UniformMps - Implementation of infinite translation invariant MPS
+    % Implementation of infinite translation invariant MPS
     %
     % The center gauge is defined to have:
-    %   :math:`AL_w * C_w = AC_w = C_{w-1} * AR_w`
+    %
+    % .. math::
+    %	AL_w \cdot C_w = AC_w = C_{w-1} \cdot AR_w
     %
     % Properties
     % ----------
-    % AL : :class:`MpsTensor`
+    % AL : :class:`.MpsTensor`
     %   left-gauged mps tensors.
     %
-    % AR : :class:`MpsTensor`
+    % AR : :class:`.MpsTensor`
     %   right-gauged mps tensors.
     %
-    % C : :class:`Tensor`
+    % C : :class:`.Tensor`
     %   center gauge transform.
     %
-    % AC : :class:`MpsTensor`
+    % AC : :class:`.MpsTensor`
     %   center-gauged mps tensors.
+    %
+    % Todo
+    % ----
+    % Document all methods.
     
     properties
         AL (1,:) cell
@@ -37,18 +43,18 @@ classdef UniformMps
             %
             % Arguments
             % ---------
-            % A : :class:`cell` of :class:`MpsTensor`
+            % A : :class:`cell` of :class:`.MpsTensor`
             %   set of tensors per site that define an MPS to be gauged.
             %
-            % AL, AR, AC : :class:`cell` of :class:`MpsTensor`
+            % AL, AR, AC : :class:`cell` of :class:`.MpsTensor`
             %   set of gauged MpsTensors.
             %
-            % C : :class:`cell` of :class:`Tensor`
+            % C : :class:`cell` of :class:`.Tensor`
             %   gauge tensor.
             %
             % Returns
             % -------
-            % mps : :class:`UniformMps`
+            % mps : :class:`.UniformMps`
             %   gauged uniform MPS.
             
             narginchk(0, 4);
@@ -121,12 +127,12 @@ classdef UniformMps
             % fun : :class:`function_handle`
             %   function to initialize the tensor.
             %
-            % Repeating Aruguments
-            % --------------------
-            % pspaces : :class:`AbstractSpace`
+            % Repeating Arguments
+            % -------------------
+            % pspaces : :class:`.AbstractSpace`
             %   physical spaces for each site.
             %
-            % vspaces : :class:`AbstractSpace`
+            % vspaces : :class:`.AbstractSpace`
             %   virtual spaces between each site. (entry `i` corresponds to left of site
             %   `i`.)
             
@@ -161,7 +167,7 @@ classdef UniformMps
             %
             % See Also
             % --------
-            % :meth:`UniformMps.new`
+            % :meth:`.UniformMps.new`
             
             arguments (Repeating)
                 pspaces
@@ -176,12 +182,12 @@ classdef UniformMps
     %% Properties
     methods
         function p = period(mps)
-            % period over which the mps is translation invariant.
+            % Period over which the mps is translation invariant.
             p = length(mps(1).AL);
         end
         
         function d = depth(mps)
-            % amount of lines in a multi-line mps.
+            % Number of lines in a multi-line mps.
             d = size(mps, 1);
         end
         
@@ -204,19 +210,19 @@ classdef UniformMps
         end
         
         function s = leftvspace(mps, w)
-            % return the virtual space to the left of site w.
+            % Return the virtual space to the left of site `w`.
             if nargin == 1 || isempty(w), w = 1:period(mps); end
             s = arrayfun(@leftvspace, mps.AL{w});
         end
         
         function s = pspace(mps, w)
-            % return the physical space at site w.
+            % Return the physical space at site `w`.
             if nargin == 1 || isempty(w), w = 1:period(mps); end
             s = pspace(mps.AL{w});
         end
         
         function s = rightvspace(mps, w)
-            % return the virtual space to the right of site w.
+            % Return the virtual space to the right of site `w`.
             if nargin == 1 || isempty(w), w = 1:period(mps); end
             s = arrayfun(@rightvspace, mps.AL{w});
         end
@@ -238,34 +244,35 @@ classdef UniformMps
             %
             % Arguments
             % ---------
-            % mps : :class:`UniformMps`
+            % mps : :class:`.UniformMps`
             %   input mps, from which AL or AR is used as the state, and optionally C as an
             %   initial guess for the gauge.
             %
             % Keyword Arguments
             % -----------------
-            % Tol : numeric
+            % Tol : :class:`numeric`
             %   tolerance for the algorithm.
             %
-            % MaxIter : integer
-            %   maximum amount of iterations.
+            % MaxIter : :class:`integer`
+            %   maximum number of iterations.
             %
-            % Method : char
+            % Method : :class:`char`
             %   algorithm used for decomposition. Must be 'polar', 'qr' or 'qrpos'.
             %
-            % Verbosity : :class:`Verbosity`
+            % Verbosity : :class:`.Verbosity`
             %   level of output.
             %
-            % DiagC : logical
+            % DiagC : :class:`logical`
             %   flag to indicate if `C` needs to be diagonalized.
             %
-            % ComputeAC : logical
+            % ComputeAC : :class:`logical`
             %   flag to indicate if `AC` needs to be computed.
             %
-            % Order : 'lr' or 'rl'
+            % Order : :class:`char`, 'lr' or 'rl'
             %   order of gauge fixing:
-            %       'lr' uses AL as input tensors, first leftorth, then rightorth.
-            %       'rl' uses AR as input tensors, first rightorth, then leftorth.
+            %
+            %   - 'lr' uses AL as input tensors, first :code:`leftorth`, then :class:`rightorth`.
+            %   - 'rl' uses AR as input tensors, first :class:`rightorth`, then :code:`leftorth`.
             
             arguments
                 mps
@@ -364,7 +371,7 @@ classdef UniformMps
         end
         
         function mps = diagonalizeC(mps)
-            % gauge transform an mps such that C is diagonal.
+            % Gauge transform an mps such that C is diagonal.
             
             for i = 1:depth(mps)
                 for w = 1:period(mps(i))
@@ -396,7 +403,7 @@ classdef UniformMps
         end
         
         function mps = normalize(mps)
-            % normalize an mps state.
+            % Normalize an mps state.
             
             mps.C = arrayfun(@normalize, mps.C);
             mps.AC = arrayfun(@normalize, mps.AC);
@@ -422,25 +429,25 @@ classdef UniformMps
             %
             % Arguments
             % ---------
-            % mps1 : :class:`UniformMps`
+            % mps1 : :class:`.UniformMps`
             %   input mps for top layer.
             %
-            % mps2 : :class:`UniformMps`
+            % mps2 : :class:`.UniformMps`
             %   input mps for bottom layer, by default equal to the top.
             %
-            % sites : integer
+            % sites : :class:`int`
             %   optionally slice the unit cell of the mps and only define the transfer
             %   matrix for this slice.
             %
             % Keyword Arguments
             % -----------------
-            % Type : char
+            % Type : :class:`char`
             %   'LL', 'LR', 'RL', 'RR' to determine if the top or bottom respectively are AL
             %   or AR.
             %
             % Returns
             % -------
-            % T : FiniteMpo
+            % T : :class:`.FiniteMpo`
             %   transfer matrix of an mps, acting to the left.
             
             arguments
@@ -475,16 +482,16 @@ classdef UniformMps
             %
             % Arguments
             % ---------
-            % mps : :class:`UniformMps`
+            % mps : :class:`.UniformMps`
             %   input state.
             %
-            % type : char
+            % type : :class:`char`
             %   specification of the type of transfer matrix: 
-            %   general format: sprintf(%c_%c%c, side, top, bot) where side is 'l' or 'r' to
+            %   general format: :code:`sprintf(%c_%c%c, side, top, bot)` where side is 'l' or 'r' to
             %   determine which fixedpoint, and top and bot are 'L' or 'R' to specify
             %   whether to use AL or AR in the transfer matrix.
             %
-            % w : integer
+            % w : :class:`int`
             %   position within the mps unitcell of the fixed point.
             
             arguments
@@ -533,30 +540,31 @@ classdef UniformMps
             %
             % Arguments
             % ---------
-            % mps1 : :class:`UniformMps`
+            % mps1 : :class:`.UniformMps`
             %   input mps for top layer.
             %
-            % mps2 : :class:`UniformMps`
+            % mps2 : :class:`.UniformMps`
             %   input mps for bottom layer. Default value equal to `mps1`.
             %
-            % howmany : integer
+            % howmany : :class:`int`
             %   number of eigenvectors and eigenvalues to compute.
             %
-            % which : 'char'
+            % which : :class:`char`
             %   type of eigenvectors to target.
             %
             % Keyword Arguments
             % -----------------
             % eigopts
-            %   see keyword arguments for :meth:`eigs`.
+            %   see keyword arguments for :func:`.eigsolve`.
             %
-            % Verbosity : integer
+            % Verbosity : :class:`int`
             %   detail level for output.
             %
-            % Type : 'char'
-            %   type of transfer matrix to construct.
+            % Type : :class:`char`
+            %   type of transfer matrix to construct, see
+            %   :meth:`.UniformMps.transfermatrix`.
             %
-            % Charge : :class:`AbstractCharge`
+            % Charge : :class:`.AbstractCharge`
             %   charge of eigenvectors to target.
             
             arguments
@@ -597,6 +605,8 @@ classdef UniformMps
         end
         
         function f = fidelity(mps1, mps2, kwargs)
+            % Compute the fidelity between two uniform MPSs.
+            
             arguments
                 mps1
                 mps2
@@ -612,6 +622,8 @@ classdef UniformMps
         end
         
         function E = expectation_value(mps1, O, mps2)
+            % Compute the expectation value of an operator.
+            
             arguments
                 mps1
                 O
@@ -646,6 +658,8 @@ classdef UniformMps
         end
         
         function E = local_expectation_value(mps, O, offset)
+            % Compute the expectation value of a local operator.
+            
             arguments
                 mps
                 O
@@ -667,6 +681,13 @@ classdef UniformMps
         end
         
         function [svals, charges] = schmidt_values(mps, w)
+            % Compute the Schmidt values and corresponding charges for an entanglement cut
+            % to the right of site :code:`w`.
+            %
+            % Usage
+            % -----
+            % :code:`[svals, charges] = schmidt_values(mps, w)`
+            
             arguments
                 mps
                 w = 1
@@ -677,6 +698,8 @@ classdef UniformMps
         end
         
         function plot_entanglementspectrum(mps, d, w, ax, kwargs)
+            % Plot the entanglement spectrum of a uniform MPS.
+            
             arguments
                 mps
                 d = 1:depth(mps)
@@ -754,18 +777,18 @@ classdef UniformMps
             %
             % Arguments
             % ---------
-            % mps : :class:`UniformMps`
+            % mps : :class:`.UniformMps`
             %   input mps.
             %
-            % charge : :class:`AbstractCharge`
+            % charge : :class:`.AbstractCharge`
             %   charge sector for correlation length to target.
             %
             % Returns
             % -------
-            % xi : numeric
+            % xi : :class:`numeric`
             %   correlation length in the given charge sector.
             %
-            % theta : numeric
+            % theta : :class:`numeric`
             %   angle of the corresponding oscillation period.
             
             arguments
@@ -799,32 +822,32 @@ classdef UniformMps
             %
             % Arguments
             % ---------
-            % mps : :class:`UniformMps`
+            % mps : :class:`.UniformMps`
             %   input mps.
             %
-            % charge : :class:`AbstractCharge`
+            % charge : :class:`.AbstractCharge`
             %   charge sector for correlation length to target.
             %
             % Keyword Arguments
             % -----------------
-            % HowMany : int
+            % HowMany : :class:`int`
             %   amount of transfer matrix eigenvalues to compute.
             %
-            % Angle : numeric
+            % Angle : :class:`numeric`
             %   angle in radians around which the gap should be computed.
             %
-            % AngleTol : numeric
+            % AngleTol : :class:`numeric`
             %   tolerance in radians for angles to be considered equal.
             %
             % Returns
             % -------
-            % epsilon : numeric
+            % epsilon : :class:`numeric`
             %   inverse correlation length in the given charge sector.
             %
-            % delta : numeric
+            % delta : :class:`numeric`
             %   refinement parameter.
             %
-            % spectrum : numeric
+            % spectrum : :class:`numeric`
             %   computed partial transfer matrix spectrum.
             arguments
                 mps
@@ -859,6 +882,8 @@ classdef UniformMps
         end
 
         function S = entanglement_entropy(mps, w)
+            % Compute the entanglement entropy of a uniform MPS for a cut to the right of
+            % site :code:`w`
             arguments
                 mps
                 w = 1
@@ -873,7 +898,9 @@ classdef UniformMps
         end
         
         function S = renyi_entropy(mps, n, w)
-            arguments
+            % Compute the :code:`n`-th Renyi entropy of a uniform MPS for a cut to the right
+            % of site :code:`w`
+           arguments
                 mps
                 n
                 w = 1
@@ -889,6 +916,8 @@ classdef UniformMps
         end
 
         function out = truncate(mps, trunc)
+            % Truncate a uniform MPS according to the options specified in :code:`trunc`
+            % (see :meth:`.Tensor.tsvd` for details on the truncation options).
             arguments
                 mps
                 trunc.TruncDim
@@ -911,32 +940,32 @@ classdef UniformMps
             end
         end
         
-        S = EntanglementEntropy(mps, loc);
-        S = RenyiEntropy(mps,n, loc);
-        E = ExpectationValue(mps, W, GL, GR)
-        rho = LeftFixedPoint(mps1, mps2, w, choice)
-        rho = RightFixedPoint(mps1, mps2, w, choice)
-        sf=StaticStructureFactor(mps,S,k)
-        
-        out = Block(mps, opts)
-        out = Split(mps, varargin)
-        %[out, lambda] = Truncate(mps, control, opts)
-        
-        [f, rho] = Fidelity(mps1, mps2, tol)
-        
-        mps = Conj(mps)
-        
-        mps = mtimes(mps, lambda)
-        
-        mps = ShiftUnitCell(mps,dd,dw)
-        out = Rotate180(mps)
-        out = Transpose(mps)
-        
-        mps = SendToGpu(mps)
-        mps = GetFromGpu(mps)
-        
-        [mps, xi] = Retract(mps, eta, alpha)
-        n = Inner(x, eta, xi)
+%         S = EntanglementEntropy(mps, loc);
+%         S = RenyiEntropy(mps,n, loc);
+%         E = ExpectationValue(mps, W, GL, GR)
+%         rho = LeftFixedPoint(mps1, mps2, w, choice)
+%         rho = RightFixedPoint(mps1, mps2, w, choice)
+%         sf=StaticStructureFactor(mps,S,k)
+%         
+%         out = Block(mps, opts)
+%         out = Split(mps, varargin)
+%         %[out, lambda] = Truncate(mps, control, opts)
+%         
+%         [f, rho] = Fidelity(mps1, mps2, tol)
+%         
+%         mps = Conj(mps)
+%         
+%         mps = mtimes(mps, lambda)
+%         
+%         mps = ShiftUnitCell(mps,dd,dw)
+%         out = Rotate180(mps)
+%         out = Transpose(mps)
+%         
+%         mps = SendToGpu(mps)
+%         mps = GetFromGpu(mps)
+%         
+%         [mps, xi] = Retract(mps, eta, alpha)
+%         n = Inner(x, eta, xi)
         
         
     end
@@ -944,6 +973,11 @@ classdef UniformMps
     %% Subroutines
     methods (Access = protected)
         function [AL, CL, lambda, eta] = uniform_leftorth(mps, CL, kwargs)
+            % Bring a uniform MPS into left canonical form.
+            %
+            % Usage
+            % -----
+            % :code:`[AL, CL, lambda, eta] = uniform_leftorth(mps, CL, kwargs)`
             arguments
                 mps
                 CL = {}
@@ -1047,6 +1081,11 @@ classdef UniformMps
         end
         
         function [AR, CR, lambda, eta] = uniform_rightorth(mps, CR, kwargs)
+            % Bring a uniform MPS into right canonical form.
+            %
+            % Usage
+            % -----
+            % :code:`[AR, CR, lambda, eta] = uniform_rightorth(mps, CR, kwargs)`
             arguments
                 mps
                 CR = mps.C

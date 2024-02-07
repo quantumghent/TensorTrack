@@ -1,4 +1,28 @@
 function mpo = quantum1dIsing(kwargs)
+% Hamiltonian for the 1D transverse-field Ising model.
+%
+% .. math::
+%   H = -J \left(\sum_{\langle ij \rangle} S_i^x S_j^x  + h \sum_{i} S_i^z \right).
+%
+% Keyword arguments
+% -----------------
+% 'J' : :class:`double`
+%   :math:`ZZ` coupling, defaults to :code:`1`.
+%
+% 'h' : :class:`double`
+%   relative transverse field strength, defaults to :code:`1`.
+%
+% 'L' : :class:`int`
+%   system size, defaults to :code:`Inf`.
+%
+% 'Symmetry' : :class:`char`
+%   symmetry group ('Z1', 'Z2' or 'fZ2'), defaults to :code:`'Z1'`.
+%
+% Returns
+% -------
+% mpo : :class:`.InfJMpo`
+%   Ising Hamiltonian as a Jordan block MPO.
+
 arguments
     kwargs.J = 1
     kwargs.h = 1

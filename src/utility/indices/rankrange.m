@@ -1,6 +1,5 @@
 function r = rankrange(rank)
-%RANKRANGE Summary of this function goes here
-%   Detailed explanation goes here
+% Convert tensor rank into a contiguous range of dimensions.
 
 r = [1:rank(1) rank(1) + (rank(2):-1:1)];
 
