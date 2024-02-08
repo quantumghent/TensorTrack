@@ -1986,9 +1986,21 @@ classdef Tensor < AbstractTensor
                 end
             end
             if isfield(trunc, 'TruncSpace')
-                error('TBA');
+                truncspace = trunc.TruncSpace;
+                [b, ind] = ismember(truncspace.dimensions.charges, dims.charges);
+                assert(all(b),"Truncation space contains charges that S does not.")
+                assert(all(dims.degeneracies(ind) >= truncspace.dimensions.degeneracies), "Truncation space has degeneracies larger than S.")
+                dims.degeneracies(ind) = truncspace.dimensions.degeneracies;
+                dims.degeneracies(setxor(ind,1:numel(dims.degeneracies))) = 0;
+                for i = 1:length(mblocks)
+                    s = diag(Ss{i});
+                    eta = eta + sum(s(dims.degeneracies(i) + 1:end).^2 * qdim(dims.charges(i)));
+                    Us{i} = Us{i}(:, 1:dims.degeneracies(i));
+                    Ss{i} = diag(s(1:dims.degeneracies(i)));
+                    Vs{i} = Vs{i}(1:dims.degeneracies(i), :);
+                end
             end
-            
+
             if ~doTrunc
                 W1 = prod(t.codomain);
                 W2 = prod(t.domain);
@@ -2014,7 +2026,7 @@ classdef Tensor < AbstractTensor
             U.var = fill_matrix_data(U.var, Us, dims.charges);
             S.var = fill_matrix_data(S.var, Ss, dims.charges);
             V.var = fill_matrix_data(V.var, Vs, dims.charges);
-            
+
             if nargout <= 1
                 U = S;
             end

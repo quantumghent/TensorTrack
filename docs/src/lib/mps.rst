@@ -28,3 +28,6 @@ Operators
 .. autoclass:: src.mps.PepsTensor
 .. autoclass:: src.mps.PepsSandwich
     :no-members:
+.. autoclass:: src.mps.UniformPeps
+    :no-members:
+    :members: UniformPeps

@@ -209,6 +209,11 @@ classdef PepsTensor
         function t = randnc(varargin)
             t = PepsTensor.new(@randnc, varargin{:});
         end
+
+        function t = zeros(varargin)
+            t = PepsTensor.new(@zeros, varargin{:});
+        end
+
     end
 end
 

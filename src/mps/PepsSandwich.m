@@ -5,10 +5,10 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) PepsSandwich
     % Properties
     % ----------
     % top : :class:`.PepsTensor`
-    %   top-layer PEPS tensor, usually interpreted as the 'bra' in the overlap.
+    %   top-layer PEPS tensor, usually interpreted as the 'ket' in the overlap.
     %
     % bot : :class:`.PepsTensor`
-    %   bottom-layer PEPS tensor, usually interpreted as the 'ket' in the overlap.
+    %   bottom-layer PEPS tensor, usually interpreted as the 'bra' in the overlap.
     %
     % Todo
     % ----

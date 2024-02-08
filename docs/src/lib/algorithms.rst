@@ -44,6 +44,15 @@ Infinite MPS algorithms
     :members: changebonds
 
 
+Infinite PEPS algorithms
+------------------------
+
+.. autoclass:: src.algorithms.Ctmrg
+    :no-members:
+    :members: fixedpoint
+
+
+
 Eigsolvers
 ----------
 
