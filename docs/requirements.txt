@@ -1,7 +1,6 @@
-sphinx==4.5.0
+sphinx==5.0.2
 sphinx-rtd-theme==0.5.2
 sphinxcontrib-matlabdomain==0.18.0
-sphinxcontrib-applehelp==1.0.2
 sphinx-prompt==1.5.0
 nbsphinx==0.8.9
 sphinx-gallery==0.10.1
