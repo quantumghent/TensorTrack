@@ -1,5 +1,5 @@
 classdef PepsTensor
-    % Generic PEPS tensor object that hos a notion of virtual and physical legs.
+    % Generic PEPS tensor object that has a notion of virtual and physical legs.
     %   This object represents the PEPS tensor at a single site as a rank (1, 4) tensor,
     %   where the physical index lies in the codomain and the virtual indices lie in the
     %   domain.
@@ -197,6 +197,11 @@ classdef PepsTensor
         function t = randnc(varargin)
             t = PepsTensor.new(@randnc, varargin{:});
         end
+
+        function t = zeros(varargin)
+            t = PepsTensor.new(@zeros, varargin{:});
+        end
+
     end
 end
 

@@ -1891,7 +1891,6 @@ classdef Tensor < AbstractTensor
                 trunc.TruncTotalDim
                 trunc.TruncBelow
                 trunc.TruncSpace
-                trunc.doPlot = false
             end
             
             t = tpermute(t, [p1 p2], [length(p1) length(p2)]);
@@ -1913,13 +1912,6 @@ classdef Tensor < AbstractTensor
                     [Us{i}, Ss{i}, Vs{i}] = svd(mblocks{i});
                 end
                 Vs{i} = Vs{i}';
-            end
-
-            if isfield(trunc, 'doPlot') && trunc.doPlot
-                Ss_old = Ss;
-                W_old = t.domain.new(dims, false);
-                S_old = Tensor.zeros(W_old, W_old);
-                S_old.var = fill_matrix_data(S_old.var, Ss_old, dims.charges);
             end
             
             if isfield(trunc, 'TruncBelow')
@@ -1963,9 +1955,9 @@ classdef Tensor < AbstractTensor
             end
             if isfield(trunc, 'TruncSpace')
                 truncspace = trunc.TruncSpace;
-                [b, ind] = ismember(truncspace.dimensions.charges,dims.charges);
+                [b, ind] = ismember(truncspace.dimensions.charges, dims.charges);
                 assert(all(b),"Truncation space contains charges that S does not.")
-                assert(all(dims.degeneracies(ind)>=truncspace.dimensions.degeneracies), "Truncation space has degeneracies larger than S.")
+                assert(all(dims.degeneracies(ind) >= truncspace.dimensions.degeneracies), "Truncation space has degeneracies larger than S.")
                 dims.degeneracies(ind) = truncspace.dimensions.degeneracies;
                 dims.degeneracies(setxor(ind,1:numel(dims.degeneracies))) = 0;
                 for i = 1:length(mblocks)
@@ -1975,20 +1967,6 @@ classdef Tensor < AbstractTensor
                     Ss{i} = diag(s(1:dims.degeneracies(i)));
                     Vs{i} = Vs{i}(1:dims.degeneracies(i), :);
                 end
-            end
-            
-            if isfield(trunc, 'doPlot') && trunc.doPlot
-                ax = gca;
-                ax = plot_schmidtspectrum(S_old, ax);
-                hold on
-                for i = 1:length(mblocks)
-                    s = diag(Ss_old{i});
-                    s(dims.degeneracies(i)+1:end) = 0;
-                    Ss_old{i} = diag(s);
-                end
-                S_old.var = fill_matrix_data(S_old.var, Ss_old, dims.charges);
-                ax = plot_schmidtspectrum(S_old, ax, 'Marker', 'o');
-                hold off
             end
 
             if ~doTrunc

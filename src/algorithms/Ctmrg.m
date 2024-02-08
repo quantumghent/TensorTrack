@@ -181,7 +181,7 @@ classdef Ctmrg
                         %norm(P*Q-Tensor.eye(space(Q,2:4)',space(Q,2:4)'))
     
                         above_projs{i} = Q;
-                        below_projs{i} = P;                %normally ok for any arrow
+                        below_projs{i} = P;                %should be ok for any arrow
 
                     end
 
