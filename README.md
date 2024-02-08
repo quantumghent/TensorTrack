@@ -2,8 +2,8 @@
 
 <!-- PROJECT SHIELDS -->  
 <div align="center">
-  
-  [![Documentation Status](https://readthedocs.org/projects/tensortrack/badge/?version=stable)](https://tensortrack.readthedocs.io/en/stable/?badge=stable)
+
+  [![Documentation Status](https://readthedocs.org/projects/tensortrack/badge/?version=latest)](https://tensortrack.readthedocs.io/en/latest/?badge=latest)
   [![CI](https://github.com/quantumghent/TensorTrack/actions/workflows/CI.yml/badge.svg)](https://github.com/quantumghent/TensorTrack/actions/workflows/CI.yml)
   [![Codecov](https://codecov.io/gh/quantumghent/TensorTrack/branch/main/graph/badge.svg?token=1I0XEB69TQ)](https://codecov.io/gh/quantumghent/TensorTrack)
   [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
