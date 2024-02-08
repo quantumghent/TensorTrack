@@ -1,6 +1,14 @@
 classdef UniformPeps
-    % UniformPeps - Implementation of infinite translation invariant PEPS
+    % Implementation of infinite translation invariant PEPS
     %
+    % Properties
+    % ----------
+    % A : :class:`cell` of :class:`.PepsTensor`
+    %   cell array of PEPS tensors in 2D unit cell.
+    %
+    % Todo
+    % ----
+    % Document.
     
     properties
         A cell
@@ -12,15 +20,17 @@ classdef UniformPeps
         function peps = UniformPeps(varargin)
             % Usage
             % -----
-            % :code:`peps = UniformMps(A)`
+            % :code:`peps = UniformPeps(A)`
             %
             % Arguments
             % ---------
-            % A : :class:`cell` of :class:`PepsTensor`
+            % A : :class:`cell` of :class:`.PepsTensor`
+            %   cell array of PEPS tensors in 2D unit cell.
             %
             % Returns
             % -------
-            % peps : :class:`UniformPeps`
+            % peps : :class:`.UniformPeps`
+            %   infinite translation-invariant PEPS.
             
             if nargin == 0, return; end % default empty constructor
             

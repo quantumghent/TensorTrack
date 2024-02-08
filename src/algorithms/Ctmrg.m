@@ -1,5 +1,29 @@
 classdef Ctmrg
-    % Corner Transfer Matrix Renormalisation Group algorithm for PEPS.
+    % `Corner Transfer Matrix Renormalisation Group algorithm <https://arxiv.org/abs/cond-mat/9705072>`_ for PEPS.
+    %
+    % Properties
+    % ----------
+    % tol : :class:`double`
+    %   tolerance for convergence criterion, defaults to :code:`1e-10`.
+    %
+    % miniter : :class:`int`
+    %   minimum number of iteration, defaults to :code:`5`.
+    %
+    % maxiter : :class:`int`
+    %   maximum number of iteration, defaults to :code:`100`.
+    %
+    % projectortype : :class:`char`
+    %   projector scheme used in the algorithm, currently only supports a single default
+    %   value.
+    %
+    % trunc : :class:`struct`
+    %   specification of truncation options, see :meth:`.Tensor.tsvd` for details.
+    %
+    % verbosity : :class:`.Verbosity`
+    %   verbosity level of the algorithm, defaults to :code:`Verbosity.iter`.
+    %
+    % doplot : :class:`logical`
+    %   plot progress, defaults to :code:`false`.
     
     %% Options
     properties
@@ -37,6 +61,38 @@ classdef Ctmrg
         end
         
         function [envs, new_norm, err] = fixedpoint(alg, peps_top, peps_bot, envs)
+            % Find the fixed point CTMRG environment of an infinite PEPS overlap.
+            %
+            % Usage
+            % -----
+            % :code:`[envs, new_norm, err] = fixedpoint(alg, peps_top, peps_bot, envs)`
+            %
+            % Arguments
+            % ---------
+            % alg : :class:`.Ctmrg`
+            %   CTMRG algorithm.
+            %
+            % peps_top : :class:`.UniformPeps`
+            %   top-layer uniform PEPS, usually interpreted as the 'ket' in the overlap.
+            %
+            % peps_bot : :class:`.UniformPeps`
+            %   bottom-layer uniform PEPS, usually interpreted as the 'bra' in the overlap, 
+            %   defaults to the top layer state.
+            %
+            % envs : :class:`.CtmrgEnv`
+            %   initial guess for the fixed point CTMRG environment.
+            %
+            % Returns
+            % -------
+            % envs : :class:`.CtmrgEnv`
+            %  fixed point CTMRG environment.
+            %
+            % new_norm : :class:`double`
+            %   corresponding norm.
+            %
+            % err : :class:`double`
+            %   final error measure at convergence.
+            
             arguments
                 alg
                 peps_top

@@ -35,8 +35,8 @@ Additionally, for tensors which are invariant under general global symmetries, v
    lib/tensors
    lib/sparse
    lib/mps
-   lib/environments
    lib/algorithms
+   lib/environments
    lib/models
    lib/utility
    lib/caches

@@ -1,6 +1,17 @@
 classdef CtmrgEnvironment
-    %CTMRGENVIRONMENT Summary of this class goes here
-    %   Detailed explanation goes here
+    % Data structure for managing CTMRG environments.
+    %
+    % Properties
+    % ----------
+    % corners : :class:`cell` of :class:`.Tensor`
+    %   cell array of corner tensors.
+    %
+    % edges : :class:`cell` of :class:`.Tensor`
+    %   cell array of edge tensors.
+    %
+    % Todo
+    % ----
+    % Document.
     
     properties
         corners
