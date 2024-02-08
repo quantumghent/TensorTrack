@@ -1,5 +1,5 @@
 function wig = Wigner3j(j1,j2,j3,m1,m2,m3,ifs,ifcb)
-% Computes the Wigner $3j$ symbols
+% Computes the Wigner :math:`3j` symbols
 % 
 % .. math::
 %
@@ -49,14 +49,15 @@ function wig = Wigner3j(j1,j2,j3,m1,m2,m3,ifs,ifcb)
 % 
 % ifcb
 %   if exists and is true, switches to computing the Clebsch-Gordan coefficients instead of
-%   the $3j$-symbols (default :code:`false`)
+%   the :math:`3j`-symbols (default :code:`false`)
 %
 % Returns
 % -------
 % W
-%   the resulting values of the 3j-symbols (:code:`ifcb=false`) or the Clebsch-Gordan
-%   coefficients (:code:`ifcb=true`) in either numeric double-precision or symbolic form
-%   (see the input parameter :code:`ifs`); array of the same size as $j_1$.
+%   the resulting values of the :math:`3j`-symbols (:code:`ifcb=false`) or the
+%   Clebsch-Gordan coefficients (:code:`ifcb=true`) in either numeric double-precision or
+%   symbolic form (see the input parameter :code:`ifs`); array of the same size as
+%   :math:`j_1`.
 %
 %
 % Notes
@@ -71,7 +72,7 @@ function wig = Wigner3j(j1,j2,j3,m1,m2,m3,ifs,ifcb)
 % d. all the "numeric" algorithms switch automatically to the symbolic computations
 %    as soon as the numeric overflow occurs, thereby improving the accuracy
 %    but slowing down the computations for some big quantum numbers
-% e. in cases with at least one of the $j$ quantum numbers <=2, the explicit accurate
+% e. in cases with at least one of the :math:`j` quantum numbers <=2, the explicit accurate
 %    equations are applied in all the algorithms ensuring the highest possible accuracy
 % f. for relatively small quantum numbers (up to ~20) all the algorithms provide
 %    approximately equivalent results with a reasonably high accuracy

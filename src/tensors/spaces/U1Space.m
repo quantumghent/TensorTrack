@@ -1,5 +1,16 @@
 function V = U1Space(charges, bonds, isdual)
-% Convenience constructor for U1-graded spaces.
+% Convenience constructor for :math:`\mathrm{U}(1)`-graded spaces.
+%
+% Arguments
+% --------
+% charges : (1, :) :class:`int`-like
+%   vector of :math:`\mathrm{U}(1)` charge labels.
+%
+% bonds : (1, :) :class:`int`
+%   degeneracy of each charge.
+%
+% isdual : :class:`logical`
+%   indicate if the space is dual.
 arguments
     charges
     bonds

@@ -1,6 +1,8 @@
 classdef Arrow < logical
-% Arrow - Direction of tensor leg.
-%   Enumeration class with directions.
+% Enumeration class reprenting the possible directions of a tensor leg:
+%
+% - :code:`in`: Incoming tensor leg, encoded as a logical :code:`true`
+% - :code:`out`: Outgoing tensor leg, encoded as a logical :code:`false`
 
 enumeration
     in (true)

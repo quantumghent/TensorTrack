@@ -1,5 +1,9 @@
 function timeStr = time2str(time, unit, precision)
-%TIMESTRING Returns string version of a duration in seconds.
+% Returns string version of a duration in seconds.
+%
+% Usage
+% -----
+% :code:`timeStr = time2str(time, unit, precision)`
 
 if nargin < 3, precision = 1; end
 

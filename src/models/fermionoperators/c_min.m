@@ -1,4 +1,15 @@
 function c = c_min(kwargs)
+% Fermionic annihilation operator.
+%
+% Keyword arguments
+% -----------------
+% 'Side' : :class:`char`
+%   side, 'left or 'right'.
+%
+% Returns
+% c : :class:`.Tensor`
+%   annihilation operator represented as a 3-leg tensor with :math:`fZ_2` symmetry.
+
 arguments
     kwargs.side = 'left'
 end

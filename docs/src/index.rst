@@ -16,9 +16,9 @@ Additionally, for tensors which are invariant under general global symmetries, v
    :caption: Manual
    :maxdepth: 2
 
-   man/intro
    man/tensor
    man/symmetries
+   man/algorithms
 
 
 .. toctree::
@@ -33,5 +33,10 @@ Additionally, for tensors which are invariant under general global symmetries, v
    :maxdepth: 2
 
    lib/tensors
+   lib/sparse
+   lib/mps
+   lib/environments
+   lib/algorithms
+   lib/models
    lib/utility
    lib/caches

@@ -1,33 +1,34 @@
 function [I, varargout] = simulsortrows(arrays, kwargs)
 % Simultaneous sorting of several input arrays by row.
-%   Sorts the rows such that equal rows of array{i} appear sorted by the rows of array{i+1}.
+% 
+% Sorts the rows such that equal rows of array{i} appear sorted by the rows of array{i+1}.
 %
 % This is achieved by sorting rows from end to front, making use of the fact that SORTROWS
 % is stable and thus will not mess up the order of later rows when earlier rows are equal.
 %
 % Usage
 % -----
-% [I, array1, array2, ...] = simulsortrows(array1, array2, ..., kwargs)
+% :code:`[I, array1, array2, ...] = simulsortrows(array1, array2, ..., kwargs)`
 %
-% Arguments
-% ---------
+% Repeating arguments
+% -------------------
 % array1, array2, ...
 %   arrays of equal size that need to be sorted. These can be of any type that supports
 %   SORTROWS.
 %
 % Keyword Arguments
 % -----------------
-% Col : int
+% Col : :class:`int`
 %   vector of indices that specifies the columns used for sorting.
 %
-% Direction : 'ascend' or 'descend'
+% Direction : :class:`char`, 'ascend' or 'descend'
 %   specify the sorting direction. You can also specify a different direction for each
 %   column by using a cell array of 'ascend' and 'descend' of the same size as Col, such
 %   that corresponding elements are sorted ascending or descending.
 %
 % Returns
 % -------
-% I : int
+% I : :class:`int`
 %   permutation vector that brings the input arrays into rowsorted order.
 %
 % array1, array2, ...

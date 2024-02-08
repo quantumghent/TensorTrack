@@ -1,4 +1,5 @@
 function x = between(x1, x, x2)
+% Restrict :code:`x` to lie between :code:`x1` and :code:`x2`
 
 assert(x1 <= x2, 'range', 'x1 should be smaller than  or equal to x2');
 if x < x1

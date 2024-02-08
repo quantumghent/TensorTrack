@@ -3,16 +3,16 @@ classdef FusionTree < matlab.mixin.CustomDisplay
     %
     % Properties
     % ----------
-    % charges : :class:`AbstractCharge`
+    % charges : (:, :) :class:`.AbstractCharge`
     %   labels for the edges of the fusion trees
     %
-    % vertices : int
+    % vertices : (:, :) :class:`int`
     %   labels for the vertices of the fusion trees
     %
-    % isdual : logical
+    % isdual : (1, :) :class:`logical`
     %   indicator of duality transform on the external edges.
     %
-    % rank : int
+    % rank : (1, 2) :class:`int`
     %   amount of splitting tree and fusion tree legs.
     
     properties
@@ -37,18 +37,18 @@ classdef FusionTree < matlab.mixin.CustomDisplay
             %
             % Arguments
             % ---------
-            % charges : :class:`AbstractCharge`
+            % charges : (:, :) :class:`.AbstractCharge`
             %   array of charges, where each row represents an allowed fusion channel.
             %
-            % vertices : int = []
+            % vertices (:, :) : :class:`.int`
             %   Array of vertex labels. Must be empty or have the same amount of
             %   rows as `charges`. This is optional if the charges have a fusion style
             %   which is multiplicity-free.
             %
-            % isdual : logical
+            % isdual : (1, :) :class:`logical`
             %   mask that shows the presence of duality transformations.
             %
-            % rank : int
+            % rank : (1, 2) :class:`int`
             %   number of splitting and fusing legs.
             
             if nargin == 0
@@ -88,15 +88,15 @@ classdef FusionTree < matlab.mixin.CustomDisplay
             %
             % Arguments
             % ---------
-            % rank : int
+            % rank : (1, 2) :class:`int`
             %   number of legs for the splitting and fusion tree.
             %
             % Repeating Arguments
             % -------------------
-            % charges : :class:`AbstractCharge`
+            % charges : (1, :) :class:`.AbstractCharge`
             %   set of charges for a given leg
             %
-            % isdual : logical
+            % isdual : :class:`logical`
             %   presence of a duality transform
             
             arguments
@@ -238,23 +238,23 @@ classdef FusionTree < matlab.mixin.CustomDisplay
             %
             % Arguments
             % ---------
-            % f : :class:`FusionTree`
-            %   tree to swap.
+            % f : :class:`.FusionTree`
+            %   tree to swap
             %
-            % i : int
-            %   `i` and `i+1` are the braided strands.
+            % i : :class:`int`
+            %   :code:`i` and :code:`i+1` are the braided strands
             %
-            % inv : logical = false
-            %   flag to indicate whether to perform an overcrossing (false) or an
-            %   undercrossing (true).
+            % inv : :class:`logical` = :code:`false`
+            %   flag to indicate whether to perform an overcrossing (:code:`false`) or an
+            %   undercrossing (:code:`true`)
             %
             % Returns
             % -------
-            % c : sparse double
-            %   matrix of coefficients that transform input to output trees.
-            %   f(i) --> c(i,j) * f(j)
+            % c : (:, :) :class:`sparse`
+            %   matrix of coefficients that transform input to output trees:
+            %   :code:`f(i) --> c(i,j) * f(j)`
             %
-            % f : :class:`FusionTree`
+            % f : :class:`.FusionTree`
             %   braided trees in canonical form.
             
             if nargin < 3, inv = false; end
@@ -410,16 +410,16 @@ classdef FusionTree < matlab.mixin.CustomDisplay
             %
             % Arguments
             % ---------
-            % f : :class:`FusionTree`
+            % f : :class:`.FusionTree`
             %   tree to bend.
             %
             % Returns
             % -------
-            % c : sparse double
+            % c :  (:, :) :class:`sparse`
             %   matrix of coefficients that transform input to output trees.
-            %   f(i) --> c(i,j) * f(j)
+            %   :code:`f(i) --> c(i,j) * f(j)`
             %
-            % f : :class:`FusionTree`
+            % f : :class:`.FusionTree`
             %   bent trees in canonical form.
             
             f = flip(f);
@@ -434,16 +434,16 @@ classdef FusionTree < matlab.mixin.CustomDisplay
             %
             % Arguments
             % ---------
-            % f : :class:`FusionTree`
+            % f : :class:`.FusionTree`
             %   tree to bend.
             %
             % Returns
             % -------
-            % c : sparse double
+            % c :  (:, :) :class:`sparse`
             %   matrix of coefficients that transform input to output trees.
-            %   `f(i) --> c(i,j) * f(j)`
+            %   :code:`f(i) --> c(i,j) * f(j)`
             %
-            % f : :class:`FusionTree`
+            % f : :class:`.FusionTree`
             %   bent trees in canonical form.
             
             if ~hasmultiplicity(fusionstyle(f))
@@ -544,30 +544,31 @@ classdef FusionTree < matlab.mixin.CustomDisplay
         
         function [c, f] = braid(f, p, lvl, rank)
             % Compute the coefficients that bring a braided tree into canonical form.
-            %   This is done by reducing the braid into a composition of elementary swaps
-            %   on neighbouring strands.
+            %
+            % This is done by reducing the braid into a composition of elementary swaps
+            % on neighbouring strands.
             %
             % Arguments
             % ---------
-            % f : :class:`FusionTree`
+            % f : :class:`.FusionTree`
             %   tree to braid.
             %
-            % p : int
+            % p :  (:, :) :class:`int`
             %   permutation indices.
             %
-            % lvl : int
+            % lvl :  (:, :) :class:`int`
             %   height of the strands, indicating over- and undercrossings.
             %
-            % rank : int
+            % rank : :class:`int` (1, 2)
             %   final number of splitting and fusing legs.
             %
             % Returns
             % -------
-            % c : sparse double
+            % c :  (:, :) :class:`sparse`
             %   matrix of coefficients that transform input to output trees.
-            %   f(i) --> c(i,j) * f(j)
+            %   :code:`f(i) --> c(i,j) * f(j)`
             %
-            % f : :class:`FusionTree`
+            % f : :class:`.FusionTree`
             %   braided trees in canonical form.
             %
             % Todo
@@ -717,19 +718,19 @@ classdef FusionTree < matlab.mixin.CustomDisplay
             % f : :class:`FusionTree`
             %   tree to permute.
             %
-            % p : int
+            % p :  (1, :) :class:`int`
             %   permutation indices.
             %
-            % r : int
+            % r : (1, 2) :class:`int`
             %   final number of splitting and fusing legs.
             %
             % Returns
             % -------
-            % c : sparse double
+            % c : (:, :) :class:`sparse`
             %   matrix of coefficients that transform input to output trees.
-            %   `f(i) --> c(i,j) * f(j)`
+            %   :code:`f(i) --> c(i,j) * f(j)`
             %
-            % f : :class:`FusionTree`
+            % f : :class:`.FusionTree`
             %   permuted trees in canonical form.
             
             arguments
@@ -749,19 +750,19 @@ classdef FusionTree < matlab.mixin.CustomDisplay
             %
             % Arguments
             % ---------
-            % f : :class:`FusionTree`
+            % f : :class:`.FusionTree`
             %   tree to repartition.
             %
-            % newrank : int
+            % newrank : (1, 2) :class:`int`
             %   new rank of the fusion tree.
             %
             % Returns
             % -------
-            % c : sparse double
+            % c : (:, :) :class:`sparse`
             %   matrix of coefficients that transform input to output trees.
-            %   `f(i) --> c(i,j) * f(j)`
+            %   :code:`f(i) --> c(i,j) * f(j)`
             %
-            % f : :class:`FusionTree`
+            % f : :class:`.FusionTree`
             %   repartitioned trees in canonical form.
             
             arguments
@@ -799,22 +800,22 @@ classdef FusionTree < matlab.mixin.CustomDisplay
             %
             % Arguments
             % ---------
-            % f : :class:`FusionTree`
+            % f : :class:`.FusionTree`
             %   tree to repartition.
             %
-            % i : int or logical
+            % i : :class:`int` or :class:`logical`
             %   indices of legs to twist.
             %
-            % inv : logical
+            % inv : :class:`logical`
             %   flag to determine inverse twisting.
             %
             % Returns
             % -------
-            % c : sparse double
+            % c : (:, :) :class:`sparse`
             %   matrix of coefficients that transform input to output trees.
-            %   `f(i) --> c(i,j) * f(j)`
+            %   :code:`f(i) --> c(i,j) * f(j)`
             %
-            % f : :class:`FusionTree`
+            % f : :class:`.FusionTree`
             %   twisted trees in canonical form.
             
             arguments
@@ -1138,11 +1139,11 @@ classdef FusionTree < matlab.mixin.CustomDisplay
             %
             % Arguments
             % ---------
-            % f : :class:`FusionTree`
+            % f : :class:`.FusionTree`
             %
             % Returns
             % -------
-            % A : double
+            % A : :class:`double`
             %   array representation of a fusion tree.
             
             assert(issymmetric(braidingstyle(f)), ...
@@ -1176,13 +1177,13 @@ classdef FusionTree < matlab.mixin.CustomDisplay
             %
             % Arguments
             % ---------
-            % f : :class:`FusionTree`
+            % f : :class:`.FusionTree`
             %   an array of fusion trees to convert.
             %
             % Returns
             % -------
-            % C : cell
-            %   a cell array containing the array representations of f.
+            % C : :class:`cell`
+            %   a cell array containing the array representations of :code:`f`.
             
             if fusionstyle(f) == FusionStyle.Unique
                 C = num2cell(ones(size(f)));

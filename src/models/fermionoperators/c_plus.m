@@ -1,4 +1,15 @@
 function c_dagger = c_plus(kwargs)
+% Fermionic creation operator.
+%
+% Keyword arguments
+% -----------------
+% 'Side' : :class:`char`
+%   side, 'left or 'right'.
+%
+% Returns
+% c_dagger : :class:`.Tensor`
+%   creation operator represented as a 3-leg tensor with :math:`fZ_2` symmetry.
+
 arguments
     kwargs.side = 'left'
 end

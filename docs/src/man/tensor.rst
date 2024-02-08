@@ -1,10 +1,10 @@
-Tensor manipulations
-====================
+Tensors and tensor manipulations
+================================
 
 Definitions
 -----------
 
-We start with the definition of a tensor. According to the `Link Wikipedia page <https://en.wikipedia.org/wiki/Tensor#Definition>` on tensors, there are 3 equivalent ways of describing a tensor object:
+We start with the definition of a tensor. According to the `Wikipedia page <https://en.wikipedia.org/wiki/Tensor#Definition>`_ on tensors, there are 3 equivalent ways of describing a tensor object:
 
 * As a multidimensional array.
 

@@ -1,5 +1,14 @@
 classdef InfMpo
     % Infinite translation invariant matrix product operator.
+    %
+    % Properties
+    % ----------
+    % O : :class:`cell` of :class:`.MpoTensor` or :class:`.PepsSandwich`
+    %   cell of MPO tensors in translation invariant unit cell.
+    %
+    % Todo
+    % ----
+    % Document
     
     properties
         O

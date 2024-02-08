@@ -3,14 +3,14 @@ function s = perm2swap(p)
 %
 % Arguments
 % ---------
-% p : int
+% p : :class:`int`
 %   permutation vector.
 %
 % Returns
 % -------
-% s : int
-%   list of swaps that compose into the permutation vector, where `i` indicates a swap
-%   between indices `i` and `i+1`.
+% s : :class:`int`
+%   list of swaps that compose into the permutation vector, where :code:`i` indicates a swap
+%   between indices :code:`i` and :code:`i+1`.
 
 N = length(p);
 s = [];

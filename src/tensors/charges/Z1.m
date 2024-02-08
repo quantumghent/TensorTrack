@@ -1,5 +1,5 @@
 classdef Z1 < AbstractCharge
-    % Trivial charges.
+    % Trivial charge.
     
     methods
         function A = Asymbol(~, ~, ~)

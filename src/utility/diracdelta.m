@@ -1,4 +1,5 @@
 function d = diracdelta(sz)
+% Construct delta tensor of given size. Note that all dimensions must have the same length.
 
 assert(all(sz == sz(1)))
 d = zeros(sz);

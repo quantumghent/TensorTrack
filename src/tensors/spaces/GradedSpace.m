@@ -8,17 +8,17 @@ classdef GradedSpace < AbstractSpace
             %
             % Repeating Arguments
             % -------------------
-            % dimensions : (1, 1) struct
-            %   internal structure of the vector space, with fields 'charges' and
-            %   'degeneracies'.
+            % dimensions : (1, 1) :class:`struct`
+            %   internal structure of the vector space, with fields :code:`charges` and
+            %   :code:`degeneracies`.
             %
-            % dual : (1, 1) logical
+            % dual : (1, 1) :class:`logical`
             %   flag to denote dual spaces.
             %
             % Returns
             % -------
-            % spaces : :class:`GradedSpace`
-            %   array of cartesian spaces.
+            % spaces : :class:`.GradedSpace`
+            %   array of graded spaces.
             
             arguments (Repeating)
                 dimensions (1, 1) struct
@@ -84,28 +84,28 @@ classdef GradedSpace < AbstractSpace
             %
             % Usage
             % -----
-            % spaces = GradedSpace.new(charges, degeneracies, dual, ...)
+            % :code:`spaces = GradedSpace.new(charges, degeneracies, dual, ...)`
             %
-            % spaces = GradedSpace.new(dimensions, dual, ...)
+            % :code:`spaces = GradedSpace.new(dimensions, dual, ...)`
             %
             % Repeating Arguments
             % -------------------
-            % dimensions : struct
+            % dimensions : :class:`struct`
             %   a variable which represents the internal dimension of the space.
             %
-            % charges : :class:`AbstractCharge`
+            % charges : (1, :) :class:`.AbstractCharge`
             %   charges for the internal structure of the space.
             %
-            % degeneracies : int
+            % degeneracies : (1, :) :class:`int`
             %   degeneracies for the internal structure of the space.
             %
-            % dual : logical
+            % dual : :class:`logical`
             %   a variable which indicates if a space is dual.
             %
             % Returns
             % -------
-            % spaces : :class:`GradedSpace`
-            %   array of spaces.
+            % spaces : :class:`.GradedSpace`
+            %   array of graded spaces.
             
             if isstruct(varargin{1})    % default
                 assert(mod(nargin, 2) == 0);
@@ -140,13 +140,14 @@ classdef GradedSpace < AbstractSpace
             %
             % Arguments
             % ---------
-            % spaces : (1, :) :class:`GradedSpace`
+            % spaces : (1, :) :class:`.GradedSpace`
             %   input spaces.
             %
             % Returns
             % -------
-            % c : (:, :) :class:`AbstractCharge`
-            %   list of charge combinations, where each row is an entry.
+            % c : (:, :) :class:`.AbstractCharge`
+            %   list of charge combinations, where each row represents a possible
+            %   combination.
             
             if isdual(spaces(1))
                 c = conj(spaces(1).dimensions.charges);
@@ -168,13 +169,14 @@ classdef GradedSpace < AbstractSpace
             %
             % Arguments
             % ---------
-            % spaces : (1, :) :class:`GradedSpace`
+            % spaces : (1, :) :class:`.GradedSpace`
             %   input spaces.
             %
             % Returns
             % -------
-            % d : (:, :) int
-            %   list of degeneracy combinations, where each row is an entry.
+            % d : (:, :) :class:`int`
+            %   list of degeneracy combinations, where each row represents a possible
+            %   combination.
             
             d = spaces(1).dimensions.degeneracies;
             for i = 2:length(spaces)
@@ -187,12 +189,12 @@ classdef GradedSpace < AbstractSpace
             %
             % Arguments
             % ---------
-            % spaces : (1, :) :class:`GradedSpace`
+            % spaces : (1, :) :class:`.GradedSpace`
             %   input spaces.
             %
             % Returns
             % -------
-            % d : (1, :) int
+            % d : (1, :) :class:`int`
             %   total dimension of each of the input spaces.
             
             d = zeros(size(spaces));
@@ -208,12 +210,12 @@ classdef GradedSpace < AbstractSpace
             %
             % Arguments
             % ---------
-            % space1, space2 : (1, 1) :class:`GradedSpace`
+            % space1, space2 : (1, 1) :class:`.GradedSpace`
             %   input spaces.
             % 
             % Returns
             % -------
-            % space : (1, 1) :class:`GradedSpace`
+            % space : (1, 1) :class:`.GradedSpace`
             %   fused space.
             
             space = prod([space1, space2]);
@@ -224,17 +226,19 @@ classdef GradedSpace < AbstractSpace
             %
             % Arguments
             % ---------
-            % spaces : (1, :) :class:`GradedSpace`
-            %   Array of input spaces.
+            % spaces : (1, :) :class:`.GradedSpace`
+            %   array of input spaces.
             %
             % Returns
             % -------
-            % space : (1, 1) :class:`GradedSpace`
-            %   Fused space which is isomorphic to the input product space.
+            % space : (1, 1) :class:`.GradedSpace`
+            %   fused space which is isomorphic to the input product space.
+            
             arguments
                 spaces
                 isdual = false
             end
+            
             if fusionstyle(spaces) == FusionStyle.Unique
                 c = prod(charges(spaces), 1);
                 d = prod(degeneracies(spaces), 1);
@@ -269,12 +273,12 @@ classdef GradedSpace < AbstractSpace
             %
             % Arguments
             % ---------
-            % spaces1, spaces2 : (1, :) :class:`GradedSpace`
+            % spaces1, spaces2 : (1, :) :class:`.GradedSpace`
             %   input spaces, either of equal size or scalar.
             %
             % Returns
             % -------
-            % bools : (1, :) logical
+            % bools : (1, :) :class:`logical`
             %   flags that indicate if the element spaces are equal.
             
             if isempty(spaces1) && isempty(spaces2)

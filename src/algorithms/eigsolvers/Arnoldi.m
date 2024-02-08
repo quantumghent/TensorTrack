@@ -1,14 +1,37 @@
 classdef Arnoldi
     % Arnoldi Krylov algorithm for linear algebra problems.
+    %
+    % Properties
+    % ----------
+	% tol : :class:`double`
+    %   convergence tolerance, defaults to :code:`1e-10`.
+    %
+	% maxiter : :class:`int`
+    %   maximum number of iterations, defaults to :code:`100`.
+    %
+	% krylovdim : :class:`int`
+    %   Krylov subspace dimension, defaults to :code:`20`.
+    %
+	% deflatedim : :class:`int`
+    %   number of Krylov vectors to keep when deflating.
+    %
+	% reorth : :class:`int`
+    %   reorthogonalize basis if larger than this number, defaults to :code:`20`.
+    %
+	% nobuild : :class:`int`
+    %   frequency of convergence check when building, defaults to :code:`3`.
+    %
+	% verbosity : :class:`.Verbosity`
+    %   display information, defaults to :code:`Verbosity.warn`.
     
     properties
-        tol         = 1e-10             % convergence tolerance
-        maxiter     = 100               % maximum iterations
-        krylovdim   = 20                % Krylov subspace dimension
-        deflatedim                      % number of Krylov vectors to keep when deflating
-        reorth      = 20                % reorthogonalize basis if larger than this number
-        nobuild     = 3                 % frequency of convergence check when building
-        verbosity   = Verbosity.warn    % display information
+        tol         = 1e-10
+        maxiter     = 100
+        krylovdim   = 20
+        deflatedim
+        reorth      = 20
+        nobuild     = 3
+        verbosity   = Verbosity.warn
     end
     
     methods
@@ -31,26 +54,27 @@ classdef Arnoldi
             % Usage
             % -----
             % :code:`[V, D, flag] = eigsolve(A, v, howmany, sigma)`
+            %
             % :code:`D = eigsolve(A, v, ...)`
             %
             % Arguments
             % ---------
-            % A : matrix or function_handle
+            % A : :class:`matrix` or :class:`function_handle`
             %   A square matrix.
             %   A function handle which implements one of the following, depending on sigma:
             %
-            %   - A \ x, if `sigma` is 0 or 'smallestabs'
-            %   - (A - sigma * I) \ x, if sigma is a nonzero scalar
-            %   - A * x, for all other cases
+            %   - :code:`A \ x`, if `sigma` is 0 or 'smallestabs'
+            %   - :code:`(A - sigma * I) \ x`, if sigma is a nonzero scalar
+            %   - :code:`A * x`, for all other cases
             %
-            % v : vector
+            % v : :class:`vector`
             %   initial guess for the eigenvector.
             %
-            % howmany : int
+            % howmany : :class:`int`
             %   amount of eigenvalues and eigenvectors that should be computed. By default
             %   this is 1, and this should not be larger than the total dimension of A.
             %
-            % sigma : `char` or numeric
+            % sigma : :class:`char` or numeric
             %   selector for the eigenvalues, should be either one of the following:
             %
             %   - 'largestabs', 'lm': default, eigenvalues of largest magnitude
@@ -59,17 +83,20 @@ classdef Arnoldi
             %   - 'smallestabs', 'sm': default, eigenvalues of smallest magnitude
             %   - 'smallestreal', 'sr': eigenvalues with smallest real part
             %   - 'smallestimag', 'si': eigenvalues with smallest imaginary part.
+            %   - numeric : eigenvalues closest to sigma.
             %
             % Returns
             % -------
-            % V : (1, howmany) array
+            % V : (1, howmany) :class:`vector`
             %   vector of eigenvectors.
             %
-            % D : numeric
+            % D : :class:`numeric`
             %   vector of eigenvalues if only a single output argument is asked, diagonal
             %   matrix of eigenvalues otherwise.
             %
-            % flag : int
+            % flag : :class:`int`
+            %   convergence info flag:
+            %
             %   - flag = 0: all eigenvalues are converged.
             %   - flag = 1: invariant subspace was found and the algorithm was aborted.
             %   - flag = 2: algorithm did not converge after maximum number of iterations.

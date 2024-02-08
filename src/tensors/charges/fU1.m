@@ -1,7 +1,9 @@
 classdef fU1 < U1
-    % Fermionic U1 charges.
-    %   This is equivalent to representations of U1 x fZ2, but restricted to only allow
-    %   for the combinations of even with trivial and odd with fermion charges.
+    % Fermionic :math:`\mathrm{U}(1)` charges.
+    %
+    % This is equivalent to representations of :math:`\mathrm{U}(1) \otimes fZ_2`, but
+    % restricted to only allow for the combinations of even with trivial and odd with
+    % fermion charges.
     
     methods
         function style = braidingstyle(~)

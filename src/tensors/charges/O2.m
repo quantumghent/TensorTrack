@@ -1,16 +1,25 @@
 classdef O2 < AbstractCharge
-    % O2 - Irreducible representations of O(2).
-    %   This class represents the representations of O(2), also known as the
-    %   semi-direct product of U(1) and charge conjugation.
+    % Irreducible representations of :math:`\mathrm{O}(2)`.
     %
-    %   The representations are labeled using (j, s), indicating the behaviour
-    %   of U(1) and charge conjugation respectively. This leads to two
-    %   1-dimensional representations (0, 0) and (0, 1), and for any
-    %   non-negative j a two-dimensional representation (j, 2).
+    %   This class represents the representations of :math:`\mathrm{O}(2)`, also known as the
+    %   semi-direct product of :math:`\mathrm{U}(1)` and charge conjugation.
+    %
+    %   The representations are labeled using :math:`(j, s)`, indicating the behaviour
+    %   of :math:`\mathrm{U}(1)` and charge conjugation respectively. This leads to two
+    %   1-dimensional representations :math:`(0, 0)` and :math:`(0, 1)`, and for any
+    %   non-negative :math:`j` a two-dimensional representation :math:`(j, 2)`.
+    %
+    % Properties
+    % ----------
+    % j : :class:`uint8`
+    %   :math:`\mathrm{U}(1)` label
+    %
+    % s : :class:`uint8`
+    %   indicator for type of representation
     
     properties
-        j uint8 % (uint8) U1 label.
-        s uint8 % (uint8) indicator for type of representation.
+        j uint8
+        s uint8
     end
     
     methods
