@@ -1566,12 +1566,12 @@ classdef Tensor < AbstractTensor
             % alg : :class:`char` or :class:`string`
             %   selection of algorithms for the decomposition:
             %
-            %   - 'qr' produces an upper triangular remainder R
-            %   - 'qrpos' corrects the diagonal elements of R to be positive.
-            %   - 'ql' produces a lower triangular remainder R
-            %   - 'qlpos' corrects the diagonal elements of R to be positive.
-            %   - 'polar' produces a Hermitian and positive semidefinite R.
-            %   - 'svd' uses a singular value decomposition.
+            %   - :code:`'qr'` produces an upper triangular remainder R
+            %   - :code:`'qrpos'` corrects the diagonal elements of R to be positive.
+            %   - :code:`'ql'` produces a lower triangular remainder R
+            %   - :code:`'qlpos'` corrects the diagonal elements of R to be positive.
+            %   - :code:`'polar'` produces a Hermitian and positive semidefinite R.
+            %   - :code:`'svd'` uses a singular value decomposition.
             %
             % Returns
             % -------
@@ -1647,12 +1647,12 @@ classdef Tensor < AbstractTensor
             % alg : :class:`char` or :class:`string`
             %   selection of algorithms for the decomposition:
             %
-            %   - 'rq' produces an upper triangular remainder R
-            %   - 'rqpos' corrects the diagonal elements of R to be positive.
-            %   - 'lq' produces a lower triangular remainder R
-            %   - 'lqpos' corrects the diagonal elements of R to be positive.
-            %   - 'polar' produces a Hermitian and positive semidefinite R.
-            %   - 'svd' uses a singular value decomposition.
+            %   - :code:`'rq'` produces an upper triangular remainder R
+            %   - :code:`'rqpos'` corrects the diagonal elements of R to be positive.
+            %   - :code:`'lq'` produces a lower triangular remainder R
+            %   - :code:`'lqpos'` corrects the diagonal elements of R to be positive.
+            %   - :code:`'polar'` produces a Hermitian and positive semidefinite R.
+            %   - :code:`'svd'` uses a singular value decomposition.
             %
             % Returns
             % -------
@@ -1723,8 +1723,8 @@ classdef Tensor < AbstractTensor
             % alg : :class:`char` or :class:`string`
             %   selection of algorithms for the nullspace:
             %
-            %   - 'svd'
-            %   - 'qr'
+            %   - :code:`'svd'`
+            %   - :code:`'qr'`
             %
             % Returns
             % -------
@@ -1793,8 +1793,8 @@ classdef Tensor < AbstractTensor
             % alg : :class:`char` or :class:`string`
             %   selection of algorithms for the nullspace:
             %
-            %   - 'svd'
-            %   - 'lq'
+            %   - :code:`'svd'`
+            %   - :code:`'lq'`
             %
             % Returns
             % -------
@@ -2224,7 +2224,7 @@ classdef Tensor < AbstractTensor
             % Returns
             % -------
             % bool : :class:`logical`
-            %   true if t is isometric.
+            %   true if :code:`t` is isometric.
             
             arguments
                 t

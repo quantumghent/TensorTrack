@@ -940,34 +940,6 @@ classdef UniformMps
             end
         end
         
-%         S = EntanglementEntropy(mps, loc);
-%         S = RenyiEntropy(mps,n, loc);
-%         E = ExpectationValue(mps, W, GL, GR)
-%         rho = LeftFixedPoint(mps1, mps2, w, choice)
-%         rho = RightFixedPoint(mps1, mps2, w, choice)
-%         sf=StaticStructureFactor(mps,S,k)
-%         
-%         out = Block(mps, opts)
-%         out = Split(mps, varargin)
-%         %[out, lambda] = Truncate(mps, control, opts)
-%         
-%         [f, rho] = Fidelity(mps1, mps2, tol)
-%         
-%         mps = Conj(mps)
-%         
-%         mps = mtimes(mps, lambda)
-%         
-%         mps = ShiftUnitCell(mps,dd,dw)
-%         out = Rotate180(mps)
-%         out = Transpose(mps)
-%         
-%         mps = SendToGpu(mps)
-%         mps = GetFromGpu(mps)
-%         
-%         [mps, xi] = Retract(mps, eta, alpha)
-%         n = Inner(x, eta, xi)
-        
-        
     end
     
     %% Subroutines

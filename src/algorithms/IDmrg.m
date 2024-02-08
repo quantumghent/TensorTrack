@@ -21,7 +21,7 @@ classdef IDmrg
     %
     % dynamical_tols : :class:`logical`
     %   indicate whether or not to use a dynamical tolerance scaling for the algorithm's
-    %   subroutines based on the current error measure, defaults to :code:`false`
+    %   subroutines based on the current error measure, defaults to :code:`false`.
     %
     % tol_min : :class:`double`
     %   smallest allowed convergence tolerance for soubroutines, defaults to :code:`1e-12`.

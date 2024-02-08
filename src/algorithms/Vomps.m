@@ -21,7 +21,7 @@ classdef Vomps
     %
     % dynamical_tols : :class:`logical`
     %   indicate whether or not to use a dynamical tolerance scaling for the algorithm's
-    %   subroutines based on the current error measure, defaults to :code:`true`
+    %   subroutines based on the current error measure, defaults to :code:`true`.
     %
     % tol_min : :class:`double`
     %   smallest allowed convergence tolerance for soubroutines, defaults to :code:`1e-12`.

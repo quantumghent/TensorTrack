@@ -34,7 +34,7 @@ classdef (Abstract) AbstractCharge
             % Returns
             % -------
             % abar : :class:`.AbstractCharge`
-            %   conjugate charge suche that :code:`one(a)` is an element of :code:`a * abar`
+            %   conjugate charge such that :code:`one(a)` is an element of :code:`a * abar`
             error('AbstractCharge:requiredMethod', ...
                     'Error. \nMethod must be overloaded.')
         end
