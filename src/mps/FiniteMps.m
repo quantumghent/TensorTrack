@@ -1,5 +1,18 @@
 classdef FiniteMps
-    % Finite Matrix product states
+    % Finite matrix product state.
+    %
+    % Properties
+    % ----------
+    % A : :class:`cell` of :class:`.MpsTensor`
+    %   set of tensors that define a finite MPS.
+    %
+    % center : :class:`int`
+    %   location of center gauge, such that every tensor to the left (right) of
+    %   :code:`center` is in left (right) gauge. 
+    %
+    % Todo
+    % ----
+    % Document.
     
     properties
         A (1,:) cell

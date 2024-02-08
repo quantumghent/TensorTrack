@@ -1,10 +1,10 @@
 classdef SU2 < AbstractCharge & uint8
-    % SU2 - Irreducible representations of SU2.
-    %   This class represents the representations of SU2, represented using uint8, such that
-    %   the representative is equal to the quantum dimension. The use of uint8 limits the
-    %   maximum to 255. The spin label can be recovered with spin = (j - 1) / 2.
+    % Irreducible representations of :math:`\mathrm{SU}(2)`.
     %
-    %   See also AbstractCharge
+    % This class represents the representations of :math:`\mathrm{SU}(2)`, represented using
+    % :code:`uint8`, such that the representative is equal to the quantum dimension. The use
+    % of :math:`uint8` limits the maximum dimension to 255. The spin label can be recovered
+    % as :math:`s = (j - 1) / 2`.
     
     methods
         function style = braidingstyle(~)

@@ -1,6 +1,71 @@
 classdef Vumps < handle
-    % Variational fixed point algorithm for uniform matrix product states.
-    
+    % `Variational fixed point algorithm for uniform matrix product states <https://journals.aps.org/prb/abstract/10.1103/PhysRevB.97.045145>`_.
+    %
+    % Properties
+    % ----------
+    % tol : :class:`double`
+    %   tolerance for convergence criterion, defaults to :code:`1e-10`.
+    %
+    % miniter : :class:`int`
+    %   minimum number of iteration, defaults to :code:`5`.
+    %
+    % maxiter : :class:`int`
+    %   maximum number of iteration, defaults to code:`100`.
+    %
+    % verbosity : :class:`.Verbosity`
+    %   verbosity level of the algorithm, defaults to :code:`Verbosity.iter`.
+    %
+    % doplot : :class:`logical`
+    %   plot progress, defaults to :code:`false`.
+    %
+    % which : :class:`char`
+    %   eigenvalue selector (passed as the :code:`sigma` argument to :func:`.eigsolve`),
+    %   defaults to :code:`'largestabs'`.
+    %
+    % dynamical_tols : :class:`logical`
+    %   indicate whether or not to use a dynamical tolerance scaling for the algorithm's
+    %   subroutines based on the current error measure, defaults to :code:`true`.
+    %
+    % tol_min : :class:`double`
+    %   smallest allowed convergence tolerance for soubroutines, defaults to :code:`1e-12`.
+    %
+    % tol_max : :class:`double`
+    %   highest allowed convergence tolerance for soubroutines, defaults to :code:`1e-10`.
+    %
+    % eigs_tolfactor : :class:`double`
+    %   relative scaling factor for determining the convergence tolerance of the local
+    %   update solver subroutine based on the current error measure, defaults to
+    %   :code:`1e-6`.
+    %
+    % canonical_tolfactor : :class:`double`
+    %   relative scaling factor for determining the convergence tolerance of the
+    %   canonicalization subroutine based on the current error measure, defaults to
+    %   :code:`1e-8`.
+    %
+    % environments_tolfactor : :class:`double`
+    %   relative scaling factor for determining the convergence tolerance of the environment
+    %   solver subroutine based on the current error measure, defaults to :code:`1e-6`.
+    %
+    % multiAC : :class:`char`
+    %   execution style for the local `AC` updates for a multi-site unit cell, options are:
+    %
+    %   - :code:`'parallel'`: (default) update all `AC` tensors simultaneously.
+    %   - :code:`'sequential'`: update one `AC` tensor at a time, sweeping through the unit
+    %     cell.
+    %
+    % dynamical_multiAC : :class:`logical`
+    %   automatically switch from :code:`'sequential'` to :code:`'parallel'` if the error
+    %   measure becomes small enough, defaults to :code:`false`.
+    %
+    % tol_multiAC : :class:`char`
+    %   tolerance for automatically switching from :code:`'sequential'` to
+    %   :code:`'parallel'` if the error measure falls below this value, defaults to
+    %   :code:`Inf`.
+    %
+    % alg_eigs : :class:`.KrylovSchur` or :class:`.Arnoldi`
+    %   algorithm used for the eigsolver subroutines, defaults to
+    %   :code:`Arnoldi('MaxIter', 100, 'KrylovDim', 20)`.
+
     %% Options
     properties
         tol = 1e-10
@@ -73,6 +138,39 @@ classdef Vumps < handle
         end
         
         function [mps, lambda, GL, GR, eta] = fixedpoint(alg, mpo, mps)
+            % Find the fixed point MPS of an infinite MPO, given an initial guess.
+            %
+            % Usage
+            % -----
+            % :code:`[mps, lambda, GL, GR, eta] = fixedpoint(alg, mpo, mps)`
+            %
+            % Arguments
+            % ---------
+            % alg : :class:`.Vumps`
+            %   VUMPS algorithm.
+            %
+            % mpo : :class:`.InfMpo`
+            %   matrix product operator.
+            %
+            % mps : :class:`.UniformMps`
+            %   initial guess for MPS fixed point.
+            %
+            % Returns
+            % -------
+            % mps : :class:`.UniformMps`
+            %   MPS fixed point.
+            %
+            % lambda : :class:`double`
+            %   eigenvalue.
+            %
+            % GL : :class:`cell` of :class:`.MpsTensor`
+            %   left environment tensors.
+            %
+            % GR : :class:`cell` of :class:`.MpsTensor`
+            %   right environment tensors.
+            %
+            % eta : :class:`double`
+            %   final error measure at convergence.
             
             if period(mpo) ~= period(mps)
                 error('vumps:argerror', ...

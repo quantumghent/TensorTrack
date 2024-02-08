@@ -1,15 +1,22 @@
 classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) MpoTensor < AbstractTensor
-    % Matrix product operator building block
-    %   This object represents the MPO tensor at a single site as the sum of rank (2,2)
-    %   (sparse) tensors and some scalars, which will be implicitly used as unit tensors.
+    % Matrix product operator building block.
+    % 
+    % This object represents the MPO tensor at a single site as the sum of rank (2,2)
+    % (sparse) tensors and some scalars, which will be implicitly used as unit tensors.
+    %
+    % .. code-block::
     %
     %                               4
-    %                               ^
+    %                               v
     %                               |
-    %                        1 ->-- O -->- 3
+    %                        1 -<-- O --<- 3
     %                               |
-    %                               ^
+    %                               v
     %                               2
+    %
+    % Todo
+    % ----
+    % Document.
 
     properties
         tensors = []
@@ -440,7 +447,7 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) MpoTensor < Ab
         end
         
         function local_operators = decompose_local_operator(H, kwargs)
-            % convert a tensor into a product of local operators.
+            % Convert a tensor into a product of local operators.
             %
             % Usage
             % -----
@@ -448,14 +455,14 @@ classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) MpoTensor < Ab
             %
             % Arguments
             % ---------
-            % H : :class:`AbstractTensor`
+            % H : :class:`.AbstractTensor`
             %   tensor representing a local operator on N sites.
             %
             % Keyword Arguments
             % -----------------
-            % 'Trunc' : cell
+            % 'Trunc' : :class:`cell`
             %   optional truncation method for the decomposition. See also
-            %   :meth:`Tensor.tsvd`
+            %   :meth:`.Tensor.tsvd`
             arguments
                 H
                 kwargs.Trunc = {'TruncBelow', 1e-14}

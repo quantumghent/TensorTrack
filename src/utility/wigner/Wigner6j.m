@@ -1,5 +1,5 @@
 function wig = Wigner6j(j1,j2,j3,j4,j5,j6,ifs,ifcb)
-% Computes the Wigner $$6j$$ symbols
+% Computes the Wigner :math:`6j` symbols
 %
 % .. math::
 %
@@ -48,14 +48,14 @@ function wig = Wigner6j(j1,j2,j3,j4,j5,j6,ifs,ifcb)
 % 
 % ifcb
 %   if exists and is true, switches to computing the coupling matrix elements instead of the
-%   $6j$-symbols (default :code:`false`)
+%   :math:`6j`-symbols (default :code:`false`)
 %
 % Returns
 % -------
 % W
-%   the resulting values of the 3j-symbols (:code:`ifcb=false`) or the Clebsch-Gordan
+%   the resulting values of the :math:`6j`-symbols (:code:`ifcb=false`) or the coupling matrix elements
 %   coefficients (:code:`ifcb=true`) in either numeric double-precision or symbolic form
-%   (see the input parameter :code:`ifs`); array of the same size as $j_1$.
+%   (see the input parameter :code:`ifs`); array of the same size as :math:`j_1`.
 % 
 % Notes
 % -----
@@ -69,7 +69,7 @@ function wig = Wigner6j(j1,j2,j3,j4,j5,j6,ifs,ifcb)
 % d. all the "numeric" algorithms switch automatically to the symbolic computations
 % e. as soon as the numeric overflow occurs, thereby improving the accuracy
 %    but slowing down the computations for some big quantum numbers
-% f. in cases with at least one of the $j$ quantum numbers <=2, the explicit accurate
+% f. in cases with at least one of the :math:`j` quantum numbers <=2, the explicit accurate
 %    equations are applied in all the algorithms ensuring the highest possible accuracy
 % g. for relatively small quantum numbers (up to ~20) all the algorithms provide
 %    approximately equivalent results with a reasonably high accuracy

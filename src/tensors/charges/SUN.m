@@ -1,5 +1,13 @@
 classdef SUN < AbstractCharge
-    % Irreducible representations of the special unitary group SU(N).
+    % Irreducible representations of the special unitary group :math:`\mathrm{SU}(N)`.
+    %
+    % .. todo::
+    %   Explain irrep labeling and give some references.
+    %
+    % Properties
+    % ----------
+    % I : (1, :) :class:`uint8`
+    %   integer vector representation label
     
     properties
         I (1,:) uint8

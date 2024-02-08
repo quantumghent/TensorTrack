@@ -3,24 +3,24 @@ function bool = isisometry(A, side, tol)
 %
 % Arguments
 % ---------
-% A : numeric
+% A : :class:`numeric`
 %   input matrix.
 %
-% side : 'left', 'right' or 'both'
-%   check if A' * A == I, A * A' == I, or both by default.
+% side : :class:`char`, 'left', 'right' or 'both'
+%   check if :code:`A' * A == I`, :code:`A * A' == I`, or both by default.
 %
 % Keyword Arguments
 % -----------------
-% AbsTol : double
+% AbsTol : :class:`double`
 %   absolute tolerance
 %
-% RelTol : double
+% RelTol : :code:`double`
 %   relative tolerance
 %
 % Returns
 % -------
-% bool : logical
-%   true if A is an isometry.
+% bool : :code:`logical`
+%   true if :code:`A` is an isometry.
 
 arguments
     A

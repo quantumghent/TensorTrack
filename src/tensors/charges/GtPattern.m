@@ -1,5 +1,6 @@
 classdef GtPattern
-    % Object that represents a pattern devised by Gelfand and Tsetlin.
+    % Object that represents a pattern devised by Gelfand and Tsetlin, used for enumerating
+    % :math:`\mathrm{SU}(N)` basis states.
     %
     % ::
     %
@@ -9,18 +10,18 @@ classdef GtPattern
     %        |       m_{1,2} m_{2,2}         |
     %         \          m_{1,1}            /
     %
-    % These consist of triangular arrangements of integers M_ij with the
+    % These consist of triangular arrangements of integers :math:`M_{ij}` with the
     % following property:
     %
     % .. math::
     %
     %   m_{k,l} \geq m_{k,l-1} \geq m_{k+1,l} \quad \text{for} \quad 1 <= k < l <= N
     %
-    % They will be represented using arrays of size N x N, where the elements
+    % They will be represented using arrays of size :math:`N \times N`, where the elements
     % outside of the triangular region are assumed to be zero.
     
     
-    properties % (Access = private)
+    properties
         M double
         N
     end
@@ -115,17 +116,21 @@ classdef GtPattern
             % Usage
             % -----
             % :code:`m = get(pat, k, l)`
-            %   gets the element specified by m_kl.
+            % gets the element specified by :math:`M_{kl}`.
+            %
             % :code:`m = get(pat, ks, l)`
-            %   gets a row vector of elements in the l'th row.
+            % gets a row vector of elements in the :code:`l`'th row.
+            %
             % :code:`m = get(pat, k, ls)`
-            %   gets a col vector of elements in the k'th column.
+            % gets a column vector of elements in the :code:`k`'th column.
 
 %             assert(isscalar(p));
             m = p.M(k + bitshift(((l + 1 + p.N) .* (p.N - l)), -1));
         end
         
         function p = set(p, k, l, val)
+            % Set the value of :math:`M_{kl}` to :code:`val`.
+            
 %             assert(isscalar(p));
             assert(checkbounds(p, k, l));
             p.M(k + bitshift(((l + 1 + p.N) * (p.N - l)), -1)) = val;
@@ -212,7 +217,7 @@ classdef GtPattern
             % Usage
             % -----
             % :code:`sigma = rowsum(pat, l)`
-            %   computes :math:`\sigma_l = \sum_{k=1}^l m_{k, l}`.
+            % computes :math:`\sigma_l = \sum_{k=1}^l m_{k, l}`.
             
             sigma = sum(get(p, 1:l, l));
         end
@@ -223,8 +228,8 @@ classdef GtPattern
             % Usage
             % -----
             % :code:`w = pWeight(pat)`
-            % 	computes the pattern weight :math:`W(\text{pat}) = (w_1 w_2 ... w_N)` where
-            %	:math:`w_i = \sigma_i - \sigma_{i-1}`.
+            % computes the pattern weight :math:`W(\text{pat}) = (w_1 w_2 ... w_N)` where
+            % :math:`w_i = \sigma_i - \sigma_{i-1}`.
             %
             % Note
             % ----
@@ -232,7 +237,7 @@ classdef GtPattern
             %
             % See Also
             % --------
-            % :meth:`GtPattern.zWeight`
+            % :meth:`.GtPattern.zWeight`
             
             M = p.M;
             ctr = 0;
@@ -252,12 +257,12 @@ classdef GtPattern
             % Usage
             % -----
             % :code:`w = zWeight(pat)`
-            %	computes the z-weight :math:`L(\text{pat}) = (l_1 l_2 ... l_N-1)` where
-            %   :math:`l_i = \sigma_l - 1/2(\sigma_{l+1} + \sigma_{l-1})`.
+            % computes the z-weight :math:`L(\text{pat}) = (l_1 l_2 ... l_N-1)` where
+            % :math:`l_i = \sigma_l - 1/2(\sigma_{l+1} + \sigma_{l-1})`.
             %
             % Note
             % ----
-            % This is a generalization of the m-quantum number for angular momentum.
+            % This is a generalization of the :math:`m`-quantum number for angular momentum.
 
             sigma = [0 arrayfun(@(l) rowsum(p, l), 1:p.N)];
             w = sigma(2:end-1) - (sigma(1:end-2) + sigma(3:end))/2;

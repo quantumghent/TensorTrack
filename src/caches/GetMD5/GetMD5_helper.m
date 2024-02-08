@@ -1,5 +1,5 @@
 function S = GetMD5_helper(V)
-% GetMD5_helper: Convert non-elementary array types for GetMD5
+%  Convert non-elementary array types for GetMD5
 % The C-Mex function GetMD5 calls this function to obtain meaningful unique data
 % for function handles, java or user-defined objects and sparse arrays. The
 % applied processing can depend on the needs of the users, therefore it is

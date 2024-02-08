@@ -1,9 +1,17 @@
 classdef (Abstract) AbstractSpace
     % Abstract structure of a tensor index.
+    %
+    % Properties
+    % ----------
+    % dimensions : :class:`int` or :class:`struct`
+    %   Specification of the internal dimensions
+    %
+    % dual : :class:`logical`
+    %   Flag to indicate if the space is a dual space
     
-    properties %(Access = protected)
-        dimensions                      % Specification of the internal dimensions
-        dual (1,1) logical = false    % Flag to indicate if the space is a dual space
+    properties
+        dimensions
+        dual (1,1) logical = false
     end
     
     %% Constructors
@@ -13,15 +21,15 @@ classdef (Abstract) AbstractSpace
             %
             % Repeating Arguments
             % -------------------
-            % dimensions : int or struct
+            % dimensions : :class:`int` or :class:`struct`
             %   a variable which represents the internal dimension of the space.
             %
-            % isdual : logical
+            % isdual : :class:`logical`
             %   a variable which indicates if a space is dual.
             %
             % Returns
             % -------
-            % spaces : :class:`AbstractSpace`
+            % spaces : :class:`.AbstractSpace`
             %   array of spaces.
             
             arguments (Repeating)
@@ -45,16 +53,20 @@ classdef (Abstract) AbstractSpace
             %
             % Repeating Arguments
             % -------------------
-            % dimensions : int or struct
+            % dimensions : :class:`int` or :class:`struct`
             %   a variable which represents the internal dimension of the space.
             %
-            % dual : logical
+            % dual : :class:`logical`
             %   a variable which indicates if a space is dual.
             %
             % Returns
             % -------
-            % spaces : :class:`AbstractSpace`
+            % spaces : :class:`.AbstractSpace`
             %   array of spaces.
+            %
+            % Note
+            % ----
+            % This abstract constructor should be overloaded for every concrete subtype.
             
             error('tensors:AbstractMethod', 'This method should be overloaded.');
         end
@@ -73,12 +85,12 @@ classdef (Abstract) AbstractSpace
             %
             % Arguments
             % ---------
-            % spaces : (1, :) :class:`AbstractSpace`
+            % spaces : (1, :) :class:`.AbstractSpace`
             %   input spaces.
             %
             % Returns
             % -------
-            % c : (:, :) :class:`AbstractCharge`
+            % c : (:, :) :class:`.AbstractCharge`
             %   list of charge combinations, where each row is a combination.
             
             error('tensors:AbstractMethod', 'This method should be overloaded.');
@@ -89,12 +101,12 @@ classdef (Abstract) AbstractSpace
             %
             % Arguments
             % ---------
-            % spaces : (1, :) :class:`AbstractSpace`
+            % spaces : (1, :) :class:`.AbstractSpace`
             %   input spaces.
             %
             % Returns
             % -------
-            % d : (:, :) int
+            % d : (:, :) :class:`int`
             %   list of degeneracy combinations, where each row is an entry.
             
             error('tensors:AbstractMethod', 'This method should be overloaded.');
@@ -105,12 +117,12 @@ classdef (Abstract) AbstractSpace
             %
             % Arguments
             % ---------
-            % spaces : (1, :) :class:`AbstractSpace`
+            % spaces : (1, :) :class:`.AbstractSpace`
             %   input spaces.
             %
             % Returns
             % -------
-            % d : (1, :) numeric
+            % d : (1, :) :class:`double`
             %   total dimension of each of the input spaces.
             
             error('tensors:AbstractMethod', 'This method should be overloaded.');
@@ -125,12 +137,12 @@ classdef (Abstract) AbstractSpace
             %
             % Arguments
             % ---------
-            % codomain, domain : :class:`GradedSpace`
+            % codomain, domain : :class:`.GradedSpace`
             %   input spaces.
             %
             % Returns
             % -------
-            % trees : :class:`FusionTree`
+            % trees : :class:`.FusionTree`
             %   list of all allowed fusion trees.
             
             rank = [length(codomain) length(domain)];
@@ -150,12 +162,12 @@ classdef (Abstract) AbstractSpace
             %
             % Arguments
             % ---------
-            % codomain, domain : (1, :) :class:`AbstractSpace`
+            % codomain, domain : (1, :) :class:`.AbstractSpace`
             %   input spaces.
             %
             % Returns
             % -------
-            % style : :class:`BraidingStyle`
+            % style : :class:`.BraidingStyle`
             %   braiding style of the internal structure.
             
             error('tensors:AbstractMethod', 'This method should be overloaded.');
@@ -166,12 +178,12 @@ classdef (Abstract) AbstractSpace
             %
             % Arguments
             % ---------
-            % codomain, domain : (1, :) :class:`AbstractSpace`
+            % codomain, domain : (1, :) :class:`.AbstractSpace`
             %   input spaces.
             %
             % Returns
             % -------
-            % style : :class:`FusionStyle`
+            % style : :class:`.FusionStyle`
             %   fusion style of the internal structure.
             
             error('tensors:AbstractMethod', 'This method should be overloaded.');
@@ -186,12 +198,12 @@ classdef (Abstract) AbstractSpace
             %
             % Arguments
             % ---------
-            % spaces : (1, :) :class:`AbstractSpace`
+            % spaces : (1, :) :class:`.AbstractSpace`
             %   input spaces.
             %
             % Returns
             % -------
-            % spaces : (1, :) :class:`AbstractSpace`
+            % spaces : (1, :) :class:`.AbstractSpace`
             %   dual spaces.
             
             for i = 1:length(spaces)
@@ -205,12 +217,12 @@ classdef (Abstract) AbstractSpace
             %
             % Arguments
             % ---------
-            % spaces : (1, :) :class:`AbstractSpace`
+            % spaces : (1, :) :class:`.AbstractSpace`
             %   input product space.
             %
             % Returns
             % -------
-            % spaces : (1, :) :class:`AbstractSpace`
+            % spaces : (1, :) :class:`.AbstractSpace`
             %   dual product space.
             
             spaces = conj(spaces(length(spaces):-1:1));
@@ -221,12 +233,12 @@ classdef (Abstract) AbstractSpace
             %
             % Arguments
             % ---------
-            % space1, space2 : (1,1) :class:`AbstractSpace`
+            % space1, space2 : (1, 1) :class:`.AbstractSpace`
             %   input spaces.
             % 
             % Returns
             % -------
-            % space : (1,1) :class:`AbstractSpace`
+            % space : (1, 1) :class:`.AbstractSpace`
             %   fused space.
             
             error('tensors:AbstractMethod', 'This method should be overloaded.');
@@ -237,12 +249,12 @@ classdef (Abstract) AbstractSpace
             %
             % Arguments
             % ---------
-            % space1, space2 : (1,1) :class:`AbstractSpace`
+            % space1, space2 : (1, 1) :class:`.AbstractSpace`
             %   input spaces.
             %
             % Returns
             % -------
-            % space : (1,1) :class:`AbstractSpace`
+            % space : (1, 1) :class:`.AbstractSpace`
             %   direct sum space.
             
             
@@ -254,12 +266,12 @@ classdef (Abstract) AbstractSpace
             %
             % Arguments
             % ---------
-            % spaces : (1, :) :class:`AbstractSpace`
-            %   Array of input spaces.
+            % spaces : (1, :) :class:`.AbstractSpace`
+            %   array of input spaces.
             %
             % Returns
             % -------
-            % space : (1, 1) :class:`AbstractSpace`
+            % space : (1, 1) :class:`.AbstractSpace`
             %   Fused space which is isomorphic to the input product space.
             
             % TODO this is probably faster by fusing from both ends to the middle.
@@ -274,12 +286,12 @@ classdef (Abstract) AbstractSpace
             %
             % Arguments
             % ---------
-            % spaces : (1, :) :class:`AbstractSpace`
-            %   Array of input spaces.
+            % spaces : (1, :) :class:`.AbstractSpace`
+            %   array of input spaces.
             %
             % Returns
             % -------
-            % space : (1, 1) :class:`AbstractSpace`
+            % space : (1, 1) :class:`.AbstractSpace`
             %   direct sum space.
             space = spaces(1);
             for i = 2:length(spaces)
@@ -288,7 +300,23 @@ classdef (Abstract) AbstractSpace
         end
         
         function spaces = insertone(spaces, i, dual)
-            % insert a trivial space at position i.
+            % Insert a trivial space at a given position.
+            %
+            % Arguments
+            % ---------
+            % spaces : (1, :) :class:`.AbstractSpace`
+            %   array of input spaces.
+            %
+            % i : :class:`int`
+            %   position at which to insert trivial space, defaults to the end.
+            %
+            % dual : :class:`logical`
+            %   indicate if trivial space should be dualized, defaults to :code:`false`.
+            %
+            % Returns
+            % -------
+            % spaces : (1, :) :class:`.AbstractSpace`
+            %   array of output spaces.
             arguments
                 spaces
                 i = length(spaces) + 1
@@ -307,12 +335,12 @@ classdef (Abstract) AbstractSpace
             %
             % Arguments
             % ---------
-            % spaces1, spaces2 : (1, :) :class:`AbstractSpace`
+            % spaces1, spaces2 : (1, :) :class:`.AbstractSpace`
             %   input spaces, either of equal size or scalar.
             %
             % Returns
             % -------
-            % bools : (1, :) logical
+            % bools : (1, :) :class:`logical`
             %   flags that indicate if the element spaces are equal.
             
             error('tensors:AbstractMethod', 'This method should be overloaded.');
@@ -344,16 +372,16 @@ classdef (Abstract) AbstractSpace
             %
             % Usage
             % -----
-            % bool = isequal(spaces{:})
+            % :code:`bool = isequal(spaces{:})`
             %
             % Repeating Arguments
             % -------------------
-            % spaces : (1,:) :class:`AbstractSpace`
+            % spaces : (1, :) :class:`.AbstractSpace`
             %   input spaces to compare.
             %
             % Returns
             % -------
-            % bool : (1,1) logical
+            % bool : (1, 1) :class:`logical`
             %   true if all inputs are equal.
             
             arguments (Repeating)
@@ -376,17 +404,17 @@ classdef (Abstract) AbstractSpace
         
         function hashable = GetMD5_helper(spaces)
             % Helper function for hash algorithm. This converts the space object to a data
-            % structure which can be processed by :func:`GetMD5`.
+            % structure which can be processed by :func:`.GetMD5`.
             %
             % Arguments
             % ---------
-            % spaces : :class:`AbstractSpace`
+            % spaces : :class:`.AbstractSpace`
             %   input spaces.
             %
             % Returns
             % -------
-            % hashable : cell
-            %   data which can be accepted by :func:`GetMD5`.
+            % hashable : :class:`cell`
+            %   data which can be accepted by :func:`.GetMD5`.
             
             hashable = {spaces.dimensions, spaces.dual};
         end

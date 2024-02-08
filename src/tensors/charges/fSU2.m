@@ -1,7 +1,9 @@
 classdef fSU2 < SU2
-    % Fermionic spin charges.
-    %   This is equivalent to representations of SU2 x fZ2, but restricted to only allow
-    %   for the combinations of integer with trivial and halfinteger with fermion charges.
+    % Fermionic :math:`\mathrm{SU}(2)` charges, used to represent fermionspin.
+    %
+    % This is equivalent to representations of :math:`\mathrm{SU}(2) \otimes fZ_2`, but
+    % restricted to only allow for the combinations of integer with trivial and halfinteger
+    % with fermion charges.
     
     methods
         function style = braidingstyle(~)

@@ -1,6 +1,18 @@
 classdef (InferiorClasses = {?Tensor, ?MpsTensor, ?SparseTensor}) PepsSandwich
     % Data structure representing a pair of PEPS tensors in an overlap, which behave as an
     % MPO tensor.
+    %
+    % Properties
+    % ----------
+    % top : :class:`.PepsTensor`
+    %   top-layer PEPS tensor, usually interpreted as the 'bra' in the overlap.
+    %
+    % bot : :class:`.PepsTensor`
+    %   bottom-layer PEPS tensor, usually interpreted as the 'ket' in the overlap.
+    %
+    % Todo
+    % ----
+    % Document.
     
     properties
         top PepsTensor

@@ -19,18 +19,18 @@ function [I, varargout] = simulsort(arrays, kwargs)
 %
 % Keyword Arguments
 % -----------------
-% Dimension : int
+% Dimension : :class:`int`
 %   determine the dimension along which to sort. This behaves similarly to SORT, by default:
 %   - for vectors, sorts the elements
 %   - for matrices, sorts each column
 %   - for N-D arrays, sorts along the first non-singleton dimension.
 %
-% Direction : 'ascend' or 'descend'
+% Direction : :class:`char`, 'ascend' or 'descend'
 %   specify the sorting direction, defaults to 'ascend'.
 %
 % Returns
 % -------
-% I : int
+% I : :class:`int`
 %   permutation vector that brings the input arrays into sorted order.
 %
 % array1, array2, ...

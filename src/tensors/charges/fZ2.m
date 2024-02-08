@@ -1,7 +1,5 @@
 classdef fZ2 < Z2
-    % Fermionic charges.
-    %
-    % See also AbstractCharge
+    % Fermionic charges, implemented as a graded :math:`Z_2` symmetry.
     
     methods
         function style = braidingstyle(~)

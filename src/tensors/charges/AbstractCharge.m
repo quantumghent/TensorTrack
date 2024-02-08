@@ -1,5 +1,5 @@
 classdef (Abstract) AbstractCharge
-    % AbstractCharge - Abstract base class for objects in a fusion category.
+    % Abstract base class for objects in a fusion category.
     
     %% Required categorical data.
     methods
@@ -28,13 +28,13 @@ classdef (Abstract) AbstractCharge
             %
             % Arguments
             % --------
-            % a : :class:`AbstractCharge`
+            % a : :class:`.AbstractCharge`
             %   input charge
             %
             % Returns
             % -------
-            % abar : :class:`AbstractCharge`
-            %   conjugate charge suche that :code:`one(a)` is an element of :code:`a * abar`
+            % abar : :class:`.AbstractCharge`
+            %   conjugate charge such that :code:`one(a)` is an element of :code:`a * abar`
             error('AbstractCharge:requiredMethod', ...
                     'Error. \nMethod must be overloaded.')
         end
@@ -69,7 +69,7 @@ classdef (Abstract) AbstractCharge
             %
             % Returns
             % -------
-            % c : :class:`.AbstractCharge` (1, \*)
+            % c : (1, :) :class:`.AbstractCharge`
             %   the unique elements in the decomposition of the tensor product of ``a`` and
             %   ``b``
             error('AbstractCharge:requiredMethod', ...
@@ -109,7 +109,7 @@ classdef (Abstract) AbstractCharge
             %
             % Returns
             % -------
-            % F : :class:`double` (\*, \*, \*, \*)
+            % F : (:, :, :, :) :class:`double`
             %   recoupling coefficients
             error('AbstractCharge:requiredMethod', ...
                     'Error. \nMethod must be overloaded.')
@@ -177,7 +177,7 @@ classdef (Abstract) AbstractCharge
             %
             % Returns
             % -------
-            % C : :class:`double` (\*, \*, \*, \*)
+            % C : (:, :, :, :) :class:`double`
             %   fusion tensor
             error('AbstractCharge:optionalMethod', ...
                     'Error. \nMethod must be overloaded.')
@@ -211,7 +211,7 @@ classdef (Abstract) AbstractCharge
             %
             % Returns
             % -------
-            % R : :class:`double` (\*, \*)
+            % R : (:, :) :class:`double`
             %   braiding coefficients
             error('AbstractCharge:optionalMethod', ...
                     'Error. \nMethod must be overloaded.')
@@ -224,7 +224,7 @@ classdef (Abstract) AbstractCharge
             % Compute the fusion to splitting coefficient.
             % 
             % .. todo::
-            %   Add diagram?
+            %   Add diagram.
             %
             % Arguments
             % ---------
@@ -246,7 +246,7 @@ classdef (Abstract) AbstractCharge
             % Compute the splitting to fusion coefficient.
             % 
             % .. todo::
-            %   Add diagram?
+            %   Add diagram.
             %
             % Arguments
             % ---------
@@ -303,7 +303,7 @@ classdef (Abstract) AbstractCharge
             % Create a matrix-representation of an arrowflip.
             % 
             % .. todo::
-            %   Add diagram or definition?
+            %   Add diagram and proper definition.
             %
             % Arguments
             % ---------
@@ -311,7 +311,7 @@ classdef (Abstract) AbstractCharge
             %
             % Returns
             % -------
-            % F : :class:`double` (\*, \*)
+            % F : (:, :) :class:`double`
             %   matrix-representation of an arrowflip
             F = conj(sqrt(qdim(a)) .* fusiontensor(conj(a), a, one(a)));
         end
@@ -320,7 +320,7 @@ classdef (Abstract) AbstractCharge
             % Compute the full recoupling matrix from ``e`` to ``f``.
             %
             % .. todo::
-            %   Add proper definition?
+            %   Add proper definition.
             %
             % Usage
             % -----
@@ -333,14 +333,14 @@ classdef (Abstract) AbstractCharge
             %   charges being fused
             % d : :class:`.AbstractCharge`
             %   total charges
-            % e : :class:`.AbstractCharge` (1, \*)
+            % e : (1, :) :class:`.AbstractCharge`
             %   intermediate charges before recoupling
-            % f : :class:`.AbstractCharge` (1, \*)
+            % f : (1, :) :class:`.AbstractCharge`
             %   intermediate charge after recoupling
             %
             % Returns
             % -------
-            % F : :class:`double` (\*, \*, \*, \*)
+            % F : (:, :, :, :) :class:`double`
             %   recoupling matrix between all allowed channels
             if a.fusionstyle == FusionStyle.Unique
                 if nargin < 5, e = a * b; end
@@ -414,7 +414,7 @@ classdef (Abstract) AbstractCharge
             % Compute the coefficient obtained by twisting a charge.
             %
             % .. todo::
-            %   Add diagram/definition?
+            %   Add diagram and proper definition.
             %
             % Arguments
             % ---------
@@ -449,19 +449,21 @@ classdef (Abstract) AbstractCharge
     %% Utility functions
     methods
         function [d, N] = prod(a, dim)
-            % Total fusion product of charges.
-            %
-            % .. todo::
-            %   Complete docstring
+            % Compute the total fusion product of array of charges along a given axis.
             %
             % Arguments
             % ---------
-            % a, b, c, ... : :class:`.AbstractCharge`
+            % a : :class:`.AbstractCharge`
+            %   input array of charges
+            % dim : :class:`int`
+            %   array dimension along which to take the fusion product, defaults to first
+            %   non-trivial axis
             %
             % Returns
             % -------
             % c : :class:`.AbstractCharge`
-            %   total fusion product determined by subsequently multiplying input charges
+            %   array of total fusion products determined by subsequently multiplying input
+            %   charges along the given direction
             arguments
                 a
                 dim = find(size(a) ~= 1, 1)
@@ -550,11 +552,12 @@ classdef (Abstract) AbstractCharge
             % Cumulative fusion product of elements.
             %
             % .. todo::
-            %   Complete docstring
+            %   Complete docstring.
             %
             % Usage
             % -----
-            % :code:`Y = cumprod(X)` computes the cumulative fusion product along the
+            % :code:`Y = cumprod(X)`
+            % computes the cumulative fusion product along the
             % columns of X.
             %
             % For ``FusionStyle.Unique``, ``Y`` has the same size as ``X``, which can be
@@ -564,7 +567,7 @@ classdef (Abstract) AbstractCharge
             %
             % Arguments
             % ---------
-            % a: :class:`.AbstractCharge` (\*, \*)
+            % a: (:, :) :class:`.AbstractCharge`
             %
             % Returns
             % -------
@@ -663,7 +666,7 @@ classdef (Abstract) AbstractCharge
             % Create all combinations of vectors.
             %
             % .. todo::
-            %   Complete docstring
+            %   Complete docstring.
             %
             % Usage
             % -----

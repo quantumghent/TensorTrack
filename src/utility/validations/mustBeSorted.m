@@ -1,10 +1,11 @@
 function mustBeSorted(A)
-% mustBeSorted - Validate that value is sorted.
-%   mustBeSorted(A) throws an error if A is not sorted.
+% Validate that input is sorted.
+% 
+% :code:`mustBeSorted(A)` throws an error if :code:`A` is not sorted.
 %
-%   Class support:
-%       All classes that define these methods:
-%           issorted
+% Note
+% ----
+% Supported by all classes that define these methods: :code:`issorted`
 
 if ~issorted(A)
     throwAsCaller(createValidatorException('TensorTrack:validators:mustBeSorted'));

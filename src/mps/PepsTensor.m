@@ -1,8 +1,11 @@
 classdef PepsTensor
-    % Generic PEPS tensor object that hos a notion of virtual and physical legs.
-    %   This object represents the PEPS tensor at a single site as a rank (1, 4) tensor,
-    %   where the physical index lies in the codomain and the virtual indices lie in the
-    %   domain.
+    % Generic PEPS tensor object that has a notion of virtual and physical legs.
+    %
+    % This object represents the PEPS tensor at a single site as a rank (1, 4) tensor,
+    % where the physical index lies in the codomain and the virtual indices lie in the
+    % domain.
+    %
+    % .. code-block::
     %
     %                               5   1
     %                               |  /
@@ -13,6 +16,15 @@ classdef PepsTensor
     %                               ^
     %                               |
     %                               3
+    %
+    % Properties
+    % ----------
+    % var : :class:`.Tensor`
+    %   PEPS tensor data.
+    %
+    % Todo
+    % ----
+    % Document.
     properties
         var
     end

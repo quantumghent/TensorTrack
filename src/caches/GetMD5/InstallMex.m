@@ -1,5 +1,5 @@
 function Ok = InstallMex(SourceFile, varargin)
-% INSTALLMEX - Compile and install Mex file
+% Compile and install Mex file
 % The C, C++ or FORTRAN mex file is compiled and additional installation
 % routines are started. Advanced users can call MEX() manually instead, but some
 % beginners are overwhelmed by instructions for a compilation sometimes.
@@ -52,9 +52,13 @@ function Ok = InstallMex(SourceFile, varargin)
 % --------
 %
 % Compile func1.c with LAPACK libraries:
-%   InstallMex('func1', {'libmwlapack.lib', 'libmwblas.lib'})
+%
+% :code:`InstallMex('func1', {'libmwlapack.lib', 'libmwblas.lib'})`
+% 
 % Compile func2.cpp, enable debugging and call a test function:
-%   InstallMex('func2.cpp', '-debug', 'Test_func2');
+% 
+% :code:`InstallMex('func2.cpp', '-debug', 'Test_func2');`
+% 
 % These commands can be appended after the help section of an M-file, when the
 % compilation should be started automatically, if the compiled MEX is not found.
 %

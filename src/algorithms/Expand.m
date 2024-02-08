@@ -1,5 +1,70 @@
 classdef Expand
     % Bond expansion algorithm for uniform matrix product states.
+    %
+    % Properties
+    % ----------
+    % bondsmethod : :class:`char`
+    %   bond expansion method, options are:
+    %
+    %   - :code:`'off'`: no bond expansion.
+    %   - :code:`'factor'`: (default) multiply the bond dimsion in each sector by a fixed
+    %     factor
+    %   - :code:`'explicit'`: manually provide bond dimension expansion.
+    %   - :code:`'extrapolate'`: extrapolate the bond dimension in each sector according to
+    %     a pre-defined exponential distribution.
+    %   - :code:`'twosite'`: expand bond dimension according to a truncated two-site update.
+    %
+    % chargesmethod : :class:`char`
+    %   charge expansion method, options are:
+    %
+    %   - :code:`'off'`: (default) no charge expansion.
+    %   - :code:`'fusionproduct'`: expand virtual charges according to the fusion product of
+    %     each previous virtual space with the corresponding physical space.
+    %   - :code:`'twosite'`: expand virtual charges according to a truncated two-site
+    %     update.
+    %
+    % schmidtcut : :class:`double`
+    %   cut in singular values used in two-site update, defaults to :code:`1e-5`.
+    %
+    % notrunc : :class:`logical`
+    %   disable truncation such that the bond dimension is only grown, defaults to
+    %   :code:`false`.
+    %
+    % noisefactor : :class:`double`
+    %   noise factor applied to expanded MPS entries in order to improve stability, defaults
+    %   to :code:`1e-3`.
+    %
+    % which : :class:`char`
+    %   eigenvalue selector used in two-site update routine (passed as the :code:`sigma`
+    %   argument to :func:`.eigsolve`), defaults to :code:`'largestabs'`.
+    %
+    % minbond : :class:`int`
+    %   minimal bond dimension in for each charge, defaults to :code:`1`
+    %
+    % maxbond : :class:`int`
+    %   maximal bond dimension for each charge, defaults to :code:`1e9`.
+    %
+    % tolbond : :class:`double`
+    %   tolerance on expanded bond dimension compared to their current values, defaults to
+    %   :code:`0.2`.
+    %
+    % bondfactor : :class:`double`
+    %   expansion factor used for the :code:`'factor'` bond expansion method, defaults to
+    %   :code:`1.2`.
+    %
+    % cutfactor : :class:`double`
+    %   cut factor used in bond dimension extrapolation for the :code:`'extrapolate'` bond
+    %   expansion method, defaults to :code:`1`.
+    %
+    % explicitbonds : :class:`int`
+    %   vector of integers indicating the bond dimsension to add/subtract for each charge,
+    %   defaults to :code:`[]`.
+    %
+    % mincharges : :class:`int`
+    %   minimal number of charges in eevery virtual space, defaults to :code:`2`.
+    %
+    % finalize : :class:`function_handle`
+    %   optional finalization.
     
     %% Options
     properties
@@ -48,7 +113,30 @@ classdef Expand
         end
         
         function [mps2, flag] = changebonds(alg, mpo, mps1)
-            % Change sectors and bond dimensions of mps virtual spaces.
+            % Change charges and bond dimensions of MPS virtual spaces.
+            %
+            % Usage
+            % -----
+            % :code:`[mps2, flag] = changebonds(alg, mpo, mps1)`
+            %
+            % Arguments
+            % ---------
+            % alg : :class:`.Expand`
+            %   bond expansion algorithm.
+            %
+            % mpo : :class:`.InfMpo`
+            %   matrix product operator.
+            %
+            % mps1 : :class:`.UniformMps`
+            %   MPS to be expanded.
+            %
+            % Returns
+            % -------
+            % mps2 : :class:`.UniformMps`
+            %   expanded MPS.
+            %
+            % flag : :class:`struct`
+            %   explain.
             
             % canonicalize before starting
             for d = 1:depth(mps1)

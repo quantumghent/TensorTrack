@@ -1,5 +1,9 @@
 classdef InfQP
     % Infinite Quasi-Particle states
+    %
+    % Todo
+    % ----
+    % Document.
     
     
     %% Properties
@@ -240,24 +244,24 @@ classdef InfQP
         end
         
         function rho = fixedpoint(qp, type, w)
-            % compute the fixed point of the transfer matrix of an mps.
+            % compute the fixed point of the transfer matrix of a quasi-particle state.
             %
             % Usage
             % -----
-            % :code:`rho = fixedpoint(mps, type, w)`
+            % :code:`rho = fixedpoint(qp, type, w)`
             %
             % Arguments
             % ---------
-            % mps : :class:`UniformMps`
-            %   input state.
+            % mps : :class:`.InfQP`
+            %   input quasi-particle state.
             %
-            % type : char
+            % type : :class:`char`
             %   specification of the type of transfer matrix:
             %   general format: sprintf(%c_%c%c, side, top, bot) where side is 'l' or 'r' to
             %   determine which fixedpoint, and top and bot are 'L' or 'R' to specify
             %   whether to use AL or AR in the transfer matrix.
             %
-            % w : integer
+            % w : :class:`int`
             %   position within the mps unitcell of the fixed point.
             
             arguments
@@ -287,16 +291,16 @@ classdef InfQP
             %
             % Arguments
             % ---------
-            % qp : :class:`InfQP`
+            % qp : :class:`.InfQP`
             %   input quasi-particle state.
             %
-            % type : 'real' or 'complex'
+            % type : :class:`char`, 'real' or 'complex'
             %   optionally specify if complex entries should be seen as 1 or 2 parameters.
             %   Defaults to 'complex', with complex parameters.
             %
             % Returns
             % -------
-            % v : numeric
+            % v : :class:`numeric`
             %   real or complex vector containing the parameters of the quasi-particle
             %   state.
             
@@ -313,20 +317,20 @@ classdef InfQP
             %
             % Arguments
             % ---------
-            % v : numeric
+            % v : :class:`numeric`
             %   real or complex vector containing the parameters of the quasi-particle
             %   state.
             %
-            % qp : :class:`InfQP`
+            % qp : :class:`.InfQP`
             %   input quasi-particle state.
             %
-            % type : 'real' or 'complex'
+            % type : :class:`char`, 'real' or 'complex'
             %   optionally specify if complex entries should be seen as 1 or 2 parameters.
             %   Defaults to 'complex', with complex parameters.
             %
             % Returns
             % -------
-            % qp : :class:`InfQP`
+            % qp : :class:`.InfQP`
             %   output quasi-particle state, filled with the parameters.
             
             arguments

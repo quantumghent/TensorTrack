@@ -1,4 +1,4 @@
-Symmetries
+Algorithms
 ==========
 
 Coming soon.

@@ -1,4 +1,5 @@
 function y = colors(i)
+% Periodically cycle through standard Matlab colors.
 
 y=[0    0.4470    0.7410
     0.8500    0.3250    0.0980

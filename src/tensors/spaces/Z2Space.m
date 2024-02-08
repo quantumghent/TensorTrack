@@ -1,5 +1,16 @@
 function V = Z2Space(charges, bonds, isdual)
-% Convenience constructor for Z2-graded spaces.
+% Convenience constructor for :math:`Z_2`-graded spaces.
+%
+% Arguments
+% --------
+% charges : (1, :) :class:`logical`-like
+%   vector of :math:`Z_2` charge labels.
+%
+% bonds : (1, :) :class:`int`
+%   degeneracy of each charge.
+%
+% isdual : :class:`logical`
+%   indicate if the space is dual.
 arguments
     charges
     bonds

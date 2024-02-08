@@ -1,10 +1,29 @@
 function mpo = quantum1dHubbard(u, mu, kwargs)
 % Hamiltonian for the 1D Hubbard model.
 %
-% `math`:-\sum (c^+_i c_j + c^+_j c_i) + u\sum (1 - 2n_{up}) * (1-2n_{down}) - mu\sum (n_{up} + n_{down}):
+% .. math::
+%   H = -\sum_{\langle ij \rangle} (c^+_i c_j + c^+_j c_i) + u \sum_i (1 - 2n_i^{\uparrow}) \cdot (1-2n_i^{\downarrow}) - \mu \sum_i (n_i^{\uparrow} + n_i^{\downarrow})
 %
 % Arguments
 % ---------
+% u : :class:`double`
+%   interaction strength.
+%
+% mu : :class:`double`
+%   chemical potential.
+%
+% Keyword arguments
+% -----------------
+% 'Filling' : :class:`double`
+%   rational filling factor.
+%
+% 'Symmetry' : :class:`char`
+%   symmetry group, defaults to :code:`'fZ2xSU2xU1'`.
+%
+% Returns
+% -------
+% mpo : :class:`.InfJMpo`
+%   Hubbard Hamiltonian as a Jordan block MPO.
 
 arguments
     u

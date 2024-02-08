@@ -1,5 +1,20 @@
 classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
-    % Generic mps tensor objects that have a notion of virtual, physical and auxiliary legs.
+    % Generic MPS tensor objects that have a notion of virtual, physical and auxiliary legs.
+    %
+    % Properties
+    % ----------
+    % var : :class:`.Tensor` or :class:`.SparseTensor`
+    %   tensor data of the MPS tensor.
+    %
+    % plegs : :class:`int`
+    %   number of physical legs.
+    %
+    % alegs : :class:`int`
+    %   number of auxiliary legs.
+    %
+    % Todo
+    % ----
+    % Document all methods.
     
     properties
         var
@@ -109,7 +124,13 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
         end
         
         function tdst = insert_onespace(tsrc, varargin)
-            % insert a trivial space at position i.
+            % Insert a trivial space at position :code:`i`, corresponding to an additional
+            % auxiliary leg.
+            % 
+            % See Also
+            % --------
+            % :meth:`.Tensor.insert_onespace`
+            
             tdst = MpsTensor(insert_onespace(tsrc.var, varargin{:}), tsrc.alegs + 1);
         end
     end
@@ -137,17 +158,17 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
         end
         
         function s = pspace(A)
-            % The physical space of an :class:`MpsTensor`.
+            % The physical space of an :class:`.MpsTensor`.
             s = space(A, 1 + (1:A.plegs));
         end
         
         function s = leftvspace(A)
-            % The left virtual space of an :class:`MpsTensor`.
+            % The left virtual space of an :class:`.MpsTensor`.
             s = space(A.var(1), 1);
         end
         
         function s = rightvspace(A)
-            % The right virtual space of an :class:`MpsTensor`.
+            % The right virtual space of an :class:`.MpsTensor`.
             s = space(A.var(1), nspaces(A.var(1)) - A.alegs);
         end
     end
@@ -326,16 +347,17 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
             % Usage
             % -----
             % :code:`t = ctranspose(t)`
+            %
             % :code:`t = t'`
             %
             % Arguments
             % ---------
-            % t : :class:`Tensor`
+            % t : :class:`.MpsTensor`
             %   input tensor.
             %
             % Returns
             % -------
-            % t : :class:`Tensor`
+            % t : :class:`.MpsTensor`
             %   adjoint tensor.
             
             for i = 1:numel(t)
@@ -592,7 +614,7 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
             %
             % Arguments
             % ---------
-            % t : :class:`Tensor`
+            % t : :class:`.MpsTensor`
             %   input tensor.
             %
             % type : 'real' or 'complex'
@@ -601,7 +623,7 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
             %
             % Returns
             % -------
-            % v : numeric
+            % v : :class:`numeric`
             %   real or complex vector containing the parameters of the tensor.
             
             arguments
@@ -617,19 +639,19 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
             %
             % Arguments
             % ---------
-            % v : numeric
+            % v : :class:`numeric`
             %   real or complex vector containing the parameters of the tensor.
             %
-            % t : :class:`Tensor`
+            % t : :class:`.MpsTensor`
             %   input tensor.
             %
-            % type : 'real' or 'complex'
+            % type : :class:`char`, 'real' or 'complex'
             %   optionally specify if complex entries should be seen as 1 or 2 parameters.
             %   Defaults to 'complex', with complex parameters.
             %
             % Returns
             % -------
-            % t : :class:`Tensor`
+            % t : :class:`.MpsTensor`
             %   output tensor, filled with the parameters.
             
             arguments
@@ -654,14 +676,14 @@ classdef (InferiorClasses = {?Tensor, ?SparseTensor}) MpsTensor < AbstractTensor
             %
             % Arguments
             % ---------
-            % H : :class:`AbstractTensor`
-            %   tensor representing a local operator on N sites.
+            % psi : :class:`.AbstractTensor`
+            %   tensor representing a local state on N sites.
             %
             % Keyword Arguments
             % -----------------
-            % 'Trunc' : cell
+            % 'Trunc' : :class:`cell`
             %   optional truncation method for the decomposition. See also
-            %   :meth:`Tensor.tsvd`
+            %   :meth:`.Tensor.tsvd`
             arguments
                 psi
                 kwargs.Trunc = {'TruncBelow', 1e-14}

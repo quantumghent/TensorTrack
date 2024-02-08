@@ -1,7 +1,9 @@
 classdef AbelianBlock < MatrixBlock
-    %ABELIANBLOCK Summary of this class goes here
-    %   Detailed explanation goes here
-    
+    % Structure for storing symmetric tensor data for an Abelian symmetry.
+    %
+    % This represents the blocks in the block-diagonal decomposition of a tensor defined
+    % over graded vector spaces corresponding to an Abelian symmetry, allowing for a more
+    % efficient multiplication.    
     
     methods
         function Y = axpby(a, X, b, Y, p, map)

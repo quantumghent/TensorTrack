@@ -1,4 +1,18 @@
 function S = sigma_exchange(spin, symmetry)
+% Spin exchange operator.
+%
+% Arguments
+% ---------
+% spin : :class:`double`
+%   halfinteger or integer spin label, defaults to :code:`1/2`.
+%
+% symmetry : :class:`char`
+%   symmetry group ('Z1' or 'SU2'), defaults to :code:`'SU2'`.
+%
+% Returns
+% S : :class:`.Tensor`
+%   two-site exchange interaction represented as a 4-leg tensor.
+
 arguments
     spin = 1/2
     symmetry = 'Z1'

@@ -1,21 +1,23 @@
 function N = rightnull(A, alg, atol)
-% Compute the right nullspace of a matrix, such that A * N' = 0.
+% Compute the right nullspace of a matrix, such that :code:`A * N' == 0`.
 %
 % Arguments
 % ---------
-% A : numeric
+% A : :class:`numeric`
 %   input matrix.
 %
-% alg : 'lq' or 'svd'
+% alg : :class:`char`, 'lq' or 'svd'
 %   choice of algorithm, default 'svd'.
 %
-% atol : double
-%   absolute tolerance for the null space, defaults to max(size(A)) * eps(max(svd(A))).
+% atol : :class:`double`
+%   absolute tolerance for the null space, defaults to
+%   :code:`max(size(A)) * eps(max(svd(A)))`.
 %
 % Returns
 % -------
-% N : numeric
-%   orthonormal basis for the orthogonal complement of the support of the column space of A.
+% N : :class:`numeric`
+%   orthonormal basis for the orthogonal complement of the support of the column space of
+%   :code:`A`.
 
 arguments
     A

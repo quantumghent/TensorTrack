@@ -1,11 +1,25 @@
 classdef KrylovSchur
     % KrylovSchur wrapper for Matlab implementation of eigs
+    %
+    % Properties
+    % ----------
+	% tol : :class:`double`
+    %   convergence tolerance, defaults to :code:`1e-10`.
+    %
+	% maxiter : :class:`int`
+    %   maximum number of iterations, defaults to :code:`100`.
+    %
+	% krylovdim : :class:`int`
+    %   Krylov subspace dimension, defaults to :code:`20`.
+    %
+    % verbosity : :class:`.Verbosity`
+    %   display information, defaults to :code:`Verbosity.warn`.
     
     properties
-        tol         = 1e-10             % convergence tolerance
-        maxiter     = 100               % maximum iterations
-        krylovdim   = 20                % Krylov subspace dimension
-        verbosity   = Verbosity.warn    % display information
+        tol         = 1e-10
+        maxiter     = 100
+        krylovdim   = 20
+        verbosity   = Verbosity.warn
     end
     
     methods
@@ -28,26 +42,27 @@ classdef KrylovSchur
             % Usage
             % -----
             % :code:`[V, D, flag] = eigsolve(A, v, howmany, sigma, kwargs)`
+            %
             % :code:`D = eigsolve(A, v, ...)`
             %
             % Arguments
             % ---------
-            % A : matrix or function_handle
+            % A : :class:`matrix` or :class:`function_handle`
             %   A square matrix.
             %   A function handle which implements one of the following, depending on sigma:
             %
-            %   - A \ x, if `sigma` is 0 or 'smallestabs'
-            %   - (A - sigma * I) \ x, if sigma is a nonzero scalar
-            %   - A * x, for all other cases
+            %   - :code:`A \ x`, if :code:`sigma` is 0 or 'smallestabs'
+            %   - :code:(A - sigma * I) \ x`, if sigma is a nonzero scalar
+            %   - :code:A * x`, for all other cases
             %
-            % v : vector
+            % v : :class:`vector`
             %   initial guess for the eigenvector.
             %
-            % howmany : int
+            % howmany : :class:`int`
             %   amount of eigenvalues and eigenvectors that should be computed. By default
             %   this is 1, and this should not be larger than the total dimension of A.
             %
-            % sigma : `char` or numeric
+            % sigma : :class:`char` or :class:`numeric`
             %   selector for the eigenvalues, should be either one of the following:
             %
             %   - 'largestabs', 'lm': default, eigenvalues of largest magnitude
@@ -56,28 +71,26 @@ classdef KrylovSchur
             %   - 'smallestabs', 'sm': default, eigenvalues of smallest magnitude
             %   - 'smallestreal', 'sr': eigenvalues with smallest real part
             %   - 'smallestimag', 'si': eigenvalues with smallest imaginary part.
-            %   - 'bothendsreal', 'be': both ends, with howmany/2 values with largest and
-            %     smallest real part respectively.
-            %   - 'bothendsimag', 'li': both ends, with howmany/2 values with largest and
-            %     smallest imaginary part respectively.
             %   - numeric : eigenvalues closest to sigma.
             %
             % Keyword Arguments
             % -----------------
-            % IsSymmetric : logical
+            % IsSymmetric : :class:`logical`
             %   flag to speed up the algorithm if the operator is symmetric, false by
             %   default.
             %
             % Returns
             % -------
-            % V : (1, howmany) array
+            % V : (1, howmany) :class:`vector`
             %   vector of eigenvectors.
             %
-            % D : numeric
+            % D : :class:`numeric`
             %   vector of eigenvalues if only a single output argument is asked, diagonal
             %   matrix of eigenvalues otherwise.
             %
-            % flag : int
+            % flag : :class:`int`
+            %   convergence info flag:
+            %
             %   if flag = 0 then all eigenvalues are converged, otherwise not.
 
             arguments

@@ -14,18 +14,18 @@ function R = randc(varargin)
 %
 % Arguments
 % ---------
-% m, n, p, ... : int
+% m, n, p, ... : :class:`int`
 %   integers defining the size of the output array.
 %
 % classname : :class:`char`
-%   datatype of the array, default :class:`double`.
+%   datatype of the array, default :code:`'double'`.
 %
-% Y : numeric
+% Y : :class:`numeric`
 %   create an array of the same class as Y.
 %
 % Returns
 % -------
-% R : numeric
+% R : :class:`numeric`
 %   complex pseudorandom values, real and imaginary part distributed from the uniform
 %   distribution.
 

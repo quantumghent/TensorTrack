@@ -10,8 +10,8 @@ function uTest_GetMD5(doSpeed)
 % Arguments
 % ---------
 % doSpeed
-%   Optional logical flag to trigger time consuming speed tests. Defaults to :code:`true.If
-%   no speed test is defined, this is ignored.
+%   Optional logical flag to trigger time consuming speed tests. Defaults to :code:`true`.
+%   If no speed test is defined, this is ignored.
 %
 % Note
 % ----
