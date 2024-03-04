@@ -1,6 +1,20 @@
-classdef Tensor
-    %TENSOR Summary of this class goes here
-    %   Detailed explanation goes here
+classdef Tensor < AbstractTensor
+    % Base implementation of a dense tensor array with optional symmetries.
+    %
+    % Properties
+    % ----------
+    % codomain
+    %   codomain vector space represented as tensor product space.
+    %
+    % domain
+    %   codomain vector space represented as tensor product space.
+    %
+    % var
+    %   block sparse representation of tensor data.
+    %
+    % Todo
+    % ----
+    % Document all methods.
     
     properties
         codomain
@@ -24,10 +38,10 @@ classdef Tensor
             %
             % Arguments
             % ---------
-            % array : numeric
+            % array : :class:`numeric`
             %   numeric input array to convert to a :class:`Tensor`
             %
-            % codomain, domain : :class:`AbstractSpace`
+            % codomain, domain : (1, :) :class:`.AbstractSpace`
             %   spaces that define the structure of the output tensor.
             %
             % Returns
@@ -39,9 +53,17 @@ classdef Tensor
             
             % t = Tensor(tensor)
             if nargin == 1 && isa(varargin{1}, 'Tensor')
-                t.codomain = varargin{1}.codomain;
-                t.domain = varargin{1}.domain;
-                t.var = varargin{1}.var;
+                for i = numel(varargin{1}):-1:1
+                    t(i).codomain = varargin{1}(i).codomain;
+                    t(i).domain = varargin{1}(i).domain;
+                    t(i).var = varargin{1}(i).var;
+                end
+                t = reshape(t, size(varargin{1}));
+                return
+            end
+            
+            if nargin == 1 && isa(varargin{1}, 'SparseTensor')
+                t = full(varargin{1});
                 return
             end
             
@@ -53,7 +75,7 @@ classdef Tensor
                     varargin);
                 return;
             end
-                
+            
             % t = Tensor(codomain, domain)
             if nargin == 2
                 codomain = varargin{1};
@@ -61,10 +83,30 @@ classdef Tensor
                 
                 assert(~isempty(codomain) || ~isempty(domain), ...
                     'Cannot create (0,0) tensors.');
-                t.domain    = domain;
-                t.codomain  = codomain;
                 
-                t.var = AbstractBlock.new(codomain, domain);
+                if isa(codomain, 'SumSpace') || isa(domain, 'SumSpace')
+                    if isempty(codomain)
+                        sz = flip(nsubspaces(domain));
+                    elseif isempty(domain)
+                        sz = nsubspaces(codomain);
+                    else
+                        if ~isa(codomain, 'SumSpace'), codomain = SumSpace(codomain); end
+                        if ~isa(domain, 'SumSpace'), domain = SumSpace(domain); end
+                        sz = [nsubspaces(codomain) flip(nsubspaces(domain))];
+                    end
+                    subs = ind2sub_(sz, 1:prod(sz));
+                    for i = size(subs, 1):-1:1
+                        [cod, dom] = slice(codomain, domain, subs(i,:));
+                        t(i).codomain = cod;
+                        t(i).domain = dom;
+                        t(i).var = AbstractBlock.new(cod, dom);
+                    end
+                else
+                    t.domain    = domain;
+                    t.codomain  = codomain;
+                    t.var = AbstractBlock.new(codomain, domain);
+                end
+                
                 return
             end
             
@@ -77,26 +119,26 @@ classdef Tensor
             % Usage
             % -----
             % :code:`t = fill_matrix(t, matrices, charges)`
-            % 
+            %
             % :code:`t = fill_matrix(t, fun, charges)`
             %
             % Arguments
             % ---------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   input tensor to fill into.
             %
-            % matrices : cell or numeric
+            % matrices : :class:`cell` or :class:`numeric`
             %   list of matrices or single matrix to fill with.
             %
             % fun : :class:`function_handle`
             %   function of signature :code:`fun(dims, charge)` to fill with.
-            % 
-            % charges : :class:`AbstractCharge`
+            %
+            % charges : :class:`.AbstractCharge`
             %   optional list of charges to identify the matrix blocks.
             %
             % Returns
             % -------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   filled tensor.
             
             arguments
@@ -122,46 +164,46 @@ classdef Tensor
             end
         end
         
-        function t = fill_tensor(t, data, trees)
+        function t = fill_tensor(t, data)
             % Fill the tensor blocks of a tensor.
             %
             % Usage
             % -----
-            % :code:`t = fill_tensor(t, tensors, trees)`
-            % 
-            % :code:`t = fill_tensor(t, fun, trees)`
+            % :code:`t = fill_tensor(t, tensors)`
+            %
+            % :code:`t = fill_tensor(t, fun)`
             %
             % Arguments
             % ---------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   input tensor to fill into.
             %
-            % tensors : cell or numeric
+            % tensors : :class:`cell` or :class:`numeric`
             %   list of tensors or single tensor to fill with.
             %
             % fun : :class:`function_handle`
             %   function of signature :code:`fun(dims, trees)` to fill with.
-            % 
-            % trees : :class:`FusionTree`
-            %   optional list of fusion trees to identify the tensor blocks.
             %
             % Returns
             % -------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   filled tensor.
             
             arguments
                 t
                 data
-                trees = []
             end
             
             if isnumeric(data), data = {data}; end
             
             if iscell(data)
-                t.var = fill_tensor_data(t.var, data, trees);
+                t.var = fill_tensor_data(t.var, data);
             else
-                t.var = fill_tensor_fun(t.var, data, trees);
+                [tmp, trees] = tensorblocks(t);
+                for i = 1:length(tmp)
+                    tmp{i} = data(size(tmp{i}), trees(i));
+                end
+                t.var = fill_tensor_data(t.var, tmp);
             end
         end
         
@@ -181,7 +223,7 @@ classdef Tensor
             %
             % Repeating Arguments
             % -------------------
-            % tensors : :class:`Tensor`
+            % tensors : :class:`.Tensor`
             %   input tensors used to copy legs.
             %
             % indices : int
@@ -189,27 +231,27 @@ classdef Tensor
             %
             % Keyword Arguments
             % -----------------
-            % Rank : (1, 2) int
+            % Rank : (1, 2) :class:`int´
             %   rank of the output tensor, by default this is :code:`[nspaces(t) 0]`.
             %
-            % Conj : logical
+            % Conj : :class:`logical`
             %   flag to indicate whether the space should be equal to the input space, or
             %   fit onto the input space. This can be either an array of size(tensors), or a
             %   scalar, in which case it applies to all tensors.
             %
-            % Mode : 'tensor' or 'matrix'
+            % Mode : :class:`char`, 'tensor' or 'matrix'
             %   method of filling the tensor data. By default this is matrix, where the
             %   function should be of signature :code:`fun(dims, charge)`, for 'tensor' this
             %   should be of signature :code:`fun(dims, tree)`.
             %
             % Returns
             % -------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   output tensor.
             %
             % Examples
             % --------
-            % :code:`t = similar([], mpsbar, 1, mpo, 4, mps, 1, 'Conj', true)` creates a 
+            % :code:`t = similar([], mpsbar, 1, mpo, 4, mps, 1, 'Conj', true)` creates a
             % left mps environment tensor.
             
             arguments
@@ -273,39 +315,39 @@ classdef Tensor
             %   function of signature :code:`fun(dims, id)` where id is determined by Mode.
             %   If this is left empty, the tensor data will be uninitialized.
             %
-            % dims : int
+            % dims : :class:`int`
             %   list of dimensions for non-symmetric tensors.
             %
-            % arrows : logical
+            % arrows : :class:`logical`
             %   optional list of arrows for tensor legs.
             %
-            % tensor : :class:`Tensor`
+            % tensor : :class:`.Tensor`
             %   input tensor to copy structure.
             %
             % Repeating Arguments
             % -------------------
-            % charges : cell
+            % charges : :class:`cell`
             %   list of charges for each tensor index.
             %
-            % degeneracies : cell
+            % degeneracies : :class:`cell`
             %   list of degeneracies for each tensor index.
             %
-            % arrow : logical
+            % arrow : :class:`logical`
             %   arrow for each tensor index.
             %
             % Keyword Arguments
             % -----------------
-            % Rank : int (1, 2)
-            %   rank of the constructed tensor. By default this is [nspaces(t) 0].
+            % Rank : (1, 2) :class:`int`
+            %   rank of the constructed tensor. By default this is :code:`[nspaces(t) 0]`.
             %
-            % Mode : 'matrix' or 'tensor'
+            % Mode : :class:`char`, 'matrix' or 'tensor'
             %   method of filling the resulting tensor. When this is 'matrix' (default),
             %   the function signature is :code:`fun(dims, charge)`, while for 'tensor' the
             %   signature should be :code:`fun(dims, tree)`.
             %
             % Returns
             % -------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   output tensor.
             
             arguments
@@ -328,7 +370,8 @@ classdef Tensor
                     spaces = CartesianSpace.new(varargin{1});
                 elseif isnumeric(varargin{2}) || islogical(varargin{2})
                     assert(length(varargin{1}) == length(varargin{2}))
-                    spaces = ComplexSpace.new(varargin{1}, varargin{2});
+                    args = [num2cell(varargin{1}); num2cell(varargin{2})];
+                    spaces = ComplexSpace.new(args{:});
                 end
                 
                 if ~isfield(kwargs, 'Rank')
@@ -372,7 +415,7 @@ classdef Tensor
                 end
             end
         end
-
+        
         function t = zeros(varargin)
             t = Tensor.new(@zeros, varargin{:});
         end
@@ -402,37 +445,41 @@ classdef Tensor
         end
     end
     
+    methods (Hidden)
+        function tdst = zerosLike(t, varargin)
+            tdst = repmat(0 * t, varargin{:});
+        end
+    end
+    
     
     %% Structure
     methods
         function n = indin(t)
-            n = length(t.domain);
+            n = length(t(1).domain);
         end
         
         function n = indout(t)
-            n = length(t.codomain);
+            n = length(t(1).codomain);
         end
         
         function n = nspaces(t)
-            n = length(t.domain) + length(t.codomain);
+            n = length(t(1).domain) + length(t(1).codomain);
         end
         
         function r = rank(t, i)
-            r = [length(t.codomain) length(t.domain)];
+            r = [length(t(1).codomain) length(t(1).domain)];
             if nargin > 1
                 r = r(i);
             end
         end
         
-        function sz = dims(t, inds)
-            sz = dims([t.codomain, t.domain']);
-            if nargin > 1
-                sz = sz(inds);
-            end
-        end
-        
         function sp = space(t, inds)
-            sp = [t.codomain t.domain'];
+            if isscalar(t)
+                sp = [t.codomain t.domain'];
+            else
+                [cod, dom] = deduce_spaces(t);
+                sp = [cod, dom'];
+            end
             if nargin > 1
                 sp = sp(inds);
             end
@@ -459,10 +506,26 @@ classdef Tensor
             style = fusionstyle(t.codomain, t.domain);
         end
         
+        function t = full(t)
+        end
+        
         function tdst = insert_onespace(tsrc, i, dual)
+            % Insert a trivial space at position :code:`i`.
+            %
+            % Arguments
+            % ---------
+            % tsrc : :class:`.Tensor`
+            %   input tensor.
+            %
+            % i : :class:`int`
+            %   position at which to insert trivial space, defaults to the last index.
+            %
+            % dual : :class:`logical`
+            %   indicate whether or not to dualize the trivial space, defaults to
+            %   :code:`false`.
             arguments
                 tsrc
-                i = nspaces(tsrc)
+                i = nspaces(tsrc) + 1
                 dual = false
             end
             
@@ -480,11 +543,13 @@ classdef Tensor
         end
         
         function tdst = embed(tsrc, tdst)
+            % Embed a tensor in a different tensor.
             
-            bsrc = tensorblocks(tsrc);
-            fsrc = fusiontrees(tsrc);
-            bdst = tensorblocks(tdst);
-            fdst = fusiontrees(tdst);
+            assert(isequal(rank(tsrc), rank(tdst)), 'tensors:argerror', ...
+                'tensors must have the same rank');
+            
+            [bsrc, fsrc] = tensorblocks(tsrc);
+            [bdst, fdst] = tensorblocks(tdst);
             
             [lia, locb] = ismember(fsrc, fdst);
             nsp = nspaces(tdst);
@@ -502,29 +567,9 @@ classdef Tensor
     
     %% Comparison
     methods
-        function d = distance(A, B)
-            % Compute the Euclidean distance between two tensors.
-            %
-            % Arguments
-            % ---------
-            % A, B : :class:`Tensor`
-            %
-            % Returns
-            % -------
-            % d : numeric
-            %   Euclidean distance, defined as the norm of the distance.
-            
-            assert(isequal(size(A), size(B)) || isscalar(A) || isscalar(B), ...
-                'tensors:SizeError', 'Incompatible sizes for vectorized function.');
-            
-            % make everything a vector
-            A = arrayfun(@repartition, A);
-            B = arrayfun(@repartition, B);
-            
-            d = norm(A - B);
-        end
-    end
         
+    end
+    
     
     %% Linear algebra
     methods
@@ -535,15 +580,17 @@ classdef Tensor
             %
             % Arguments
             % ---------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   input tensor.
             %
             % Returns
             % -------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   conjugate tensor.
             
-            t = permute(t', nspaces(t):-1:1, rank(t));
+            for i = 1:numel(t)
+                t(i) = tpermute(t(i)', nspaces(t(i)):-1:1, rank(t(i)));
+            end
         end
         
         function t = ctranspose(t)
@@ -553,47 +600,57 @@ classdef Tensor
             % Usage
             % -----
             % :code:`t = ctranspose(t)`
+            %
             % :code:`t = t'`
             %
             % Arguments
             % ---------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   input tensor.
             %
             % Returns
             % -------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   adjoint tensor.
             
-            [t.codomain, t.domain] = swapvars(t.codomain, t.domain);
-            t.var = t.var';
+            for i = 1:numel(t)
+                [t(i).codomain, t(i).domain] = swapvars(t(i).codomain, t(i).domain);
+                t(i).var = t(i).var';
+            end
+            
+            t = permute(t, ndims(t):-1:1);
         end
         
         function d = dot(t1, t2)
-            % Compute the scalar dot product of two tensors. This is defined as the overlap 
+            % Compute the scalar dot product of two tensors. This is defined as the overlap
             % of the two tensors, which therefore must have equal domain and codomain. This
             % function is sesquilinear in its arguments.
             %
             % Arguments
             % ---------
-            % t1, t2 : :class:`Tensor`
+            % t1, t2 : :class:`.Tensor`
             %   tensors of equal structure.
             %
             % Returns
             % -------
-            % d : double
+            % d : :class:`double`
             %   scalar dot product of the two tensors.
             
-            assert(isequal(t1.domain, t2.domain) && isequal(t1.codomain, t2.codomain), ...
-                'tensors:SpaceMismatch', ...
-                'Dot product only defined for tensors of equal structure.');
-
+            assert(isequal(size(t1), size(t2)), 'tensors:dimerror', ...
+                'input tensors must have the same size.');
+            
             d = 0;
-            [mblocks1, mcharges] = matrixblocks(t1.var);
-            mblocks2 = matrixblocks(t2.var);
-            qdims = qdim(mcharges);
-            for i = 1:length(t1.var)
-                d = d + qdims(i) * sum(conj(mblocks1{i}) .* mblocks2{i}, 'all');
+            for i = 1:numel(t1)
+                assert(isequal(t1(i).domain, t2(i).domain) && ...
+                    isequal(t1(i).codomain, t2(i).codomain), ...
+                    'tensors:SpaceMismatch', ...
+                    'dot product only defined for tensors of equal structure.');
+                [mblocks1, mcharges] = matrixblocks(t1(i).var);
+                mblocks2 = matrixblocks(t2(i).var);
+                qdims = qdim(mcharges);
+                for j = 1:length(mblocks1)
+                    d = d + qdims(j) * sum(conj(mblocks1{j}) .* mblocks2{j}, 'all');
+                end
             end
         end
         
@@ -602,12 +659,12 @@ classdef Tensor
             %
             % Arguments
             % ---------
-            % t1, t2 : :class:`Tensor` or numeric
+            % t1, t2 : :class:`.Tensor` or :class:`numeric`
             %   input tensors, scalars are interpreted as scalar * eye.
             %
             % Returns
             % -------
-            % t1 : :class:`Tensor`
+            % t1 : :class:`.Tensor`
             %   output tensor
             
             if isnumeric(t1), t1 = t1 + (-t2); return; end
@@ -643,17 +700,17 @@ classdef Tensor
             %
             % Arguments
             % ---------
-            % t1, t2 : :class:`Tensor` or numeric
+            % t1, t2 : :class:`.Tensor` or :class:`numeric`
             %   input tensor or scalar.
             %
             % Returns
             % -------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   output tensor.
             
             t = inv(t1) * t2;
         end
-            
+        
         function t = mrdivide(t1, t2)
             % Right division of tensors.
             %
@@ -665,12 +722,12 @@ classdef Tensor
             %
             % Arguments
             % ---------
-            % t1, t2 : :class:`Tensor` or numeric
+            % t1, t2 : :class:`.Tensor` or :class:`numeric`
             %   input tensor or scalar.
             %
             % Returns
             % -------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   output tensor.
             
             t = t1 * inv(t2);
@@ -687,46 +744,76 @@ classdef Tensor
             %
             % Arguments
             % ---------
-            % A, B : :class:`Tensor`
-            %   input tensors, satisfying A.domain = B.codomain.
+            % A, B : :class:`.Tensor`
+            %   input tensors, satisfying :code:`A.domain == B.codomain`.
             %
             % Returns
             % -------
-            % C : :class:`Tensor`
+            % C : :class:`.Tensor`
             %   output tensor.
             
-            if ~isscalar(A) || ~isscalar(B)
-                szA = size(A);
-                szB = size(B);
-                assert(szA(2) == szB(1));
+            if isscalar(A) || isscalar(B)
+                C = A .* B;
+                return
+            end
+            
+            szA = size(A);
+            szB = size(B);
+            if szA(2) ~= szB(1)
+                error('mtimes:dimagree', ...
+                    'incompatible dimensions (%d) (%d)', szA(2), szB(1));
+            end
+            
+            if isnumeric(A)
+                if issparse(A) && ~all(any(A, 2))
+                    [cod, dom] = deduce_spaces(B);
+                    cod2 = cell(size(cod));
+                    for i = flip(1:length(cod))
+                        tmp = subspaces(cod(i));
+                        cod2{i} = tmp(1);
+                    end
+                    C = SparseTensor.zeros(SumSpace(cod2{:}), dom);
+                else
+                    C = Tensor.empty(szA(1), szB(2), 0);
+                end
                 
-                % Tensor multiplications
-                for i = szA(1):-1:1
-                    for j = szB(2):-1:1
-                        C(i,j) = A(i, 1) * B(1, j);
-                        for k = 2:szA(2)
-                            C(i,j) = C(i,j) + A(i, k) * B(k, j);
-                        end
+                for i = 1:szA(1)
+                    for j = 1:szB(2)
+                        C(i, j) = sum(A(i, :).' .* B(:, j), 'all');
                     end
                 end
                 return
             end
             
-            if isnumeric(A) || isnumeric(B)
-                C = A .* B;
+            if isnumeric(B)
+                if issparse(B) && ~all(any(B, 1))
+                    [cod, dom] = deduce_spaces(A);
+                    dom2 = cell(size(dom));
+                    for i = 1:length(dom)
+                        tmp = subspaces(dom(i));
+                        dom2{i} = tmp(1);
+                    end
+                    C = SparseTensor.zeros(cod, SumSpace(dom2{:}));
+                end
+                C(szA(1), szB(2)) = Tensor();
+                for i = flip(1:szA(1))
+                    for j = flip(1:szB(2))
+                        C(i, j) = sum(A(i, :) .* B(:, j).', 'all');
+                    end
+                end
                 return
             end
             
-            assert(isequal(A.domain, B.codomain), 'tensors:SpaceMismatch', ...
-                'Multiplied spaces incompatible.');
-            if ~isempty(A.codomain) || ~isempty(B.domain)
-                C = Tensor.zeros(A.codomain, B.domain);
-                C.var = mul(C.var, A.var, B.var);
-            else
-                Ablocks = matrixblocks(A.var);
-                Bblocks = matrixblocks(B.var);
-                C = horzcat(Ablocks{:}) * vertcat(Bblocks{:});
+            % Tensor multiplications
+            for i = szA(1):-1:1
+                for j = szB(2):-1:1
+                    C(i, j) = sum(reshape(A(i, :), [], 1) .* B(:, j));
+                end
             end
+        end
+        
+        function n = nnz(A)
+            n = numel(A);
         end
         
         function n = norm(t, p)
@@ -734,10 +821,10 @@ classdef Tensor
             %
             % Arguments
             % ---------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   input tensor, considered as a matrix from domain to codomain.
             %
-            % p : 1, 2, inf or 'fro'
+            % p : 1, 2, 'inf' or 'fro'
             %   type of norm to compute
             %
             % Returns
@@ -778,15 +865,21 @@ classdef Tensor
             end
         end
         
-        function t = normalize(t)
+        function [t, n] = normalize(t)
+            n = zeros(size(t));
             for i = 1:numel(t)
-                t(i) = t(i) .* (1 / norm(t(i)));
+                n(i) = norm(t(i));
+                t(i) = t(i) .* (1 / n(i));
             end
         end
         
         function t1 = plus(t1, t2)
             if isnumeric(t1), t1 = t2 + t1; return; end
-            assert(isequal(size(t1), size(t2)), 'Incompatible sizes for vectorized plus.');
+            if ~isequal(size(t1), size(t2))
+                error('plus:dimagree', ...
+                    'Incompatible sizes for vectorized plus. (%s) (%s)', ...
+                    dim2str(size(t1)), dim2str(size(t2)));
+            end
             
             for i = 1:numel(t1)
                 if isnumeric(t2(i))
@@ -799,37 +892,51 @@ classdef Tensor
                 elseif iszero(t1(i))
                     t1(i) = t2(i);
                 else
-                    assert(isequal(t1(i).domain, t2(i).domain) && ...
-                        isequal(t1(i).codomain, t2(i).codomain), 'tensors:SpaceMismatch', ...
-                        'Cannot add tensors of different structures.');
+                    if ~isequal(t1(i).domain, t2(i).domain) || ...
+                            ~isequal(t1(i).codomain, t2(i).codomain)
+                        t1_str = sprintf('%s\t<-\t%s', join(string(t1(i).codomain)), ...
+                            join(string(t1(i).domain)));
+                        t2_str = sprintf('%s\t<-\t%s', join(string(t2(i).codomain)), ...
+                            join(string(t2(i).domain)));
+                        error('tensors:spacemismatch', ...
+                            'Added spaces incompatible.\n%s\n%s', t1_str, t2_str);
+                    end
                     t1(i).var = t1(i).var + t2(i).var;
                 end
             end
         end
         
-        function t = permute(t, p, r)
+        function t = tpermute(t, p, r)
             % Permute the spaces of a tensor.
             %
             % Arguments
             % ---------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   input tensor.
             %
-            % p : (1, :) int
+            % p : (1, :) :class:`int`
             %   permutation vector, by default a trivial permutation.
             %
-            % r : (1, 2) int
+            % r : (1, 2) :class:`int`
             %   rank of the output tensor, by default equal to the rank of the input tensor.
             %
             % Returns
             % -------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   permuted tensor with desired rank.
             
             arguments
                 t
-                p = 1:nspaces(t)
-                r = rank(t)
+                p = []
+                r = []
+            end
+            
+            if ~isscalar(t)
+                for i = 1:numel(t)
+                    t(i) = tpermute(t(i), p, r);
+                end
+                t = permute(t, p);
+                return
             end
             
             if isempty(p), p = 1:nspaces(t); end
@@ -840,11 +947,11 @@ classdef Tensor
             
             if (all(p == 1:nspaces(t)) && all(rank(t) == r)), return; end
             
-            persistent cache
+            global cache
             if isempty(cache), cache = LRU; end
             
             if Options.CacheEnabled()
-                key = GetMD5({GetMD5_helper(t.codomain), GetMD5_helper(t.domain), p, r}, ...
+                key = GetMD5({t.codomain, t.domain, p, r}, ...
                     'Array', 'hex');
                 med = get(cache, key);
                 if isempty(med)
@@ -870,10 +977,11 @@ classdef Tensor
             %
             % Arguments
             % ---------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   input tensor.
             %
-            % r : (1, 2) int
+            % r : (1, 2) :class:`int`
+            %   rank of the output tensor, by default equal to :code:`[nspaces(t) 0]`.
             %
             % Returns
             % -------
@@ -885,8 +993,11 @@ classdef Tensor
                 r (1,2) = [nspaces(t) 0]
             end
             
-            assert(sum(r) == sum(rank(t)), 'tensors:ValueError', 'Invalid new rank.');
-            t = permute(t, 1:nspaces(t), r);
+            for i = 1:numel(t)
+                t(i) = tpermute(t(i), 1:nspaces(t(i)), r);
+                assert(sum(r) == sum(rank(t(i))), ...
+                    'tensors:ValueError', 'Invalid new rank.');
+            end
         end
         
         function t = rdivide(t, a)
@@ -900,10 +1011,10 @@ classdef Tensor
             %
             % Arguments
             % ---------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   input tensor.
-            % uminus
-            % a : numeric
+            %
+            % a : :class:`numeric`
             %   input scalar.
             %
             % Returns
@@ -911,7 +1022,53 @@ classdef Tensor
             % t : :class:`Tensor`
             %   output tensor.
             
-            t.var = rdivide(t.var, a);
+            if isscalar(a)
+                for i = 1:numel(t)
+                    t(i).var = rdivide(t(i).var, a);
+                end
+                return
+            end
+            
+            error('undefined');
+        end
+        
+        function C = sum(A, dim)
+            arguments
+                A
+                dim = []
+            end
+            
+            if isscalar(A), C = A; return; end
+            
+            if isempty(dim), dim = find(size(A) ~= 1, 1); end
+            
+            if strcmp(dim, 'all')
+                C = A(1);
+                for i = 2:numel(A)
+                    C = C + A(i);
+                end
+                return
+            end
+            
+            if ismatrix(A)
+                if dim == 1
+                    C = A(1, :);
+                    for i = 2:size(A, 1)
+                        C = C + A(i, :);
+                    end
+                    return
+                end
+                
+                if dim == 2
+                    C = A(:, 1);
+                    for i = 2:size(A, 2)
+                        C = C + A(:, i);
+                    end
+                    return
+                end
+            end
+            
+            error('TBA');
         end
         
         function C = tensorprod(A, B, dimA, dimB, ca, cb, options)
@@ -919,20 +1076,20 @@ classdef Tensor
             %
             % Arguments
             % ---------
-            % A, B : :class:`Tensor`
-            %   input tensors, must satisfy space(A, dimA) = conj(space(B, dimB)).
+            % A, B : :class:`.Tensor`
+            %   input tensors, must satisfy :code:`space(A, dimA) == conj(space(B, dimB))`.
             %
-            % dimA, dimB : (1, :) int
+            % dimA, dimB : (1, :) :class:`int`
             %   selected indices to contract.
             %
             % Keyword Arguments
             % -----------------
-            % NumDimensionsA : int
+            % NumDimensionsA : :class:`int`
             %   number of spaces of A, to satisfy builtin tensorprod syntax.
             %
             % Returns
             % -------
-            % C : :class:`Tensor` or numeric
+            % C : :class:`.Tensor` or :class:`numeric`
             %   output tensor, with the uncontracted spaces of A as codomain, and the
             %   uncontracted spaces of B as domain, or output scalar, if no uncontracted
             %   spaces remain.
@@ -944,8 +1101,55 @@ classdef Tensor
                 dimB
                 ca = false
                 cb = false
-                options.NumDimensionsA
+                options.NumDimensionsA = ndims(A)
             end
+            
+            if ~isscalar(A) || ~isscalar(B)
+                szA = size(A, 1:options.NumDimensionsA);
+                szB = size(B, 1:max(ndims(B), max(dimB)));
+                
+                assert(all(szA(dimA) == szB(dimB)), 'tensors:SizeMismatch', ...
+                    'Invalid contraction sizes.');
+                
+                uncA = 1:length(szA); uncA(dimA) = [];
+                uncB = 1:length(szB); uncB(dimB) = [];
+                
+                if isempty(uncA)
+                    if isempty(uncB)
+                        szC = [1 1];
+                    elseif length(uncB) == 1
+                        szC = [1 szB(uncB)];
+                    else
+                        szC = szB(uncB);
+                    end
+                elseif isempty(uncB)
+                    if length(uncA) == 1
+                        szC = [szA(uncA) 1];
+                    else
+                        szC = szA(uncA);
+                    end
+                else
+                    szC = [szA(uncA) szB(uncB)];
+                end
+                
+                A = reshape(permute(A, [uncA dimA]), prod(szA(uncA)), prod(szA(dimA)));
+                B = reshape(permute(B, [dimB, uncB]), prod(szB(dimB)), prod(szB(uncB)));
+                
+                for i = prod(szA(uncA)):-1:1
+                    for j = prod(szB(uncB)):-1:1
+                        C(i,j) = tensorprod(A(i,1), B(1,j), dimA, dimB, ca, cb, ...
+                            'NumDimensionsA', options.NumDimensionsA);
+                        for k = 2:prod(szA(dimA))
+                            C(i,j) = C(i,j) + ...
+                                tensorprod(A(i,k), B(k,j), dimA, dimB, ca, cb, ...
+                                'NumDimensionsA', options.NumDimensionsA);
+                        end
+                    end
+                end
+                C = reshape(C, szC);
+                return
+            end
+            
             
             uncA = 1:nspaces(A);    uncA(dimA) = [];
             iA = [uncA dimA];       rA = [length(uncA) length(dimA)];
@@ -965,12 +1169,12 @@ classdef Tensor
                 iB = idx(iB);
             end
             
-            persistent cache
+            global cache
             if isempty(cache), cache = LRU; end
             
             if Options.CacheEnabled()
-                key = GetMD5({GetMD5_helper(A.codomain), GetMD5_helper(A.domain), ...
-                    GetMD5_helper(B.codomain), GetMD5_helper(B.domain), ...
+                key = GetMD5({A.codomain, A.domain, ...
+                    B.codomain, B.domain, ...
                     dimA, dimB, ca, cb}, 'Array', 'hex');
                 med = get(cache, key);
                 if isempty(med)
@@ -990,9 +1194,13 @@ classdef Tensor
                     med.varB = B_.var;
                     med.mapB = permute(fusiontrees(B), iB, rB);
                     
-                    assert(isequal(A_.domain, B_.codomain), 'tensors:SpaceMismatch', ...
-                        'Contracted spaces incompatible.');
-                    if ~isempty(A_.codomain) || ~isempty(B_.domain) 
+                    if ~isequal(A_.domain, B_.codomain)
+                        error('tensors:SpaceMismatch', ...
+                            'Contracted spaces incompatible.\n%s\n%s', ...
+                            join(string(A_.domain), '    '), ...
+                            join(string(B_.codomain), '    '));
+                    end
+                    if ~isempty(A_.codomain) || ~isempty(B_.domain)
                         med.C = Tensor.zeros(A_.codomain, B_.domain);
                     else
                         med.C = [];
@@ -1006,19 +1214,19 @@ classdef Tensor
                 if isempty(C)
                     Ablocks = matrixblocks(varA);
                     Bblocks = matrixblocks(varB);
-                    C = horzcat(Ablocks{:}) * vertcat(Bblocks{:});
+                    C = sum(cellfun(@mtimes, Ablocks, Bblocks), 'all'); % horzcat(Ablocks{:}) * vertcat(Bblocks{:});
                 else
                     C.var = mul(C.var, varA, varB);
                 end
                 return
             end
             
-            A = permute(A, iA, rA);
+            A = tpermute(A, iA, rA);
             for i = rA(1) + (1:rA(2))
                 if ~isdual(space(A, i)), A = twist(A, i); end
             end
-%             A = twist(A, [false(1, length(A.codomain)) ~isdual(A.domain')]);
-            B = permute(B, iB, rB);
+            %             A = twist(A, [false(1, length(A.codomain)) ~isdual(A.domain')]);
+            B = tpermute(B, iB, rB);
             
             assert(isequal(A.domain, B.codomain), 'tensors:SpaceMismatch', ...
                 'Contracted spaces incompatible.');
@@ -1036,30 +1244,73 @@ classdef Tensor
             C.var = mul(C.var, A.var, B.var);
         end
         
-        function t = times(t, a)
+        function C = times(A, B)
             % Scalar product of a tensor and a scalar.
             %
             % Usage
             % -----
             % :code:`t = times(t, a)`
-            % :code:`t uminus= t .* a`
+            %
             % :code:`t = a .* t`
             %
             % Arguments
             % ---------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   input tensor.
-            % 
-            % a : numeric
+            %
+            % a : :class:`numeric`
             %   input scalar.
             %
             % Returns
             % -------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   output tensor.
             
-            if isnumeric(t), [t, a] = swapvars(t, a); end
-            t.var = times(t.var, a);
+            if isscalar(A) && ~isscalar(B)
+                A = repmat(A, size(B));
+            elseif isscalar(B) && ~isscalar(A)
+                B = repmat(B, size(A));
+            end
+            
+            nd = max(ndims(A), ndims(B));
+            assert(isequal(size(A, 1:nd), size(B, 1:nd)), ...
+                'times:dimagree', 'incompatible dimensions.');
+            
+            if isnumeric(A)
+                if issparse(A)
+                    [cod, dom] = deduce_spaces(B);
+                    C = SparseTensor.zeros(cod, dom);
+                    I = find(A);
+                    if isempty(I), return; end
+                    C(I) = full(A(I)) .* B(I);
+                    return
+                end
+                
+                C = B;
+                for i = 1:numel(C)
+                    C(i).var = C(i).var .* A(i);
+                end
+                return
+            end
+            
+            if isnumeric(B)
+                C = B .* A;
+                return
+            end
+            
+            for i = numel(A):-1:1
+                assert(isequal(A(i).domain, B(i).codomain), 'tensors:SpaceMismatch', ...
+                    'Multiplied spaces incompatible.');
+                if ~isempty(A(i).codomain) || ~isempty(B(i).domain)
+                    C(i) = Tensor.zeros(A(i).codomain, B(i).domain);
+                    C(i).var = mul(C(i).var, A(i).var, B(i).var);
+                else
+                    Ablocks = matrixblocks(A(i).var);
+                    Bblocks = matrixblocks(B(i).var);
+                    C(i) = horzcat(Ablocks{:}) * vertcat(Bblocks{:});
+                end
+            end
+            C = reshape(C, size(A));
         end
         
         function tr = trace(t)
@@ -1067,12 +1318,12 @@ classdef Tensor
             %
             % Arguments
             % ---------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   input tensor, considered as a matrix from domain to codomain.
             %
             % Returns
             % -------
-            % tr : double
+            % tr : :class:`double`
             %   matrix trace of the tensor.
             
             tr = 0;
@@ -1088,30 +1339,39 @@ classdef Tensor
         function t = transpose(t, p, r)
             % Compute the transpose of a tensor. This is defined as rotating the domain to
             % the codomain and vice versa, while cyclicly permuting the tensor blocks.
-            % Currently not implemented.
             %
             % Usage
             % -----
             % :code:`t = transpose(t, p, rank)`
+            %
             % :code:`t = t.'`
             %
             % Arguments
             % ---------
-            % t : :class:`Tensor`
+            % t : :class:`:Tensor`
             %   input tensor.
             %
-            % p : (1, :) int
+            % p : (1, :) :class:`int`
             %   permutation vector, which must be cyclic. By default this is no permutation.
             %
-            % r : (1, 2) int
+            % r : (1, 2) :class:`int`
             %   rank of the output tensor, by default equal to the rank of the input tensor.
             %
             % Returns
             % -------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   transposed output tensor.
+            if nargin < 2
+                p = circshift(1:nspaces(t), length(t.domain));
+            else
+                assert(iscircperm(p));
+            end
             
-            error('tensors:TBA', 'This method has not been implemented.');
+            if nargin < 3
+                r = flip(rank(t));
+            end
+            
+            t = tpermute(t, p, r);
         end
         
         function t = twist(t, i, inv)
@@ -1119,19 +1379,19 @@ classdef Tensor
             %
             % Arguments
             % ---------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   input tensor.
             %
-            % i : (1, :) int or logical
+            % i : (1, :) :class:`int` or :class:`logical`
             %   indices to twist.
             %
-            % inv : logical
+            % inv : :class:`logical`
             %   flag to indicate inverse twisting.
             %
             % Returns
             % -------
-            % t : :class:`Tensor`
-            %   permuted tensor with desired rank.
+            % t : :class:`.Tensor`
+            %   twisted tensor with desired rank.
             
             arguments
                 t
@@ -1139,15 +1399,22 @@ classdef Tensor
                 inv = false
             end
             
-            if isempty(i) || ~any(i) || istwistless(braidingstyle(t)) 
+            if isempty(i) || ~any(i) || istwistless(braidingstyle(t(1)))
                 return
             end
             
-            persistent cache
+            if numel(t) > 1
+                for i = 1:numel(t)
+                    t(i) = twist(t(i), i, inv);
+                end
+                return
+            end
+            
+            global cache
             if isempty(cache), cache = LRU; end
             
             if Options.CacheEnabled()
-                key = GetMD5({GetMD5_helper(t.codomain), GetMD5_helper(t.domain), i, inv}, ...
+                key = GetMD5({t.codomain, t.domain, i, inv}, ...
                     'Array', 'hex');
                 med = get(cache, key);
                 if isempty(med)
@@ -1161,12 +1428,44 @@ classdef Tensor
             t.var = axpby(1, t.var, 0, t.var, 1:nspaces(t), med);
         end
         
+        function t = twistdual(t, i, inv)
+            % Twist the spaces of a tensor if they are dual.
+            %
+            % Arguments
+            % ---------
+            % t : :class:`.Tensor`
+            %   input tensor.
+            %
+            % i : (1, :) :class:`int` or :class:`logical`
+            %   indices to twist.
+            %
+            % inv : :class:`logical`
+            %   flag to indicate inverse twisting.
+            %
+            % Returns
+            % -------
+            % t : :class:`.Tensor`
+            %   twisted tensor with desired rank.
+            arguments
+                t
+                i
+                inv = false
+            end
+            
+            for j = 1:numel(t)
+                i_dual = i(isdual(space(t(j), i)));
+                t(j) = twist(t(j), i_dual, inv);
+            end
+        end
+        
         function t = uplus(t)
             
         end
         
         function t = uminus(t)
-            t.var = -t.var;
+            for i = 1:numel(t)
+                t(i).var = -t(i).var;
+            end
         end
     end
     
@@ -1186,19 +1485,19 @@ classdef Tensor
             %
             % Arguments
             % ---------
-            % A : :class:`Tensor`
+            % A : :class:`.Tensor`
             %   square input tensor.
             %
             % Returns
             % -------
-            % D : (:,:) :class:`Tensor`
+            % D : (:, :) :class:`.Tensor`
             %   diagonal matrix of eigenvalues.
             %
-            % V : (1,:) :class:`Tensor`
-            %   row vector of right eigenvectors such that A * V = V * D.
+            % V : (1, :) :class:`.Tensor`
+            %   row vector of right eigenvectors such that :code:`A * V = V * D`.
             %
-            % W : (1,:) :class:`Tensor`
-            %   row vector of left eigenvectors such that W' * A = D * W'.
+            % W : (1, :) :class:`Tensor`
+            %   row vector of left eigenvectors such that :code:`W' * A = D * W'`.
             
             assert(isequal(A.codomain, A.domain), 'tensors:ArgumentError', ...
                 'Input should be square.');
@@ -1249,7 +1548,7 @@ classdef Tensor
         
         function [Q, R] = leftorth(t, p1, p2, alg)
             % Factorize a tensor into an orthonormal basis `Q` and remainder `R`, such that
-            % :code:`permute(t, [p1 p2], [length(p1) length(p2)]) = Q * R`.
+            % :code:`tpermute(t, [p1 p2], [length(p1) length(p2)]) = Q * R`.
             %
             % Usage
             % -----
@@ -1257,30 +1556,30 @@ classdef Tensor
             %
             % Arguments
             % ---------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   input tensor to factorize.
             %
-            % p1, p2 : int
+            % p1, p2 : :class:`int`
             %   partition of left and right indices, by default this is the partition of the
             %   input tensor.
             %
-            % alg : char or string
+            % alg : :class:`char` or :class:`string`
             %   selection of algorithms for the decomposition:
-            %   
-            %   - 'qr' produces an upper triangular remainder R
-            %   - 'qrpos' corrects the diagonal elements of R to be positive.
-            %   - 'ql' produces a lower triangular remainder R
-            %   - 'qlpos' corrects the diagonal elements of R to be positive.
-            %   - 'polar' produces a Hermitian and positive semidefinite R.
-            %   - 'svd' uses a singular value decomposition.
+            %
+            %   - :code:`'qr'` produces an upper triangular remainder R
+            %   - :code:`'qrpos'` corrects the diagonal elements of R to be positive.
+            %   - :code:`'ql'` produces a lower triangular remainder R
+            %   - :code:`'qlpos'` corrects the diagonal elements of R to be positive.
+            %   - :code:`'polar'` produces a Hermitian and positive semidefinite R.
+            %   - :code:`'svd'` uses a singular value decomposition.
             %
             % Returns
             % -------
-            % Q : :class:`Tensor`
-            %   Orthonormal basis tensor
+            % Q : :class:`.Tensor`
+            %   orthonormal basis tensor.
             %
-            % R : :class:`Tensor`
-            %   Remainder tensor, depends on selected algorithm.
+            % R : :class:`.Tensor`
+            %   remainder tensor, depends on selected algorithm.
             
             arguments
                 t
@@ -1291,9 +1590,9 @@ classdef Tensor
             end
             
             if isempty(p1), p1 = 1:rank(t, 1); end
-            if isempty(p2), p2 = rank(t, 1) + (1:rank(t,2)); end
+            if isempty(p2), p2 = rank(t, 1) + (1:rank(t, 2)); end
             
-            t = permute(t, [p1 p2], [length(p1) length(p2)]);
+            t = tpermute(t, [p1 p2], [length(p1) length(p2)]);
             
             dims = struct;
             [mblocks, dims.charges] = matrixblocks(t);
@@ -1310,8 +1609,9 @@ classdef Tensor
             V = t.codomain.new(dims, false);
             
             if strcmp(alg, 'polar')
-                assert(isequal(V, prod(t.domain)));
-                W = t.domain;
+                assert(isequal(V, prod(t.domain)), ...
+                    'linalg:polar', 'polar decomposition should lead to square R.');
+                W = V;
             elseif length(p1) == 1 && V == t.codomain
                 W = t.codomain;
             elseif length(p2) == 1 && V == t.domain
@@ -1329,7 +1629,7 @@ classdef Tensor
         
         function [R, Q] = rightorth(t, p1, p2, alg)
             % Factorize a tensor into an orthonormal basis `Q` and remainder `L`, such that
-            % :code:`permute(t, [p1 p2], [length(p1) length(p2)]) = L * Q`.
+            % :code:`tpermute(t, [p1 p2], [length(p1) length(p2)]) = L * Q`.
             %
             % Usage
             % -----
@@ -1337,29 +1637,29 @@ classdef Tensor
             %
             % Arguments
             % ---------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   input tensor to factorize.
             %
-            % p1, p2 : int
+            % p1, p2 : :class:`int`
             %   partition of left and right indices, by default this is the partition of the
             %   input tensor.
             %
-            % alg : char or string
+            % alg : :class:`char` or :class:`string`
             %   selection of algorithms for the decomposition:
-            %   
-            %   - 'rq' produces an upper triangular remainder R
-            %   - 'rqpos' corrects the diagonal elements of R to be positive.
-            %   - 'lq' produces a lower triangular remainder R
-            %   - 'lqpos' corrects the diagonal elements of R to be positive.
-            %   - 'polar' produces a Hermitian and positive semidefinite R.
-            %   - 'svd' uses a singular value decomposition.
+            %
+            %   - :code:`'rq'` produces an upper triangular remainder R
+            %   - :code:`'rqpos'` corrects the diagonal elements of R to be positive.
+            %   - :code:`'lq'` produces a lower triangular remainder R
+            %   - :code:`'lqpos'` corrects the diagonal elements of R to be positive.
+            %   - :code:`'polar'` produces a Hermitian and positive semidefinite R.
+            %   - :code:`'svd'` uses a singular value decomposition.
             %
             % Returns
             % -------
-            % R : :class:`Tensor`
+            % R : :class:`.Tensor`
             %   Remainder tensor, depends on selected algorithm.
             %
-            % Q : :class:`Tensor`
+            % Q : :class:`.Tensor`
             %   Orthonormal basis tensor.
             
             arguments
@@ -1369,11 +1669,11 @@ classdef Tensor
                 alg {mustBeMember(alg, {'rq', 'rqpos', 'lq', 'lqpos', 'polar', 'svd'})} ...
                     = 'rqpos'
             end
-
+            
             if isempty(p1), p1 = 1:rank(t, 1); end
             if isempty(p2), p2 = rank(t, 1) + (1:rank(t,2)); end
             
-            t = permute(t, [p1 p2], [length(p1) length(p2)]);
+            t = tpermute(t, [p1 p2], [length(p1) length(p2)]);
             
             dims = struct;
             [mblocks, dims.charges] = matrixblocks(t);
@@ -1389,8 +1689,9 @@ classdef Tensor
             V = t.domain.new(dims, false);
             
             if strcmp(alg, 'polar')
-                assert(isequal(V, prod(t.codomain)));
-                W = t.codomain;
+                assert(isequal(V, prod(t.codomain)), ...
+                    'linalg:polar', 'polar decomposition should lead to square R.');
+                W = V;
             elseif length(p1) == 1 && V == t.codomain
                 W = t.codomain;
             elseif length(p2) == 1 && V == t.domain
@@ -1408,26 +1709,26 @@ classdef Tensor
         
         function N = leftnull(t, p1, p2, alg, atol)
             % Compute the left nullspace of a tensor, such that
-            % :code:`N' * permute(t, [p1 p2], [length(p1) length(p2)]) = 0`.
+            % :code:`N' * tpermute(t, [p1 p2], [length(p1) length(p2)]) = 0`.
             %
             % Arguments
             % ---------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   input tensor to compute the nullspace.
             %
-            % p1, p2 : int
+            % p1, p2 : :class:`int`
             %   partition of left and right indices, by default this is the partition of the
             %   input tensor.
             %
-            % alg : char or string
+            % alg : :class:`char` or :class:`string`
             %   selection of algorithms for the nullspace:
             %
-            %   - 'svd'
-            %   - 'qr'
+            %   - :code:`'svd'`
+            %   - :code:`'qr'`
             %
             % Returns
             % -------
-            % N : :class:`Tensor`
+            % N : :class:`.Tensor`
             %   orthogonal basis for the left nullspace.
             
             arguments
@@ -1441,44 +1742,63 @@ classdef Tensor
             if isempty(p1), p1 = 1:rank(t, 1); end
             if isempty(p2), p2 = rank(t, 1) + (1:rank(t, 2)); end
             
-            t = permute(t, [p1 p2], [length(p1) length(p2)]);
+            [U, S] = tsvd(t, p1, p2);
             
             dims = struct;
-            [mblocks, dims.charges] = matrixblocks(t);
-            Ns = cell(size(mblocks));
-            dims.degeneracies = zeros(size(mblocks));
+            [Sblocks, c1] = matrixblocks(S);
+            [Ublocks, c2] = matrixblocks(U);
             
-            for i = 1:length(mblocks)
-                Ns{i} = leftnull(mblocks{i}, alg, atol);
-                dims.degeneracies(i) = size(Ns{i}, 2);
+            lia = ismember_sorted(c2, c1);
+            ctr = 0;
+            for i = 1:length(Ublocks)
+                if ~lia(i), continue; end
+                ctr = ctr + 1;
+                u = Ublocks{i};
+                s = Sblocks{ctr};
+                if isvector(s)
+                    diags = s(1);
+                else
+                    diags = diag(s);
+                end
+                r = sum(diags > atol);
+                Ublocks{i} = u(:, (r + 1):size(u, 1));
             end
             
-            N = t.eye(t.codomain, t.codomain.new(dims, false));
+            dims.degeneracies = cellfun(@(x) size(x, 2), Ublocks);
+            dims.charges = c2;
+            
+            mask = dims.degeneracies > 0;
+            dims.charges = c2(mask);
+            dims.degeneracies = dims.degeneracies(mask);
+            Ns = Ublocks(mask);
+            
+            W = t.codomain.new(dims, false);
+            N = t.eye(U.codomain, W);
             N.var = fill_matrix_data(N.var, Ns, dims.charges);
         end
         
         function N = rightnull(t, p1, p2, alg, atol)
-             % Compute the right nullspace of a tensor, such that
-            % :code:`permute(t, [p1 p2], [length(p1) length(p2)]) * N = 0`.
+            % Compute the right nullspace of a tensor, such that
+            % :code:`tpermute(t, [p1 p2], [length(p1) length(p2)]) * N = 0`.
             %
             % Arguments
             % ---------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   input tensor to compute the nullspace.
             %
-            % p1, p2 : int
+            % p1, p2 : :class:`int`
             %   partition of left and right indices, by default this is the partition of the
             %   input tensor.
             %
-            % alg : char or string
+            % alg : :class:`char` or :class:`string`
             %   selection of algorithms for the nullspace:
             %
-            %   - 'svd'
-            %   - 'lq'
+            %   - :code:`'svd'`
+            %   - :code:`'lq'`
             %
             % Returns
             % -------
-            % N : :class:`Tensor`
+            % N : :class:`.Tensor`
             %   orthogonal basis for the right nullspace.
             
             arguments
@@ -1492,62 +1812,107 @@ classdef Tensor
             if isempty(p1), p1 = 1:rank(t, 1); end
             if isempty(p2), p2 = rank(t, 1) + (1:rank(t, 2)); end
             
-            t = permute(t, [p1 p2], [length(p1) length(p2)]);
+            [~, S, V] = tsvd(t, p1, p2);
             
             dims = struct;
-            [mblocks, dims.charges] = matrixblocks(t);
-            Ns = cell(size(mblocks));
-            dims.degeneracies = zeros(size(mblocks));
+            [Sblocks, c1] = matrixblocks(S);
+            [Vblocks, c2] = matrixblocks(V);
             
-            for i = 1:length(mblocks)
-                Ns{i} = rightnull(mblocks{i}, alg, atol);
-                dims.degeneracies(i) = size(Ns{i}, 1);
+            lia = ismember_sorted(c2, c1);
+            ctr = 0;
+            for i = 1:length(Vblocks)
+                if ~lia(i), continue; end
+                ctr = ctr + 1;
+                v = Vblocks{i};
+                s = Sblocks{ctr};
+                if isvector(s)
+                    diags = s(1);
+                else
+                    diags = diag(s);
+                end
+                r = sum(diags > atol);
+                Vblocks{i} = v((r + 1):size(v, 2), :);
             end
             
-            N = Tensor.eye(t.domain.new(dims, false), t.domain);
+            dims.degeneracies = cellfun(@(x) size(x, 1), Vblocks);
+            dims.charges = c2;
+            
+            mask = dims.degeneracies > 0;
+            dims.charges = c2(mask);
+            dims.degeneracies = dims.degeneracies(mask);
+            Ns = Vblocks(mask);
+            
+            W = t.codomain.new(dims, false);
+            N = t.eye(W, V.domain);
             N.var = fill_matrix_data(N.var, Ns, dims.charges);
+%             
+%             [~, S, V] = tpermute(t, [p1 p2], [length(p1) length(p2)]);
+%             
+%             dims = struct;
+%             [mblocks, dims.charges] = matrixblocks(t);
+%             Ns = cell(size(mblocks));
+%             dims.degeneracies = zeros(size(mblocks));
+%             
+%             for i = 1:length(mblocks)
+%                 Ns{i} = rightnull(mblocks{i}, alg, atol);
+%                 dims.degeneracies(i) = size(Ns{i}, 1);
+%             end
+%             
+%             mask = dims.degeneracies > 0;
+%             dims.charges = dims.charges(mask);
+%             dims.degeneracies = dims.degeneracies(mask);
+%             Ns = Ns(mask);
+%             
+%             N = Tensor.eye(t.domain.new(dims, false), t.domain);
+%             N.var = fill_matrix_data(N.var, Ns, dims.charges);
         end
         
         function [U, S, V, eta] = tsvd(t, p1, p2, trunc)
             % Compute the singular value decomposition of a tensor. This computes left and
             % right isometries U and V, and a non-negative diagonal tensor S such that
-            % norm(permute(t, [p1 p2], [length(p1) length(p2)]) - U * S * V) = 0
+            % :code:`norm(tpermute(t, [p1 p2], [length(p1) length(p2)]) - U * S * V) = 0`
             % Additionally, the dimension of S can be truncated in such a way to minimize
             % this norm, which gives the truncation error eta.
             %
             % Usage
             % -----
-            % [U, S, V] = tsvd(t, p1, p2)
-            % [U, S, V, eta] = tsvd(t, p1, p2, trunc, tol)
-            % S = tsvd(t, ...)
+            % :code:`[U, S, V] = tsvd(t, p1, p2)`
+            %
+            % :code:`[U, S, V, eta] = tsvd(t, p1, p2, trunc, tol)`
+            %
+            % :code:`S = tsvd(t, ...)`
             %
             % Arguments
             % ---------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   input tensor.
             %
-            % p1, p2 : int
+            % p1, p2 : :class:`int`
             %   partition of left and right indices, by default this is the partition of the
             %   input tensor.
             %
             % Keyword Arguments
             % -----------------
-            % TruncDim : int
-            %   truncate such that the size of S is not larger than this value.
+            % TruncDim : :class:`int`
+            %   truncate such that the dim of S is not larger than this value for any given
+            %   charge.
             %
-            % TruncBelow : numeric
+            % TruncTotalDim : :class:`int`
+            %   truncate such that the total dim of S is not larger than this value.
+            %
+            % TruncBelow : :class:`numeric`
             %   truncate such that there are no singular values below this value.
             %
-            % TruncSpace : :class:`AbstractSpace`
+            % TruncSpace : :class:`.AbstractSpace`
             %   truncate such that the space of S is smaller than this value.
             %
             % Returns
             % -------
-            % U, S, V : :class:`Tensor`
+            % U, S, V : :class:`.Tensor`
             %   left isometry U, non-negative diagonal S and right isometry V that satisfy
-            %   U * S * V = permute(t, [p1 p2], [length(p1) length(p2)]).
+            %   :code:`U * S * V = tpermute(t, [p1 p2], [length(p1) length(p2)])`.
             %
-            % eta : numeric
+            % eta : :class:`numeric`
             %   truncation error.
             
             arguments
@@ -1555,11 +1920,12 @@ classdef Tensor
                 p1 = 1:t.rank(1)
                 p2 = t.rank(1) + (1:t.rank(2))
                 trunc.TruncDim
+                trunc.TruncTotalDim
                 trunc.TruncBelow
                 trunc.TruncSpace
             end
             
-            t = permute(t, [p1 p2], [length(p1) length(p2)]);
+            t = tpermute(t, [p1 p2], [length(p1) length(p2)]);
             
             dims = struct;
             [mblocks, dims.charges] = matrixblocks(t);
@@ -1569,7 +1935,7 @@ classdef Tensor
             dims.degeneracies = zeros(size(mblocks));
             
             doTrunc = ~isempty(fieldnames(trunc));
-            if doTrunc, eta = 0; end
+            eta = 0;
             for i = 1:length(mblocks)
                 if doTrunc
                     [Us{i}, Ss{i}, Vs{i}] = svd(mblocks{i}, 'econ');
@@ -1584,26 +1950,57 @@ classdef Tensor
                 for i = 1:length(mblocks)
                     s = diag(Ss{i});
                     dims.degeneracies(i) = sum(s > trunc.TruncBelow);
-                    eta = eta + sum(s(dims.degeneracies(i) + 1:end));
+                    eta = eta + sum(s(dims.degeneracies(i) + 1:end).^2 * qdim(dims.charges(i)));
                     Us{i} = Us{i}(:, 1:dims.degeneracies(i));
                     Ss{i} = diag(s(1:dims.degeneracies(i)));
                     Vs{i} = Vs{i}(1:dims.degeneracies(i), :);
+                end
+            end
+            if isfield(trunc, 'TruncTotalDim')
+                qdims = qdim(dims.charges);
+                totaldim = sum(dims.degeneracies .* qdims);
+                minvals = cellfun(@(x) min(diag(x)), Ss);
+                while totaldim > trunc.TruncTotalDim
+                    [~, i] = min(minvals);
+                    eta = eta + Ss{i}(end, end)^2 * qdims(i);
+                    dims.degeneracies(i) = dims.degeneracies(i) - 1;
+                    Us{i} = Us{i}(:, 1:end-1);
+                    Vs{i} = Vs{i}(1:end-1, :);
+                    Ss{i} = Ss{i}(1:end-1, 1:end-1);
+                    if dims.degeneracies(i) > 0
+                        minvals(i) = Ss{i}(end,end);
+                    else
+                        minvals(i) = Inf;
+                    end
+                    totaldim = totaldim - qdims(i);
                 end
             end
             if isfield(trunc, 'TruncDim')
                 for i = 1:length(mblocks)
                     dims.degeneracies(i) = min(dims.degeneracies(i), trunc.TruncDim);
                     s = diag(Ss{i});
-                    eta = eta + sum(s(dims.degeneracies(i) + 1:end));
+                    eta = eta + sum(s(dims.degeneracies(i) + 1:end).^2 * qdim(dims.charges(i)));
                     Us{i} = Us{i}(:, 1:dims.degeneracies(i));
                     Ss{i} = diag(s(1:dims.degeneracies(i)));
-                    Vs{i} = Vs{i}(1:1:dims.degeneracies(i), :);
+                    Vs{i} = Vs{i}(1:dims.degeneracies(i), :);
                 end
             end
             if isfield(trunc, 'TruncSpace')
-                error('TBA');
+                truncspace = trunc.TruncSpace;
+                [b, ind] = ismember(truncspace.dimensions.charges, dims.charges);
+                assert(all(b),"Truncation space contains charges that S does not.")
+                assert(all(dims.degeneracies(ind) >= truncspace.dimensions.degeneracies), "Truncation space has degeneracies larger than S.")
+                dims.degeneracies(ind) = truncspace.dimensions.degeneracies;
+                dims.degeneracies(setxor(ind,1:numel(dims.degeneracies))) = 0;
+                for i = 1:length(mblocks)
+                    s = diag(Ss{i});
+                    eta = eta + sum(s(dims.degeneracies(i) + 1:end).^2 * qdim(dims.charges(i)));
+                    Us{i} = Us{i}(:, 1:dims.degeneracies(i));
+                    Ss{i} = diag(s(1:dims.degeneracies(i)));
+                    Vs{i} = Vs{i}(1:dims.degeneracies(i), :);
+                end
             end
-            
+
             if ~doTrunc
                 W1 = prod(t.codomain);
                 W2 = prod(t.domain);
@@ -1612,20 +2009,28 @@ classdef Tensor
                 S = Tensor.zeros(W1, W2);
                 V = Tensor.eye(W2, t.domain);
             else
+                mask = dims.degeneracies ~= 0;
+                dims.charges = dims.charges(mask);
+                dims.degeneracies = dims.degeneracies(mask);
                 W = t.domain.new(dims, false);
                 
                 U = Tensor.eye(t.codomain, W);
                 S = Tensor.zeros(W, W);
                 V = Tensor.eye(W, t.domain);
+                
+                Us = Us(mask);
+                Vs = Vs(mask);
+                Ss = Ss(mask);
             end
             
             U.var = fill_matrix_data(U.var, Us, dims.charges);
             S.var = fill_matrix_data(S.var, Ss, dims.charges);
             V.var = fill_matrix_data(V.var, Vs, dims.charges);
-            
+
             if nargout <= 1
                 U = S;
             end
+            eta = sqrt(eta);
         end
     end
     
@@ -1638,12 +2043,12 @@ classdef Tensor
             %
             % Arguments
             % ---------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   input tensor.
             %
             % Returns
             % -------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   output tensor.
             
             assert(isequal(t.codomain, t.domain), 'tensors:ArgumentError', ...
@@ -1657,26 +2062,33 @@ classdef Tensor
         end
         
         function t = inv(t)
-            % Compute the matrix inverse of a square tensor, such that t * inv(t) = I.
+            % Compute the matrix inverse of a square tensor, such that
+            % :code:`t * inv(t) = I`.
             %
             % Arguments
             % ---------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   input tensor.
             %
             % Returns
             % -------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   output tensor.
             
-            assert(isequal(t.codomain, t.domain), 'tensors:ArgumentError', ...
+            assert(isisometric(t.codomain, t.domain), 'tensors:ArgumentError', ...
                 'Input should be square.');
             
             mblocks = matrixblocks(t);
             for i = 1:length(mblocks)
                 mblocks{i} = inv(mblocks{i});
             end
-            t.var = fill_matrix_data(t.var, mblocks);
+
+            if isequal(t.codomain, t.domain)
+                t.var = fill_matrix_data(t.var, mblocks);
+            else
+                t = t';
+                t.var = fill_matrix_data(t.var, mblocks);
+            end
         end
         
         function A = mpower(X, Y)
@@ -1684,25 +2096,25 @@ classdef Tensor
             %
             % Usage
             % -----
-            % :class:`A = x^Y`
+            % :code:`A = x^Y`
             %
-            % :class:`A = X^y`
+            % :code:`A = X^y`
             %
             % Arguments
             % ---------
-            % X, Y : :class:`Tensor`
-            %   Square input tensor.
+            % X, Y : :class:`.Tensor`
+            %   square input tensor.
             %
-            % x, y : numeric
-            %   Input scalars.
+            % x, y : :class:`numeric`
+            %   input scalars.
             %
             % Returns
             % -------
-            % A : :class:`Tensor`
-            %   Output tensor.
+            % A : :class:`.Tensor`
+            %   output tensor.
             
             % tensor to a scalar power
-            if isnumeric(Y) && isscalar(Y)  
+            if isnumeric(Y) && isscalar(Y)
                 assert(isequal(X.codomain, X.domain), 'tensors:ArgumentError', ...
                     'Input tensor should be square.');
                 mblocks = matrixblocks(X);
@@ -1733,22 +2145,23 @@ classdef Tensor
         
         function [A, resnorm] = sqrtm(A)
             % Compute the principal square root of a square tensor. This is the unique root
-            % for which every eigenvalue has nonnegative real part. If `t` is singular, then
-            % the result may not exist.
+            % for which every eigenvalue has nonnegative real part. If :code:`t` is
+            % singular, then the result may not exist.
             %
             % Arguments
             % ---------
-            % A : :class:`Tensor`
+            % A : :class:`.Tensor`
             %   input tensor.
             %
             % Returns
             % -------
-            % X : :class:`Tensor`
-            %   principal square root of the input, which has X^2 = A.
+            % X : :class:`.Tensor`
+            %   principal square root of the input, which has :code:`X^2 = A`.
             %
-            % resnorm : numeric
-            %   the relative residual, norm(A - X^2, 1) / norm(A, 1). If this argument is
-            %   returned, no warning is printed if exact singularity is detected.
+            % resnorm : :class:`numeric`
+            %   the relative residual, :code:`norm(A - X^2, 1) / norm(A, 1)`. If this
+            %   argument is returned, no warning is printed if exact singularity is
+            %   detected.
             
             assert(isequal(A.codomain, A.domain), 'tensors:ArgumentError', ...
                 'Input should be square.');
@@ -1770,7 +2183,7 @@ classdef Tensor
     end
     
     
-    %% 
+    %%
     methods
         function bool = isposdef(t)
             % Test if a tensor is a positive-definite map. Generally, a Hermitian matrix `M`
@@ -1778,19 +2191,19 @@ classdef Tensor
             % nonzero complex column vector `z`.
             % This is equivalent to any of the following conditions:
             %
-            % - M is Hermitian and all eigenvalues are real and positive.
-            % - M is congruent with a diagonal matrix with positive real entries.
-            % - There exists an invertible B such that `M = B' * B`.
+            % - `M` is Hermitian and all eigenvalues are real and positive.
+            % - `M` is congruent with a diagonal matrix with positive real entries.
+            % - There exists an invertible `B` such that `M = B' * B`.
             %
             % Arguments
             % ---------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   input tensor.
             %
             % Returns
             % -------
-            % bool : logical
-            %   true if `t` is positive definite.
+            % bool : :class:`logical`
+            %   true if :code:`t` is positive definite.
             
             mblocks = matrixblocks(t);
             for i = 1:length(mblocks)
@@ -1808,28 +2221,34 @@ classdef Tensor
             %
             % Arguments
             % ---------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   input tensor.
             %
-            % side : char
+            % side : :class:`char`
             %   either 'left', 'right' or 'both' (default).
             %
             % Keyword Arguments
             % -----------------
-            % AbsTol, RelTol : numeric
-            %   `norm(M * M' - eye(size(M))) < max(AbsTol, RelTol * norm(M))`.
-            %   By default `AbsTol = 0` and `RelTol = eps`.
+            % AbsTol, RelTol : :class:`numeric`
+            %   :code:`norm(t * t' - eye(size(t))) < max(AbsTol, RelTol * norm(t))`.
+            %   By default :code:`AbsTol = 0` and :code:`RelTol = eps`.
             %
             % Returns
             % -------
-            % bool : logical
-            %   true if t is isometric.
+            % bool : :class:`logical`
+            %   true if :code:`t` is isometric.
             
             arguments
                 t
                 side {mustBeMember(side, {'left', 'right', 'both'})} = 'both'
                 tol.RelTol = sqrt(eps(underlyingType(t)))
                 tol.AbsTol = 0
+            end
+            
+            if numel(t) > 1
+                bool = arrayfun(@(x) isisometry(x, side, ...
+                    'RelTol', tol.RelTol, 'AbsTol', tol.AbsTol), t);
+                return
             end
             
             mblocks = matrixblocks(t);
@@ -1883,10 +2302,11 @@ classdef Tensor
                     return
                 end
             end
+            bool = true;
         end
         
         function bool = iszero(t)
-            bool = isempty(t.var);
+            bool = isempty(t.var) || iszero(t.var);
         end
         
         function r = cond(t, p)
@@ -1897,7 +2317,7 @@ classdef Tensor
             %
             % Arguments
             % ---------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   input tensor.
             %
             % p : 1, 2, inf or 'fro'
@@ -1920,310 +2340,22 @@ classdef Tensor
     
     %% Solvers
     methods
-        function varargout = linsolve(A, b, x0, M1, M2, options)
-            % Find a solution for a linear system `A(x) = b` or `A * x = b`.
-            %
-            % Arguments
-            % ---------
-            % A : operator
-            %   either a function handle implementing or an object that supports
-            %   right multiplication.
-            %
-            % b : :class:`Tensor`
-            %   right-hand side of the equation, interpreted as vector.
-            %
-            % x0 : :class:`Tensor`
-            %   optional initial guess for the solution.
-            %
-            % M1, M2 : operator
-            %   preconditioner M = M1 or M = M1 * M2 to effectively solve the system A *
-            %   inv(M) * y = b with y = M * x.
-            %   M is either a function handle implementing or an object that supports
-            %   left division.
-            %
-            % Keyword Arguments
-            % -----------------
-            % Tol : numeric
-            %   specifies the tolerance of the method, by default this is the square root of
-            %   eps.
-            %
-            % Algorithm : char
-            %   specifies the algorithm used. Can be either one of the following:
-            %
-            %   - 'bicgstab'
-            %   - 'bicgstabl'
-            %   - 'gmres'
-            %   - 'pcg'
-            %
-            % MaxIter : int
-            %   Maximum number of iterations.
-            %
-            % Restart : int
-            %   For 'gmres', amount of iterations after which to restart.
-            %
-            % Verbosity : int
-            %   Level of output information, by default nothing is printed if `flag` is
-            %   returned, otherwise only warnings are given.
-            %
-            %   - 0 : no information
-            %   - 1 : information at failure
-            %   - 2 : information at convergence
-            %
-            % Returns
-            % -------
-            % x : :class:`Tensor`
-            %   solution vector.
-            %
-            % flag : int
-            %   a convergence flag:
-            %
-            %   - 0 : linsolve converged to the desired tolerance.
-            %   - 1 : linsolve reached the maximum iterations without convergence.
-            %   - 2 : linsolve preconditioner was ill-conditioned.
-            %   - 3 : linsolve stagnated.
-            %   - 4 : one of the scalar quantities calculated became too large or too small.
-            %
-            % relres : numeric
-            %   relative residual, norm(b - A * x) / norm(b).
-            %
-            % iter : int
-            %   iteration number at which x was computed.
-            %
-            % resvec : numeric
-            %   vector of estimated residual norms at each part of the iteration.
-            
-            arguments
-                A
-                b
-                x0 = []
-                M1 = []
-                M2 = []
-                
-                options.Tol = eps(underlyingType(b)) ^ (3/4)
-                options.Algorithm {mustBeMember(options.Algorithm, ...
-                    {'pcg', 'gmres', 'bicgstab', 'bicgstabl'})} = 'gmres'
-                options.MaxIter = 400
-                options.Restart = 30
-                options.Verbosity = 0
-            end
-            
-            % Convert input objects to vectors
-            b_vec = vectorize(b);
-            b_sz = size(b_vec);
-            
-            if ~isempty(x0) && ~iszero(x0)
-                x0_vec = vectorize(x0);
-            else
-                x0_vec = zeros(b_sz);
-            end
-            
-            % Convert input operators to handle vectors
-            if isa(A, 'function_handle')
-                A_fun = @(x) vectorize(A(devectorize(x, b)));
-            else
-                A_fun = @(x) vectorize(A * devectorize(x, b));
-            end
-            
-            if isempty(M1)
-                M1_fun = [];
-            elseif isa(M1, 'function_handle')
-                M1_fun = @(x) vectorize(M1(devectorize(x, b)));
-            else
-                M1_fun = @(x) vectorize(M1 \ devectorize(x, b));
-            end
-            
-            if isempty(M2)
-                M2_fun = [];
-            elseif isa(M2, 'function_handle')
-                M2_fun = @(x) vectorize(M2(devectorize(x, b)));
-            else
-                M2_fun = @(x) vectorize(M2 \ devectorize(x, b));
-            end
-            
-            % Sanity check on parameters
-            options.Restart = min(options.Restart, b_sz(1));
-            if options.Tol < eps(underlyingType(b))^0.9
-                warning('Requested tolerance might be too strict.');
-            end
-            
-            % Apply MATLAB implementation
-            switch options.Algorithm
-                case 'bicgstab'
-                    [varargout{1:nargout}] = bicgstab(A_fun, b_vec, ...
-                        options.Tol, options.MaxIter, M1_fun, M2_fun, x0_vec);
-                case 'bicgstabl'
-                    [varargout{1:nargout}] = bicgstabl(A_fun, b_vec, ...
-                        options.Tol, options.MaxIter, M1_fun, M2_fun, x0_vec);
-                case 'gmres'
-                    options.MaxIter = min(b_sz(1), options.MaxIter);
-                    [varargout{1:nargout}] = gmres(A_fun, b_vec, ...
-                        options.Restart, options.Tol, options.MaxIter, ...
-                        M1_fun, M2_fun, x0_vec);
-                case 'pcg'
-                    [varargout{1:nargout}] = pcg(A_fun, b_vec, ...
-                        options.Tol, options.MaxIter, M1_fun, M2_fun, x0_vec);
-            end
-            
-            
-            % Convert output
-            varargout{1} = devectorize(varargout{1}, b);
-        end
-        
-        function varargout = eigsolve(A, x0, howmany, sigma, options)
-            % Find a few eigenvalues and eigenvectors of an operator.
-            %
-            % Usage
-            % -----
-            % :code:`[V, D, flag] = eigsolve(A, x0, howmany, sigma, kwargs)`
-            % :code:`D = eigsolve(A, x0, ...)`
-            %
-            % Arguments
-            % ---------
-            % A : :class:`Tensor` or function_handle
-            %   A square tensormap interpreted as matrix.
-            %   A function handle which implements one of the following, depending on sigma:
-            %
-            %   - A \ x, if `sigma` is 0 or 'smallestabs'
-            %   - (A - sigma * I) \ x, if sigma is a nonzero scalar
-            %   - A * x, for all other cases
-            %
-            % x0 : :class:`Tensor`
-            %   initial guess for the eigenvector. If A is a :class:`Tensor`, this defaults
-            %   to a random complex :class:`Tensor`, for function handles this is a required
-            %   argument.
-            %
-            % howmany : int
-            %   amount of eigenvalues and eigenvectors that should be computed. By default
-            %   this is 1, and this should not be larger than the total dimension of A.
-            %
-            % sigma : 'char' or numeric
-            %   selector for the eigenvalues, should be either one of the following:
-            %
-            %   - 'largestabs', 'largestreal', 'largestimag' : default, eigenvalues of
-            %       largest magnitude, real part or imaginary part.
-            %   - 'smallestabs', 'smallestreal', 'smallestimag' : eigenvalues of smallest
-            %       magnitude, real part or imaginary part.
-            %   - numeric : eigenvalues closest to sigma.
-            %
-            % Keyword Arguments
-            % -----------------
-            % Tol : numeric
-            %   tolerance of the algorithm.
-            %
-            % Algorithm : char
-            %   choice of algorithm. Currently only 'eigs' is available, which leverages the
-            %   default Matlab eigs.
-            %
-            % MaxIter : int
-            %   maximum number of iterations, 100 by default.
-            %
-            % KrylovDim : int
-            %   number of vectors kept in the Krylov subspace.
-            %
-            % IsSymmetric : logical
-            %   flag to speed up the algorithm if the operator is symmetric, false by
-            %   default.
-            %
-            % Verbosity : int
-            %   Level of output information, by default nothing is printed if `flag` is
-            %   returned, otherwise only warnings are given.
-            %
-            %   - 0 : no information
-            %   - 1 : information at failure
-            %   - 2 : information at convergence
-            %   - 3 : information at every iteration
-            %
-            % Returns
-            % -------
-            % V : (1, howmany) :class:`Tensor`
-            %   vector of eigenvectors.
-            %
-            % D : numeric
-            %   vector of eigenvalues if only a single output argument is asked, diagonal
-            %   matrix of eigenvalues otherwise.
-            %
-            % flag : int
-            %   if flag = 0 then all eigenvalues are converged, otherwise not.
-            
-            arguments
-                A
-                x0 = A.randnc(A.domain, [])
-                howmany = 1
-                sigma = 'largestabs'
-                
-                options.Tol = 1e-12
-                options.Algorithm = 'eigs'
-                options.MaxIter = 100
-                options.KrylovDim = 20
-                options.IsSymmetric logical = false
-                options.Verbosity = 0
-            end
-            
-            assert(isnumeric(sigma) || ismember(sigma, {'largestabs', 'smallestabs', ...
-                'largestreal', 'smallestreal', 'bothendsreal', ...
-                'largestimag', 'smallestimag', 'bothendsimag'}), ...
-                'tensors:ArgumentError', 'Invalid choice of eigenvalue selector.');
-            nargoutchk(0, 3);
-            
-            x0_vec = vectorize(x0);
-            sz = size(x0_vec);
-            
-            if isa(A, 'function_handle')
-                A_fun = @(x) vectorize(A(devectorize(x, x0)));
-            else
-                A_fun = @(x) vectorize(A * devectorize(x, x0));
-            end
-            
-            options.KrylovDim = min(sz(1), options.KrylovDim);
-            
-            [V, D, flag] = eigs(A_fun, sz(1), howmany, sigma, ...
-                'Tolerance', options.Tol, 'MaxIterations', options.MaxIter, ...
-                'SubspaceDimension', options.KrylovDim, 'IsFunctionSymmetric', ...
-                options.IsSymmetric, 'StartVector', x0_vec, ...
-                'Display', options.Verbosity == 3);
-            
-            if nargout <= 1
-                varargout = {D};
-            elseif nargout == 2
-                for i = howmany:-1:1
-                    varargout{1}(:, i) = devectorize(V(:, i), x0);
-                end
-                varargout{2} = D;
-            else
-                varargout{2} = D;
-                for i = howmany:-1:1
-                    varargout{1}(:, i) = devectorize(V(:, i), x0);
-                end
-                varargout{3} = flag;
-            end
-            
-            if flag && options.Verbosity > 0
-                warning('eigsolve did not converge.');
-            end
-            
-            if options.Verbosity > 1
-                if flag
-                    fprintf('eigsolve converged.\n');
-                end 
-            end
-        end
-        
         function v = vectorize(t, type)
             % Collect all parameters in a vector, weighted to reproduce the correct
-            % inproduct.
+            % inner product.
             %
             % Arguments
             % ---------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   input tensor.
             %
-            % type : 'real' or 'complex'
+            % type : :class:`char`, 'real' or 'complex'
             %   optionally specify if complex entries should be seen as 1 or 2 parameters.
             %   Defaults to 'complex', with complex parameters.
             %
             % Returns
             % -------
-            % v : numeric
+            % v : :class:`numeric`
             %   real or complex vector containing the parameters of the tensor.
             
             arguments
@@ -2231,7 +2363,7 @@ classdef Tensor
                 type = 'complex'
             end
             
-            v = vectorize(t.var, type);
+            v = vectorize([t.var], type);
         end
         
         function t = devectorize(v, t, type)
@@ -2239,25 +2371,33 @@ classdef Tensor
             %
             % Arguments
             % ---------
-            % v : numeric
+            % v : :class:`numeric`
             %   real or complex vector containing the parameters of the tensor.
             %
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   input tensor.
             %
-            % type : 'real' or 'complex'
+            % type : :class:`char`, 'real' or 'complex'
             %   optionally specify if complex entries should be seen as 1 or 2 parameters.
             %   Defaults to 'complex', with complex parameters.
             %
             % Returns
             % -------
-            % t : :class:`Tensor`
+            % t : :class:`.Tensor`
             %   output tensor, filled with the parameters.
             
             arguments
                 v
                 t
                 type = 'complex'
+            end
+            
+            if numel(t) > 1
+                X = devectorize(v, [t.var], type);
+                for i = 1:numel(t)
+                    t(i).var = X(i);
+                end
+                return
             end
             
             t.var = devectorize(v, t.var, type);
@@ -2272,18 +2412,19 @@ classdef Tensor
             %
             % Arguments
             % ---------
-            % t : Tensor
+            % t : :class:`Tensor`
             %
             % Returns
             % -------
-            % a : double
+            % a : :class:`double`
             
-            trees = fusiontrees(t);
-            blocks = tensorblocks(t);
-            if isempty(trees)
+            if isa(t.var, 'TrivialBlock')
+                blocks = tensorblocks(t);
                 a = blocks{1};
                 return
             end
+            
+            [blocks, trees] = tensorblocks(t);
             
             % Initialize output
             a = zeros(dims(t));
@@ -2316,6 +2457,10 @@ classdef Tensor
             a = cell2mat(a_cell);
         end
         
+        function a = sparse(t)
+            a = SparseTensor(t);
+        end
+        
         function tdst = desymmetrize(tsrc, mode)
             arguments
                 tsrc
@@ -2328,11 +2473,53 @@ classdef Tensor
                 if ~isempty(tsrc.codomain), tdst.codomain = ComplexSpace(tsrc.codomain); end
             end
         end
+        
+        function mps = FiniteMps(t, varargin)
+            A = MpsTensor.decompose_local_state(t, varargin{:});
+            mps = FiniteMps(A);
+        end
     end
     
     
     %% Utility
     methods
+        function [I, J, V] = find(t, k, which)
+            arguments
+                t
+                k = []
+                which = 'first'
+            end
+            assert(strcmp(which, 'first'), 'not implemented yet')
+            if ~isempty(k)
+                assert(k <= numel(t));
+            else
+                k = numel(t);
+            end
+            
+            if isempty(t)
+                I = [];
+                J = [];
+                V = [];
+                return
+            end
+            
+            if ~isempty(k)
+                if strcmp(which, 'first')
+                    I = 1:k;
+                else
+                    I = numel(t):-1:numel(t)+1-k;
+                end
+            end
+            I = reshape(I, [], 1);
+            if nargout < 2, return; end
+            
+            sz = size(t);
+            subs = ind2sub_([sz(1) prod(sz(2:end))], I);
+            I = subs(:, 1);
+            J = subs(:, 2);
+            V = reshape(t, [], 1);
+        end
+        
         function s = GetMD5_helper(t)
             s = {t.codomain t.domain};
         end
@@ -2341,18 +2528,120 @@ classdef Tensor
             type = underlyingType(t(1).var);
         end
         
-        function disp(t)
+        function [codomain, domain] = deduce_spaces(t)
+            spaces = cell(1, nspaces(t));
+            subs = repmat({1}, 1, nspaces(t));
+            for i = 1:length(spaces)
+                for j = flip(1:size(t, i))
+                    subs{i} = j;
+                    spaces{i}(j) = space(t(subs{:}), i);
+                end
+                subs{i} = 1;
+            end
+            Nout = indout(t);
+            if Nout > 0
+                codomain = SumSpace(spaces{1:Nout});
+            else
+                codomain = SumSpace([]);
+            end
+            if Nout == length(spaces)
+                domain = SumSpace([]);
+            else
+                domain = SumSpace(spaces{(Nout+1):end})';
+            end
+        end
+        
+        function disp(t, details)
+            if nargin == 1 || isempty(details), details = false; end
             if isscalar(t)
                 r = t.rank;
-                fprintf('Rank (%d, %d) %s:\n\n', r(1), r(2), class(t));
+                fprintf('Rank (%d, %d) %s:\n', r(1), r(2), class(t));
                 s = space(t);
                 for i = 1:length(s)
-                    fprintf('%d.\t', i);
+                    fprintf('\t%d.\t', i);
                     disp(s(i));
-                    fprintf('\n');
+                    fprintf('\b');
+                end
+                fprintf('\n');
+                if details
+                    [blocks, charges] = matrixblocks(t);
+                    for i = 1:length(blocks)
+                        if ~isempty(blocks)
+                            fprintf('charge %s:\n', string(charges(i)));
+                        end
+                        disp(blocks{i});
+                    end
                 end
             else
-                builtin('disp', t);
+                fprintf('%s of size %s:\n', class(t), ...
+                    regexprep(mat2str(size(t)), {'\[', '\]', '\s+'}, {'', '', 'x'}));
+                subs = ind2sub_(size(t), 1:numel(t));
+                spc = floor(log10(max(double(subs), [], 1))) + 1;
+                if numel(spc) == 1
+                    fmt = strcat("\t(%", num2str(spc(1)), "u)");
+                else
+                    fmt = strcat("\t(%", num2str(spc(1)), "u,");
+                    for i = 2:numel(spc) - 1
+                        fmt = strcat(fmt, "%", num2str(spc(i)), "u,");
+                    end
+                    fmt = strcat(fmt, "%", num2str(spc(end)), "u)");
+                end
+                for i = 1:numel(t)
+                    fprintf('%s\t\t', compose(fmt, subs(i, :)));
+                    disp(t(i), details);
+                end
+            end
+        end
+
+        function tr = juliasort(t)
+            % find julia order permutations
+            f = fusiontrees(t);
+            [~, Ic] = juliasort(t.var.charge);          % sort center charges in Julia order
+            [fs, Is] = juliasort(unique(split(f)));     % sort splitting trees in Julia order
+            [ff, If] = juliasort(unique(fuse(f)));      % sort fusion trees in Julia order        
+            % reorganize data correspondingly
+            % obtain permutation of splitting trees
+            nrows = arrayfun(@(x) sum(fs.charges(:,end)== x), t.var.charge);
+            dnrows = arrayfun(@(i) - sum(nrows(1:i-1)), 1:numel(nrows));
+            pnrows = nrows(Ic);
+            pdnrows = dnrows(Ic);
+            prows = cell(1, numel(Ic));
+            prows{1} = Is(1:pnrows(1))+pdnrows(1);
+            for i = 2:length(Ic)
+                prows{i} = Is(sum(pnrows(1:i-1))+(1:pnrows(i)))+pdnrows(i);
+            end
+            prows(Ic) = prows;
+            % extend for degens
+            for i = 1:numel(Ic)
+                pr = [];
+                for j = 1:length(prows{i})
+                    pr = [pr, t.var.rowsizes{i}(prows{i}(j))+1:t.var.rowsizes{i}(prows{i}(j)+1)];
+                end
+                prows{i} = pr;
+            end
+            % obtain permutation of fusing trees
+            ncols = arrayfun(@(x) sum(ff.charges(:,1)== x), t.var.charge);
+            dncols = arrayfun(@(i) - sum(ncols(1:i-1)), 1:numel(ncols));
+            pncols = ncols(Ic);
+            pdncols = dncols(Ic);
+            pcols = cell(1, numel(Ic));
+            pcols{1} = If(1:pncols(1))+pdncols(1);
+            for i = 2:length(Ic)
+                pcols{i} = If(sum(pncols(1:i-1))+(1:pncols(i)))+pdncols(i);
+            end
+            pcols(Ic) = pcols;
+            % extend for degens
+            for i = 1:numel(Ic)
+                pc = [];
+                for j = 1:length(pcols{i})
+                    pc = [pc, t.var.colsizes{i}(pcols{i}(j))+1:t.var.colsizes{i}(pcols{i}(j)+1)];
+                end
+                pcols{i} = pc;
+            end
+            % permute data
+            tr = t;
+            for i = 1:numel(Ic)
+                tr.var.var{i} = t.var.var{i}(prows{i},pcols{i});
             end
         end
     end

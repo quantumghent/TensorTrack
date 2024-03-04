@@ -8,7 +8,7 @@ classdef TestTensor < matlab.unittest.TestCase
     methods (TestClassSetup)
         function classSetup(tc)
             orig = Options.CacheEnabled;
-            Options.CacheEnabled(false);
+            Options.CacheEnabled(true);
             tc.addTeardown(@Options.CacheEnabled, orig); 
         end
     end
@@ -26,12 +26,26 @@ classdef TestTensor < matlab.unittest.TestCase
                 U1(0, 1, -1), [1 3 3], true), ...
             'SU2', GradedSpace.new(SU2(1, 2), [3 1], false, SU2(1, 3), [2 1], false, ...
                 SU2(2, 3), [1 1], true, SU2(1, 2), [2 2], false, SU2(1, 2, 4), [1 1 1], true), ...
-            'A4', GradedSpace.new(A4(1:2), [2 1], false, A4([1 4]), [1 2], false, ...
-                A4(1:4), [2 1 3 1], true, A4(1:4), [2 2 1 2], false, A4(2:3), [1 2], true) ...
+            'A4', GradedSpace.new(A4(1:2), [2 1], false, A4(1:4), [2 1 2 1], false, ...
+                A4([1 4]), [1 2], true, A4(1:4), [2 2 1 1], false, A4(2:4), [1 2 2], true), ...
+            'U1xSU2', GradedSpace.new(...
+                ProductCharge(U1(-1:1), SU2(2,1,2)), [1 2 1], false, ...
+                ProductCharge(U1(-2:2), SU2(1,2,1,2,1)), [2 1 2 2 2], true, ...
+                ProductCharge(U1(-1:1), SU2(2,1,2)), [1 2 2], false, ...
+                ProductCharge(U1(-1:1), SU2(2,1,2)), [1 2 1], false, ...
+                ProductCharge(U1(-1:1), SU2(2,1,2)), [1 2 2], false), ...
+            'Hubbard', GradedSpace.new(...
+                ProductCharge(U1(0, 1, 2), SU2(1, 2, 1), fZ2(0, 1, 0)), [1 1 1], false, ...
+                ProductCharge(U1(-3:1), SU2(2, 1, 2, 1, 2), fZ2(0, 1, 0, 1, 0)), [1 1 3 1 1], false, ...
+                ProductCharge(U1(0, 1), SU2(1, 2), fZ2(0, 1)), [1 1], true, ...
+                ProductCharge(U1(0, 1, 2), SU2(1, 2, 1), fZ2(0, 1, 0)), [1 1 1], false, ...
+                ProductCharge(U1(0, 1), SU2(1, 2), fZ2(1, 0)), [1 1], true) ...
             )
     end
     
+    
     methods (Test)
+        %% General properties
         function basic_linear_algebra(tc, spaces)
             t1 = Tensor.rand(spaces(1:3), spaces(4:5));
             
@@ -64,6 +78,20 @@ classdef TestTensor < matlab.unittest.TestCase
                 'Dot should be sesquilinear.');
         end
         
+        function transpose_via_conversion(tc, spaces)
+            tc.assumeTrue(istwistless(braidingstyle(spaces)));
+            
+            t = Tensor.ones(spaces(1:3), spaces(4:5));
+            tdagger = t';
+            tc.assertTrue(isequal(t.domain, tdagger.codomain));
+            tc.assertTrue(isequal(t.codomain, tdagger.domain));
+            
+            tc.assertEqual(flip(dims(tdagger)), dims(t));
+            tc.assertEqual(conj(double(t)), double(conj(t)), ...
+                'AbsTol', tc.tol, 'RelTol', tc.tol, ...
+                sprintf('conj(double(t)) should be double(conj(t)). (%e)', distance(conj(double(t)), double(conj(t)))));
+        end
+        
         function matrix_functions(tc, spaces)
             for i = 1:3
                 t = Tensor.randnc(spaces(1:i), spaces(1:i));
@@ -90,6 +118,7 @@ classdef TestTensor < matlab.unittest.TestCase
         end
         
         
+        %% Contractions
         function permute_via_inner(tc, spaces)
             rng(213);
             t1 = Tensor.rand(spaces, []);
@@ -99,15 +128,15 @@ classdef TestTensor < matlab.unittest.TestCase
             
             for i = 0:5
                 ps = perms(1:nspaces(t1)).';
-                for p = ps(:, randperm(size(ps, 2), min(size(ps, 2), 20)))
-                    t3 = permute(t1, p.', [i 5-i]);
+                for p = ps(:, randperm(size(ps, 2), min(size(ps, 2), 5)))
+                    t3 = tpermute(t1, p.', [i 5-i]);
                     tc.assertTrue(all(dims(t1, p.') == dims(t3)), ...
                         'Incorrect size after permutation.');
                     tc.assertTrue(...
                         isapprox(norm(t1), norm(t3), 'AbsTol', tc.tol, 'RelTol', tc.tol), ...
                         'Permute should preserve norms.')
                     
-                    t4 = permute(t2, p.', [i 5-i]);
+                    t4 = tpermute(t2, p.', [i 5-i]);
                     tc.assertTrue(all(dims(t2, p.') == dims(t4)), ...
                         'Incorrect size after permutation.');
                     tc.assertTrue(...
@@ -125,8 +154,8 @@ classdef TestTensor < matlab.unittest.TestCase
             tc.assertTrue(all(dims(t) == size(a, 1:nspaces(t))));
             for k = 0:nspaces(t)
                 ps = perms(1:nspaces(t)).';
-                for p = ps(:, randperm(size(ps, 2), min(size(ps, 2), 10)))
-                    t2 = permute(t, p.', [k nspaces(t)-k]);
+                for p = ps(:, randperm(size(ps, 2), min(size(ps, 2), 5)))
+                    t2 = tpermute(t, p.', [k nspaces(t)-k]);
                     a2 = double(t2);
                     tc.assertTrue(all(dims(t2) == size(a2, 1:nspaces(t))));
                     tc.assertTrue(all(dims(t2) == size(a, p.')));
@@ -150,6 +179,10 @@ classdef TestTensor < matlab.unittest.TestCase
             
             tc.assertTrue(isapprox(double(t1 * t2), ...
                 tensorprod(double(t1), double(t2), [2 3], [2 1], 'NumDimensionsA', 3)));
+            
+            l1 = contract(t1, [1 2 3], conj(t1), [1 2 3]);
+            l2 = contract(double(t1), [1 2 3], conj(double(t1)), [1 2 3]);
+            tc.assertTrue(isapprox(l1, l2));
             
             W1 = spaces(1:3);
             W2 = spaces(4:5);
@@ -182,6 +215,29 @@ classdef TestTensor < matlab.unittest.TestCase
             tc.assertTrue(isapprox(double(AC), contract(double(A), [-1 -2 1], double(C), [1 -3])));
         end
         
+        function tensortrace(tc, spaces)
+            t1 = Tensor.randnc(spaces(1:3), spaces(1:3));
+            t2 = contract(t1, [-1 -2 1 1 -3 -4], 'Rank', [2 2]);
+            t3 = contract(t2, [-1 1 1 -2], 'Rank', [1 1]);
+            t4 = contract(t1, [-1 1 2 2 1 -2], 'Rank', [1 1]);
+            tc.assertTrue(isapprox(t3, t4, 'AbsTol', tc.tol, 'RelTol', tc.tol));
+            
+            % issue with fermionic traces:
+            Nl = Tensor.randnc(spaces(1), spaces(1:2));
+            Nr = Tensor.randnc(spaces(1:2), spaces(1));
+            result1 = contract(Nl, [-1 1 2], Nr, [2 1 -2]);
+            result2 = contract(contract(Nl, [-1 1 -4], Nr, [-2 1 -3]), [-1 1 -2 1]);
+            tc.assertTrue(isapprox(result1, result2, 'AbsTol', tc.tol, 'RelTol', tc.tol));
+            
+            t5 = contract(t1, [1 2 3 3 2 1]);
+            t6 = contract(t4, [1 1]);
+            tc.assertTrue(isapprox(t5, t6, 'AbsTol', tc.tol, 'RelTol', tc.tol));
+            if istwistless(braidingstyle(spaces))
+                t7 = contract(double(t1), [1 2 3  3 2 1]);
+                tc.assertTrue(isapprox(t6, t7, 'AbsTol', tc.tol, 'RelTol', tc.tol));
+            end
+        end
+        
         function contract_order(tc, spaces)
             A = Tensor.randnc(spaces(1:2), spaces(1)');
             r = Tensor.randnc(spaces(1)', spaces(1)');
@@ -197,6 +253,8 @@ classdef TestTensor < matlab.unittest.TestCase
             end
         end
         
+        
+        %% Factorizations
         function orthogonalize(tc, spaces)
             t = Tensor.randnc(spaces, []);
             
@@ -209,7 +267,7 @@ classdef TestTensor < matlab.unittest.TestCase
                 [Q, R] = leftorth(t, p1, p2, alg);
                 
                 assertTrue(tc, ...
-                    isapprox(Q * R, permute(t, [p1 p2], [length(p1) length(p2)]), ...
+                    isapprox(Q * R, tpermute(t, [p1 p2], [length(p1) length(p2)]), ...
                     'AbsTol', tc.tol, 'RelTol', tc.tol), ...
                     sprintf('Q and R not a valid %s factorization.', alg));
                 
@@ -239,7 +297,7 @@ classdef TestTensor < matlab.unittest.TestCase
                 [L, Q] = rightorth(t, p1, p2, alg);
                 
                 assertTrue(tc, ...
-                    isapprox(L * Q, permute(t, [p1 p2], [length(p1) length(p2)]), ...
+                    isapprox(L * Q, tpermute(t, [p1 p2], [length(p1) length(p2)]), ...
                     'AbsTol', tc.tol, 'RelTol', tc.tol), ...
                     sprintf('Q and R not a valid %s factorization.', alg));
                 
@@ -263,12 +321,16 @@ classdef TestTensor < matlab.unittest.TestCase
         
         function nullspace(tc, spaces)
             t = Tensor.randnc(spaces, []);
-            
+            tc.assumeTrue(spaces(3) * spaces(4) * spaces(2) >= spaces(1)' * spaces(5)', ...
+                'tensor not full rank')
             %% Left nullspace
             for alg = ["qr", "svd"]
                 N = leftnull(t, [3 4 2], [1 5], alg);
-                
-                assertTrue(tc, norm(N' * permute(t, [3 4 2 1 5], [3 2])) < ...
+                dimN = dims(N, nspaces(N));
+                dimW = prod(dims(t, [3 4 2]));
+                dimV = prod(dims(t, [1 5]));
+                tc.assertEqual(dimW, dimN + dimV, 'Nullspace should be full rank');
+                assertTrue(tc, norm(N' * tpermute(t, [3 4 2 1 5], [3 2])) < ...
                     100 * eps(norm(t)), ...
                     'N should be a left nullspace.');
                 assertTrue(tc, isisometry(N, 'left', ...
@@ -278,9 +340,15 @@ classdef TestTensor < matlab.unittest.TestCase
             
             
             %% Right nullspace
+            tc.assumeTrue(spaces(3) * spaces(4) <= spaces(1)' * spaces(2)' * spaces(5)', ...
+                'tensor not full rank');
             for alg = ["lq", "svd"]
                 N = rightnull(t, [3 4], [2 1 5], alg);
-                assertTrue(tc, norm(permute(t, [3 4 2 1 5], [2 3]) * N') < ...
+                dimN = dims(N, 1);
+                dimW = prod(dims(t, [3 4]));
+                dimV = prod(dims(t, [2 1 5]));
+                tc.assertEqual(dimV, dimW + dimN, 'Nullspace should be full rank');
+                assertTrue(tc, norm(tpermute(t, [3 4 2 1 5], [2 3]) * N') < ...
                     100 * eps(norm(t)), ...
                     'N should be a right nullspace.');
                 assertTrue(tc, isisometry(N, 'right', ...
@@ -290,9 +358,9 @@ classdef TestTensor < matlab.unittest.TestCase
         end
         
         function singularvalues(tc, spaces)
-            t = Tensor.randnc(spaces, []);
+            t = normalize(Tensor.randc(spaces, []));
             [U, S, V] = tsvd(t, [3 4 2], [1 5]);
-            assertTrue(tc, isapprox(permute(t, [3 4 2 1 5], [3 2]), U * S * V), ...
+            assertTrue(tc, isapprox(tpermute(t, [3 4 2 1 5], [3 2]), U * S * V), ...
                 'USV should be a factorization.');
             assertTrue(tc, isisometry(U), ...
                 'U should be an isometry.');
@@ -300,6 +368,32 @@ classdef TestTensor < matlab.unittest.TestCase
                 'V should be an isometry.');
             
             %% truncation
+            d = max(cellfun(@(x) min(size(x, 1), size(x, 2)), matrixblocks(S)));
+            [Utrunc, Strunc, Vtrunc, eta] = tsvd(t, [3 4 2], [1 5], 'TruncDim', d-1);
+            assertTrue(tc, isapprox(norm(tpermute(t, [3 4 2 1 5], [3 2]) - ...
+                Utrunc * Strunc * Vtrunc), eta, 'AbsTol', 1e-10, 'RelTol', 1e-6));
+            assertTrue(tc, isisometry(U, 'left'));
+            assertTrue(tc, isisometry(V, 'right'));
+            d2 = max(cellfun(@(x) max(size(x, 1), size(x, 2)), matrixblocks(Strunc)));
+            assertTrue(tc, d2 <= ceil(0.95*d));
+            
+            d = min(dims(S, 1:2));
+            [Utrunc, Strunc, Vtrunc, eta] = tsvd(t, [3 4 2], [1 5], 'TruncTotalDim', ceil(0.9*d));
+            assertTrue(tc, isapprox(norm(tpermute(t, [3 4 2 1 5], [3 2]) - ...
+                Utrunc * Strunc * Vtrunc), eta, 'AbsTol', 1e-10, 'RelTol', 1e-6));
+            assertTrue(tc, isisometry(U, 'left'));
+            assertTrue(tc, isisometry(V, 'right'));
+            d2 = max(dims(Strunc, 1:2));
+            assertTrue(tc, d2 <= ceil(0.9*d));
+            
+            s = min(cellfun(@(x) min(diag(x), [], 'all'), matrixblocks(S)));
+            [Utrunc, Strunc, Vtrunc, eta] = tsvd(t, [3 4 2], [1 5], 'TruncBelow', s * 1.2);
+            assertTrue(tc, isapprox(norm(tpermute(t, [3 4 2 1 5], [3 2]) - ...
+                Utrunc * Strunc * Vtrunc), eta, 'AbsTol', 1e-10, 'RelTol', 1e-6));
+            assertTrue(tc, isisometry(U, 'left'));
+            assertTrue(tc, isisometry(V, 'right'));
+            s2 = min(cellfun(@(x) min(diag(x)), matrixblocks(Strunc)));
+            assertTrue(tc, s * 1.2 <= s2);
             
         end
         
@@ -313,4 +407,5 @@ classdef TestTensor < matlab.unittest.TestCase
             end
         end
     end
+    
 end

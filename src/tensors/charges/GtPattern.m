@@ -1,22 +1,27 @@
 classdef GtPattern
-    %GTPATTERN Object that represents a pattern devised by Gelfand and Tsetlin.
+    % Object that represents a pattern devised by Gelfand and Tsetlin, used for enumerating
+    % :math:`\mathrm{SU}(N)` basis states.
     %
-    %        /m_{1,N} m_{2,N}  ...  m_{N,N}\
-    %       |  m_{1,N-1}  ...  m_{N-1,N-1}  |
-    %   M = |             ...               |
-    %       |       m_{1,2} m_{2,2}         |
-    %        \          m_{1,1}            /
+    % ::
     %
-    %   These consist of triangular arrangements of integers M_ij with the
-    %   following property:
-    %       - for 1 <= k < l <= N:
-    %           m_{k,l} >= m_{k,l-1} >= m_{k+1,l}
+    %         /m_{1,N} m_{2,N}  ...  m_{N,N}\
+    %        |  m_{1,N-1}  ...  m_{N-1,N-1}  |
+    %    M = |             ...               |
+    %        |       m_{1,2} m_{2,2}         |
+    %         \          m_{1,1}            /
     %
-    %   They will be represented using arrays of size N x N, where the elements
-    %   outside of the triangular region are assumed to be zero.
+    % These consist of triangular arrangements of integers :math:`M_{ij}` with the
+    % following property:
+    %
+    % .. math::
+    %
+    %   m_{k,l} \geq m_{k,l-1} \geq m_{k+1,l} \quad \text{for} \quad 1 <= k < l <= N
+    %
+    % They will be represented using arrays of size :math:`N \times N`, where the elements
+    % outside of the triangular region are assumed to be zero.
     
     
-    properties % (Access = private)
+    properties
         M double
         N
     end
@@ -106,20 +111,26 @@ classdef GtPattern
         end
         
         function m = get(p, k, l)
-            %GET Access an element in the pattern.
-            %   m = get(pat, k, l)
-            %       gets the element specified by m_kl.
+            % Access an element in the pattern.
             %
-            %   m = get(pat, ks, l)
-            %       gets a row vector of elements in the l'th row.
+            % Usage
+            % -----
+            % :code:`m = get(pat, k, l)`
+            % gets the element specified by :math:`M_{kl}`.
             %
-            %   m = get(pat, k, ls(:)
-            %       gets a col vector of elements in the k'th column.
+            % :code:`m = get(pat, ks, l)`
+            % gets a row vector of elements in the :code:`l`'th row.
+            %
+            % :code:`m = get(pat, k, ls)`
+            % gets a column vector of elements in the :code:`k`'th column.
+
 %             assert(isscalar(p));
             m = p.M(k + bitshift(((l + 1 + p.N) .* (p.N - l)), -1));
         end
         
         function p = set(p, k, l, val)
+            % Set the value of :math:`M_{kl}` to :code:`val`.
+            
 %             assert(isscalar(p));
             assert(checkbounds(p, k, l));
             p.M(k + bitshift(((l + 1 + p.N) * (p.N - l)), -1)) = val;
@@ -201,21 +212,32 @@ classdef GtPattern
         end
         
         function sigma = rowsum(p, l)
-            %ROWSUM Compute the sum of row `l`.
-            %   sigma = rowsum(pat, l)
-            %       computes sigma_l = \sum_{k=1:l} m_{k, l}
+            % Compute the sum of row :code:`l`.
+            %
+            % Usage
+            % -----
+            % :code:`sigma = rowsum(pat, l)`
+            % computes :math:`\sigma_l = \sum_{k=1}^l m_{k, l}`.
             
             sigma = sum(get(p, 1:l, l));
         end
         
         function w = pWeight(p)
-            %PWEIGHT Compute the p-weight of a pattern.
-            %   w = pWeight(pat)
-            %       computes the pattern weight W(pat) = (w_1 w_2 ... w_N) where
-            %       w_i = sigma_i - sigma_{i-1}.
+            % Compute the p-weight of a pattern.
+            %   
+            % Usage
+            % -----
+            % :code:`w = pWeight(pat)`
+            % computes the pattern weight :math:`W(\text{pat}) = (w_1 w_2 ... w_N)` where
+            % :math:`w_i = \sigma_i - \sigma_{i-1}`.
             %
-            %   This is an alternative weight definition to the z-weight.
-            %   See also GtPattern.zWeight
+            % Note
+            % ----
+            % This is an alternative weight definition to the z-weight.
+            %
+            % See Also
+            % --------
+            % :meth:`.GtPattern.zWeight`
             
             M = p.M;
             ctr = 0;
@@ -230,74 +252,23 @@ classdef GtPattern
         end
         
         function w = zWeight(p)
-            %ZWEIGHT Compute the z-weight of a pattern
-            %   w = zWeight(pat)
-            %       computes the z-weight L(pat) = (l_1 l_2 ... l_N-1) where
-            %       l_i = sigma_l - 1/2(sigma_{l+1} + sigma_{l-1})
+            % Compute the z-weight of a pattern
             %
-            %   This is a generalization of the m-quantum number for angular
-            %   momentum.
+            % Usage
+            % -----
+            % :code:`w = zWeight(pat)`
+            % computes the z-weight :math:`L(\text{pat}) = (l_1 l_2 ... l_N-1)` where
+            % :math:`l_i = \sigma_l - 1/2(\sigma_{l+1} + \sigma_{l-1})`.
+            %
+            % Note
+            % ----
+            % This is a generalization of the :math:`m`-quantum number for angular momentum.
 
             sigma = [0 arrayfun(@(l) rowsum(p, l), 1:p.N)];
             w = sigma(2:end-1) - (sigma(1:end-2) + sigma(3:end))/2;
         end
         
         
-    end
-    
-    methods (Static)
-        function pat = GeneratePatterns(I)
-            %GENERATEPATTERNS Generate all possible GtPatterns for a given SU(N) charge.
-            %   pat = GeneratePatterns(charge)
-            %       generates all allowed GtPatterns.
-            
-            
-            %% Special case length 1
-            N = length(I);
-            if N == 1
-                pat = GtPattern(1, I(:));
-                return
-            end
-            
-            
-            %% Special case length 2
-            if N == 2
-                i1 = I(2):I(1);
-                L = length(i1);
-                M = zeros(2, 2, L);
-                M(1, :, :) = repmat(I, 1, 1, L);
-                M(2, 1, :) = i1;
-                pat = GtPattern(2, M);
-                return
-            end
-            
-            
-            %% Special case length 3
-            % if N == 3
-            %
-            %
-            %
-            %     return;
-            % end
-            
-            
-            %% Generate all possible weight combinations of one level lower
-            newIs = cell(1, N-1);
-            for ii = 1:N-1
-                newIs{ii} = I(ii+1):I(ii);
-            end
-            
-            
-            %% Generate patterns
-            pat = [];
-            
-            for newI = CombVec(newIs{N-1:-1:1})
-                newPat = GtPattern.GeneratePatterns(flip(newI));
-                pat = [pat, appendRow(newPat, I)];
-            end
-            
-            
-        end
     end
 end
 

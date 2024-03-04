@@ -1,7 +1,8 @@
 function [dimA, dimB] = contractinds(ia, ib)
-% contractinds - Find the contracted dimensions.
-%   [dimA, dimB] = contractinds(ia, ib)
-%       locates the repeated indices.
+% Find the contracted dimensions.
+%
+% :code:`[dimA, dimB] = contractinds(ia, ib)`
+% locates the repeated indices in two vectors of integers.
 
 ind = find(ia(:) == ib).' - 1;
 dimA = mod(ind, length(ia)) + 1;

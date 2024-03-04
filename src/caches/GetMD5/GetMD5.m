@@ -10,7 +10,7 @@ function GetMD5(varargin)
 % Data
 %   input data on which the checksum is computed.
 %
-% Mode : char
+% Mode : :code:`char`
 %   optional declaration of the type of the input data.
 %
 %   - 'File' : `data` is a file name as a `char`.
@@ -22,7 +22,7 @@ function GetMD5(varargin)
 %   - 'Array' : Include the class and size information of `data` in the MD5 sum. This can be
 %   applied for (nested) structs, objects, cells and sparse arrays also.
 %
-% Format : char
+% Format : :code:`char`
 %   Format of the output, default value is 'hex'.
 %
 %   - 'hex' : (1, 32) lowercase hexadecimal char.
@@ -38,7 +38,7 @@ function GetMD5(varargin)
 %
 % Notes
 % -----
-% For sparse arrays, function handles, java and user-defined objects :func:`GetMD5_helper`
+% For sparse arrays, function handles, java and user-defined objects :func:`.GetMD5_helper`
 % is called to convert into a data format that can be handled.
 %
 % The C-Mex-file is compiled automatically when this function is called for the first time.
@@ -54,10 +54,10 @@ function GetMD5(varargin)
 %
 % See also
 % --------
-% Other methods for checksums can be found: :code:`CalcCRC32`, :code:`DataHash`, ...
+% Other methods for checksums can be found: :code:`CalcCRC32`, :code:`DataHash`, etc.
 %
-% For more checksum methods see:
-%   http://www.mathworks.com/matlabcentral/fileexchange/31272-datahash
+% For more checksum methods see
+% `here <http://www.mathworks.com/matlabcentral/fileexchange/31272-datahash>`_.
 
 % Dummy code, which calls the auto-compilation only: ---------------------------
 % This M-function is not called, if the compiled MEX function is in the path.

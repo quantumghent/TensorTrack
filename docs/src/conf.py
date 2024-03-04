@@ -49,7 +49,6 @@ extensions = [
     'sphinx-prompt',
     'sphinxcontrib.matlab',
     'nbsphinx',
-    'myst_parser',
     'sphinx_gallery.load_style'
 ]
 
@@ -57,7 +56,7 @@ extensions = [
 templates_path = ['_templates']
 
 # The suffix(es) of source filenames.
-source_suffix = ['.rst', '.md']
+source_suffix = ['.rst']
 
 # The master toctree document.
 master_doc = 'index'
@@ -231,24 +230,6 @@ napoleon_custom_sections = [
     'Usage',
     ('Syntax', 'returns_style')
     ]
-
-
-# -- myst_parser -----------------------------------------------
-# extensions for markdown parser
-# myst_enable_extensions = [
-#     "colon_fence",
-#     "deflist",
-#     "dollarmath",
-#     "fieldlist",
-#     "html_admonition",
-#     "html_image",
-#     "linkify",
-#     "replacements",
-#     "smartquotes",
-#     "strikethrough",
-#     "substitution",
-#     "tasklist",
-# ]
 
 
 # -- sphinx.ext.mathjax configuration -----------------------------------------------

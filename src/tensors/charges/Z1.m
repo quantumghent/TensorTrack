@@ -1,5 +1,5 @@
 classdef Z1 < AbstractCharge
-    % Trivial charges.
+    % Trivial charge.
     
     methods
         function A = Asymbol(~, ~, ~)
@@ -33,10 +33,18 @@ classdef Z1 < AbstractCharge
             C = 1;
         end
         
+        function s = GetMD5_helper(data)
+            s = uint8(0);
+        end
+        
         function a = intersect(a, ~)
         end
         
         function bool = issortedrows(~)
+            bool = true;
+        end
+        
+        function bool = issorted(~)
             bool = true;
         end
         

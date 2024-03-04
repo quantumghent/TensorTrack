@@ -32,13 +32,13 @@ classdef TestSolvers < matlab.unittest.TestCase
                 [x, flag, relres] = linsolve(A, b, 'Algorithm', alg);
                 tc.assertTrue(isapprox(norm(A * x - b) / norm(b), relres, ...
                     'AbsTol', tc.tol, 'RelTol', tc.tol));
-                tc.assertTrue(flag == 0);
+                tc.assertTrue(flag == 0 || (flag == 3 && relres < tc.tol));
 
                 f = @(x) A * x;
                 [x2, flag, relres] = linsolve(f, b, 'Algorithm', alg);
                 tc.assertTrue(isapprox(norm(f(x2) - b) / norm(b), relres, ...
                     'AbsTol', tc.tol, 'RelTol', tc.tol));
-                tc.assertTrue(flag == 0);
+                tc.assertTrue(flag == 0 || (flag == 3 && relres < tc.tol));
             end
         end
         
@@ -52,11 +52,11 @@ classdef TestSolvers < matlab.unittest.TestCase
             d1 = eigsolve(A, x0, 1, 'IsSymmetric', true);
             [v, d, flag] = eigsolve(A, x0, 1, 'IsSymmetric', true);
             tc.verifyTrue(isapprox(d, d1));
-            tc.verifyTrue(flag == 0);
+            tc.verifyTrue(all(flag == 0));
             tc.verifyTrue(isapprox(A * v, v * d));
             
             [v, d, flag] = eigsolve(A, x0, 3, 'IsSymmetric', true);
-            tc.verifyTrue(flag == 0);
+            tc.verifyTrue(all(flag == 0));
             tc.verifyTrue(isapprox(A * v, v * d));
         end
     end

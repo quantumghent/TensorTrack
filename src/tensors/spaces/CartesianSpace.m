@@ -8,7 +8,7 @@ classdef CartesianSpace < AbstractSpace
             %
             % Repeating Arguments
             % -------------------
-            % dimensions : (1, 1) int
+            % dimensions : (1, 1) :class:`int`
             %   dimension of the vector space.
             %
             % ~ : any
@@ -16,7 +16,7 @@ classdef CartesianSpace < AbstractSpace
             %
             % Returns
             % -------
-            % spaces : :class:`CartesianSpace`
+            % spaces : :class:`.CartesianSpace`
             %   array of cartesian spaces.
             
             arguments (Repeating)
@@ -42,22 +42,24 @@ classdef CartesianSpace < AbstractSpace
             %
             % Usage
             % -----
-            % spaces = CartesianSpace.new(dimensions, ~, ...)
+            % :code:`spaces = CartesianSpace.new(dims)`
             %
-            % spaces = CartesianSpace.new(dims)
+            % :code:`spaces = CartesianSpace.new(dimensions, ~, ...)`
+            %
+            % Arguments
+            % ---------
+            % dims : (1, :) :class:`int`
+            %   vector of dimensions of all spaces.
             %
             % Repeating Arguments
             % -------------------
-            % dimensions : struct
+            % dimensions : :class:`struct`
             %   a variable which represents the internal dimension of the space.
-            %
-            % dims : (1, :) int
-            %   vector of dimensions of all spaces.
             %
             % Returns
             % -------
-            % spaces : :class:`CartesianSpace`
-            %   array of spaces.
+            % spaces : (1, :) :class:`.CartesianSpace`
+            %   array of cartesian vector spaces.
             
             if isstruct(varargin{1})
                 assert(mod(nargin, 2) == 0)
@@ -83,21 +85,21 @@ classdef CartesianSpace < AbstractSpace
     
     %% Structure
     methods
-        function c = charges(~)
+        function c = charges(spaces)
             % Compute all charge combinations of a space. No internal structure is present, 
             % this yields an empty result.
             %
             % Arguments
             % ---------
-            % spaces : (1, :) :class:`CartesianSpace`
+            % spaces : (1, :) :class:`.CartesianSpace`
             %   input spaces.
             %
             % Returns
             % -------
-            % c : []
-            %   empty result.
+            % c : (1, :) :class:`.Z1`
+            %   array of trivial spaces of corresponding length.
             
-            c = [];
+            c = repmat(Z1, length(spaces), 1);
         end
         
         function d = degeneracies(spaces)
@@ -105,12 +107,12 @@ classdef CartesianSpace < AbstractSpace
             %
             % Arguments
             % ---------
-            % spaces : (1, :) :class:`CartesianSpace`
+            % spaces : (1, :) :class:`.CartesianSpace`
             %   input spaces.
             %
             % Returns
             % -------
-            % d : (1, :) int
+            % d : (1, :) :class:`int`
             %   list of degeneracy combinations, with 1 element.
             
             d = [spaces.dimensions];
@@ -121,32 +123,15 @@ classdef CartesianSpace < AbstractSpace
             %
             % Arguments
             % ---------
-            % spaces : (1, :) :class:`CartesianSpace`
+            % spaces : (1, :) :class:`.CartesianSpace`
             %   input spaces.
             %
             % Returns
             % -------
-            % d : (1, :) int
+            % d : (1, :) :class:`int`
             %   total dimension of each of the input spaces.
             
             d = [spaces.dimensions];
-        end
-        
-        function trees = fusiontrees(~, ~)
-            % Compute all allowed fusiontrees that connect domain and codomain. Only the
-            % trivial fusion tree is allowed, so this returns empty.
-            %
-            % Arguments
-            % ---------
-            % codomain, domain : :class:`CartesianSpace`
-            %   input spaces.
-            %
-            % Returns
-            % -------
-            % trees : :class:`FusionTree`
-            %   only the trivial tree is allowed.
-            
-            trees = FusionTree();
         end
         
         function style = braidingstyle(~, ~)
@@ -154,13 +139,13 @@ classdef CartesianSpace < AbstractSpace
             %
             % Arguments
             % ---------
-            % codomain, domain : (1, :) :class:`CartesianSpace`
+            % codomain, domain : (1, :) :class:`.CartesianSpace`
             %   input spaces.
             %
             % Returns
             % -------
-            % style : :class:`BraidingStyle`
-            %   Trivial braiding style
+            % style : :class:`.BraidingStyle`
+            %   trivial braiding style, :code:`BraidingStyle.Abelian`.
             
             style = BraidingStyle.Abelian;
         end
@@ -170,15 +155,29 @@ classdef CartesianSpace < AbstractSpace
             %
             % Arguments
             % ---------
-            % codomain, domain : (1, :) :class:`CartesianSpace`
+            % codomain, domain : (1, :) :class:`.CartesianSpace`
             %   input spaces.
             %
             % Returns
             % -------
-            % style : :class:`FusionStyle`
-            %   fusion style of the internal structure.
+            % style : :class:`.FusionStyle`
+            %   fusion style of the internal structure, :code:`FusionStyle.Unique`.
             
             style = FusionStyle.Unique;
+        end
+        
+        function space = one(~)
+            space = CartesianSpace(1, []);
+        end
+        
+        function spaces = insertone(spaces, i, ~)
+            arguments
+                spaces
+                i = length(spaces) + 1
+                ~
+            end
+            
+            spaces = [spaces(1:i-1) one(spaces) spaces(i:end)];
         end
     end
         
@@ -190,12 +189,12 @@ classdef CartesianSpace < AbstractSpace
             %
             % Arguments
             % ---------
-            % spaces : (1, :) :class:`CartesianSpace`
+            % spaces : (1, :) :class:`.CartesianSpace`
             %   input spaces.
             %
             % Returns
             % -------
-            % spaces : (1, :) :class:`CartesianSpace`
+            % spaces : (1, :) :class:`.CartesianSpace`
             %   dual spaces.
         end
         
@@ -204,31 +203,40 @@ classdef CartesianSpace < AbstractSpace
             %
             % Arguments
             % ---------
-            % space1, space2 : (1, 1) :class:`CartesianSpace`
+            % space1, space2 : (1, 1) :class:`.CartesianSpace`
             %   input spaces.
             % 
             % Returns
             % -------
-            % space : (1, 1) :class:`CartesianSpace`
+            % space : (1, 1) :class:`.CartesianSpace`
             %   fused space.
             
             space.dimensions = space.dimensions * space2.dimensions;
         end
         
-        function space = prod(spaces)
+        function space = prod(spaces, ~)
             % Fuse a product space to a single space.
             %
             % Arguments
             % ---------
-            % spaces : (1, :) :class:`CartesianSpace`
-            %   Array of input spaces.
+            % spaces : (1, :) :class:`.CartesianSpace`
+            %   array of input spaces.
             %
             % Returns
             % -------
-            % space : (1, 1) :class:`CartesianSpace`
-            %   Fused space which is isomorphic to the input product space.
+            % space : (1, 1) :class:`.CartesianSpace`
+            %   fused space which is isomorphic to the input product space.
             
             space = CartesianSpace(prod(dims(spaces)), []);
+        end
+        
+        function space = plus(space, space2)
+            space.dimensions = space.dimensions + space2.dimensions;
+        end
+        
+        function space = sum(spaces)
+            
+            space = CartesianSpace(sum(dims(spaces)), []);
         end
     end
         
@@ -240,19 +248,15 @@ classdef CartesianSpace < AbstractSpace
             %
             % Arguments
             % ---------
-            % spaces1, spaces2 : (1, :) :class:`CartesianSpace`
+            % spaces1, spaces2 : (1, :) :class:`.CartesianSpace`
             %   input spaces, either of equal size or scalar.
             %
             % Returns
             % -------
-            % bools : (1, :) logical
+            % bools : (1, :) :class:`logical`
             %   flags that indicate if the element spaces are equal.
             
             bools = [spaces1.dimensions] == [spaces2.dimensions];
-        end
-        
-        function bool = ge(space1, space2)
-            bool = le(space2, space1);
         end
         
         function bool = le(space1, space2)
@@ -260,48 +264,53 @@ classdef CartesianSpace < AbstractSpace
             bool = degeneracies(space1) <= degeneracies(space2);
         end
         
+        function space = infimum(space1, space2)
+            assert(isscalar(space1) && isscalar(space2));
+            space = CartesianSpace.new(min(dims(space1), dims(space2)));
+        end
+        
         function hashable = GetMD5_helper(spaces)
             % Helper function for hash algorithm. This converts the space object to a data
-            % structure which can be processed by :func:`GetMD5`.
+            % structure which can be processed by :func:`.GetMD5`.
             %
             % Arguments
             % ---------
-            % spaces : (1, :) :class:`CartesianSpace`
+            % spaces : (1, :) :class:`.CartesianSpace`
             %   input spaces.
             %
             % Returns
             % -------
-            % hashable : (1, :) int
-            %   data which can be accepted by :func:`GetMD5`.
+            % hashable : (1, :) :class:`int`
+            %   data which can be accepted by :func:`.GetMD5`.
             
             hashable = [spaces.dimensions];
         end
         
-        function disp(spaces)
-            if isscalar(spaces)
-                fprintf('CartesianSpace of dimension %d\n', spaces.dimensions);
+        function s = string(spaces, kwargs)
+            arguments
+                spaces
+                kwargs.IncludeType = true
+                kwargs.IncludeDetails = true
+            end
+            
+            if numel(spaces) > 1
+                kwargs = namedargs2cell(kwargs);
+                s = arrayfun(@(x) string(x, kwargs{:}), spaces);
                 return
             end
             
-            fprintf('%dx%d Product space with elements:\n\n', ...
-                size(spaces, 1), size(spaces, 2));
-            for i = 1:length(spaces)
-                fprintf('%d.\t', i);
-                disp(spaces(i));
-                fprintf('\n');
+            dimstring = sprintf("%d", dims(spaces));
+            
+            if kwargs.IncludeType
+                typestring = name(spaces);
+                s = sprintf("%s: %s", typestring, dimstring);
+            else
+                s = sprintf("%s", dimstring);
             end
         end
         
-        function s = string(spaces)
-            if numel(spaces) > 1
-                s = strings(size(spaces));
-                for i = 1:numel(spaces)
-                    s(i) = string(spaces);
-                end
-                return
-            end
-            
-            s = sprintf('CartesianSpace of dimension %d', spaces.dimensions);
+        function s = name(~)
+            s = "CartesianSpace";
         end
     end    
 end

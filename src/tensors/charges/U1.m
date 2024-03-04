@@ -1,8 +1,8 @@
 classdef U1 < AbstractCharge & int16
-    % U1 - Irreducible representations of U(1).
-    %   This class represents the representations of U(1), labeled using integers.
+    % Irreducible representations of :math:`\mathrm{U}(1)`.
     %
-    %   See also AbstractCharge
+    % This class represents the representations of :math:`\mathrm{U}(1)`, labeled using
+    % integers where fusion is given by addition.
     
     methods
         function charge = U1(varargin)
@@ -43,7 +43,6 @@ classdef U1 < AbstractCharge & int16
             F = double(Nsymbol(a, b, e) .* Nsymbol(b, c, f) .* ...
                 Nsymbol(e, c, d) .* Nsymbol(a, f, d));
         end
-        
         
         function style = fusionstyle(~)
             style = FusionStyle.Unique;

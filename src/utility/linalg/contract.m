@@ -11,23 +11,23 @@ function C = contract(tensors, indices, kwargs)
 %
 % Repeating Arguments
 % -------------------
-% tensors : :class:`Tensor`
+% tensors : :class:`.Tensor`
 %   list of tensors that constitute the vertices of the network.
 %
-% indices : int
-%   list of indices that define the links and contraction order, using ncon-like syntax.
+% indices : (1, :) :class:`int`
+%   list of indices that define the links and contraction order, using `ncon-like syntax <https://arxiv.org/abs/1402.0939>`_.
 %
 % Keyword Arguments
 % -----------------
-% Conj : (1, :) logical
+% Conj : (1, :) :class:`logical`
 %   optional list to flag that tensors should be conjugated.
 %
-% Rank : (1, 2) int
+% Rank : (1, 2) :class:`int`
 %   optionally specify the rank of the resulting tensor.
 %
 % Returns
 % -------
-% C : :class:`Tensor` or numeric
+% C : :class:`.Tensor` or :class:`numeric`
 %   result of the tensor network contraction.
 
 % TODO contraction order checker, order specifier.
@@ -40,33 +40,46 @@ end
 arguments
     kwargs.Conj (1, :) logical = false(size(tensors))
     kwargs.Rank = []
+    kwargs.Debug = false
+    kwargs.CheckOptimal = false
 end
 
 assert(length(kwargs.Conj) == length(tensors));
 
-for i = 1:length(tensors)
-    if length(indices{i}) > 1
-        assert(length(unique(indices{i})) == length(indices{i}), ...
-            'Tensors:TBA', 'Traces not implemented.');
+if kwargs.CheckOptimal
+    legcosts = zeros(2, 0);
+    for i = 1:length(indices)
+        legcosts = [legcosts [indices{i}; size(tensors{i}, 1:length(indices{i}))]];
+    end
+    legcosts = unique(legcosts.', 'rows');
+    
+    currentcost = contractcost(indices, legcosts);
+    [sequence, cost] = netcon(indices, 1, 1, currentcost, 1, legcosts);
+    
+    if cost < currentcost
+        warning('suboptimal contraction order.\n optimal: %s', ...
+            num2str(sequence));
     end
 end
 
+for i = 1:length(tensors)
+    [i1, i2] = traceinds(indices{i});
+    tensors{i} = tensortrace(tensors{i}, i1, i2);
+    indices{i}([i1 i2]) = [];
+end
+
+debug = kwargs.Debug;
+
 % Special case for single input tensor
 if nargin == 2
-    [~, order] = sort(indices{1}, 'descend');
     C = tensors{1};
-    if isnumeric(C)
+    if kwargs.Conj, C = conj(C); end
+    
+    if ~isempty(indices{1})
+        [~, order] = sort(indices{1}, 'descend');
         C = permute(C, order);
-        if kwargs.Conj
-            C = conj(C);
-        end
-    else
-        if kwargs.Conj
-            C = permute(C', order(length(order):-1:1), kwargs.Rank);
-        else
-            C = permute(C, order, kwargs.Rank);
-        end
     end
+    
     return
 end
 
@@ -76,15 +89,13 @@ partialtrees = num2cell(1:length(tensors));
 tree = generatetree(partialtrees, contractindices);
 
 % contract all subtrees
-[A, ia, ca] = contracttree(tensors, indices, kwargs.Conj, tree{1});
-[B, ib, cb] = contracttree(tensors, indices, kwargs.Conj, tree{2});
+[A, ia, ca] = contracttree(tensors, indices, kwargs.Conj, tree{1}, debug);
+[B, ib, cb] = contracttree(tensors, indices, kwargs.Conj, tree{2}, debug);
 
 % contract last pair
 [dimA, dimB] = contractinds(ia, ib);
 
-if Options.Debug
-    contractcheck(A, ia, ca, B, ib, cb);
-end
+if debug, contractcheck(A, ia, ca, B, ib, cb); end
 
 C = tensorprod(A, B, dimA, dimB, ca, cb, 'NumDimensionsA', length(ia));
 ia(dimA) = [];  ib(dimB) = [];
@@ -93,79 +104,7 @@ ic = [ia ib];
 % permute last tensor
 if ~isempty(ic) && length(ic) > 1
     [~, order] = sort(ic, 'descend');
-    if isnumeric(C)
-        C = permute(C, order);
-    else
-        if isempty(kwargs.Rank)
-            kwargs.Rank = [length(order) 0];
-        end
-        C = permute(C, order, kwargs.Rank);
-    end
-end
-
-end
-
-function tree = generatetree(partialtrees, contractindices)
-if length(partialtrees) == 1
-    tree = partialtrees{1};
-    return
-end
-
-if all(cellfun('isempty', contractindices)) % disconnected network
-    partialtrees{end - 1} = partialtrees(end - 1:end);
-    partialtrees(end) = [];
-    contractindices(end) = [];
-else
-    tocontract = min(horzcat(contractindices{:}));
-    tinds = find(cellfun(@(x) any(tocontract == x), contractindices));
-    assert(length(tinds) == 2);
-    partialtrees{tinds(1)} = partialtrees(tinds);
-    partialtrees(tinds(2)) = [];
-    contractindices{tinds(1)} = unique1(horzcat(contractindices{tinds}));
-    contractindices(tinds(2)) = [];
-end
-
-tree = generatetree(partialtrees, contractindices);
-end
-
-function [C, ic, cc] = contracttree(tensors, indices, conjlist, tree)
-
-if isnumeric(tree)
-    C = tensors{tree};    
-    ic = indices{tree};
-    cc = conjlist(tree);
-    return
-end
-
-[A, ia, ca] = contracttree(tensors, indices, conjlist, tree{1});
-[B, ib, cb] = contracttree(tensors, indices, conjlist, tree{2});
-[dimA, dimB] = contractinds(ia, ib);
-
-if Options.Debug
-    contractcheck(A, ia, ca, B, ib, cb);
-end
-
-C = tensorprod(A, B, dimA, dimB, ca, cb, 'NumDimensionsA', length(ia));
-
-ia(dimA) = [];
-ib(dimB) = [];
-ic = [ia ib];
-cc = false;
-end
-
-function contractcheck(A, ia, ca, B, ib, cb)
-
-Aspaces = space(A);
-if ca, Aspaces = conj(Aspaces); end
-Bspaces = space(B);
-if cb, Bspaces = conj(Bspaces); end
-
-[dimA, dimB] = contractinds(ia, ib);
-
-for i = 1:length(dimA)
-    assert(Aspaces(dimA(i)) == conj(Bspaces(dimB(i))), 'tensors:SpaceMismatch', ...
-        'Invalid index %d:\n\t%s\n\tis incompatible with\n\t%s', ...
-        ia(dimA(i)), string(Aspaces(dimA(i))), string(Bspaces(dimB(i))));
+    C = permute(C, order);
 end
 
 end

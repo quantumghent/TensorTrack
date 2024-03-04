@@ -2,10 +2,10 @@
 
 <!-- PROJECT SHIELDS -->  
 <div align="center">
-  
-  [![Documentation Status](https://readthedocs.org/projects/tensortrack/badge/?version=stable)](https://tensortrack.readthedocs.io/en/stable/?badge=stable)
+
+  [![Documentation Status](https://readthedocs.org/projects/tensortrack/badge/?version=latest)](https://tensortrack.readthedocs.io/en/latest/?badge=latest)
   [![CI](https://github.com/quantumghent/TensorTrack/actions/workflows/CI.yml/badge.svg)](https://github.com/quantumghent/TensorTrack/actions/workflows/CI.yml)
-  [![Codecov](https://codecov.io/gh/quantumghent/TensorTrack/branch/main/graph/badge.svg?token=1I0XEB69TQ)](https://codecov.io/gh/quantumghent/TensorTrack)
+  [![codecov](https://codecov.io/gh/quantumghent/TensorTrack/graph/badge.svg?token=NdumVqzQuM)](https://codecov.io/gh/quantumghent/TensorTrack)
   [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
   [![DOI](https://zenodo.org/badge/481924253.svg)](https://zenodo.org/badge/latestdoi/481924253)
 
@@ -88,6 +88,7 @@ The design of the algorithms is chosen such that the inclusion of symmetries sho
 This project depends on the following:
 - MATLAB version R2020b or newer
 - [Parallel Computing Toolbox](https://de.mathworks.com/products/parallel-computing.html)
+- [Deep Learning Toolbox](https://de.mathworks.com/products/deep-learning.html)
 - A C++ compiler compatible with your MATLAB version for MEX-file compilation.
 
 ### Installation

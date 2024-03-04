@@ -1,46 +1,69 @@
 function Ok = InstallMex(SourceFile, varargin)
-% INSTALLMEX - Compile and install Mex file
+% Compile and install Mex file
 % The C, C++ or FORTRAN mex file is compiled and additional installation
 % routines are started. Advanced users can call MEX() manually instead, but some
 % beginners are overwhelmed by instructions for a compilation sometimes.
 % Therefore this function can be called automatically from an M-function, when
 % the compiled Mex-Function does not exist already.
 %
-% Ok = InstallMex(SourceFile, ...)
-% INPUT:
-%   SourceFile: Name of the source file, with or without absolute or partial
-%               path. The default extension '.c' is appended on demand.
-%   Optional arguments in arbitrary order:
-%     Function name: Function is started after compiling, e.g. a unit-test.
-%     Cell string:   Additional arguments for the compilation, e.g. libraries.
-%     '-debug':      Enable debug mode.
-%     '-force32':    Use the compatibleArrayDims flag under 64 bit Matlab.
-%     '-replace':    Overwrite existing mex file without confirmation.
+% Usage
+% -----
+% :code:`Ok = InstallMex(SourceFile, ...)`
 %
-% OUTPUT:
-%   Ok:  Logical flag, TRUE if compilation was successful. Optional.
+% Arguments
+% ---------
+% SourceFile
+%   Name of the source file, with or without absolute or partial path. The default extension
+%   '.c' is appended on demand.
 %
-% COMPATIBILITY:
+% Optional Arguments
+% ------------------
+% Function name
+%   Function is started after compiling, e.g. a unit-test.
+% Cell string
+%   additional arguments for the compilation, e.g. libraries.
+% '-debug'
+%   enable debug mode.
+% '-force32'
+%   use the compatibleArrayDims flag under 64 bit Matlab.
+% '-replace'
+%   overwrite existing mex file without confirmation.
+%
+% Returns
+% -------
+% Ok
+%   logical flag, :code:`true` if compilation was successful.
+%
+% Note
+% ----
+% 
 % - A compiler must be installed and setup before: mex -setup
 % - For Linux and MacOS the C99 style is enabled for C-files.
 % - The optimization flag -O is set.
-% - Defined compiler directives:
-%    * MATLABVER<XYZ>: <XYZ> is the current version, e.g. 708 for v7.8.
-%    * _LITTLE_ENDIAN or _BIG_ENDIAN: according to processor type
-%    * HAS_HG2: Defined for Matlab >= R2014b with HG2 graphics.
-%    * -R2017b or -largeArrayDims for 64 bit addressing and C Matrix API
+% - Defined compiler directives
+%    - MATLABVER<XYZ>: <XYZ> is the current version, e.g. 708 for v7.8.
+%    - _LITTLE_ENDIAN or _BIG_ENDIAN: according to processor type
+%    - HAS_HG2: Defined for Matlab >= R2014b with HG2 graphics.
+%    - -R2017b or -largeArrayDims for 64 bit addressing and C Matrix API
 %      -R2018a for C Data API (this is set, when the string "[R2018a API]"
 %      appears anywhere inside the source file.
 %
-% EXAMPLES:
+% Examples
+% --------
+%
 % Compile func1.c with LAPACK libraries:
-%   InstallMex('func1', {'libmwlapack.lib', 'libmwblas.lib'})
+%
+% :code:`InstallMex('func1', {'libmwlapack.lib', 'libmwblas.lib'})`
+% 
 % Compile func2.cpp, enable debugging and call a test function:
-%   InstallMex('func2.cpp', '-debug', 'Test_func2');
+% 
+% :code:`InstallMex('func2.cpp', '-debug', 'Test_func2');`
+% 
 % These commands can be appended after the help section of an M-file, when the
 % compilation should be started automatically, if the compiled MEX is not found.
 %
-% NOTES:
+% Note
+% ----
 % Suggestions for improvements and comments are welcome!
 % Feel free to add this function to your FEX submissions, when you change the
 % URL in the variable "Precompiled" accordingly.

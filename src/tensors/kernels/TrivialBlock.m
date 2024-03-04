@@ -1,5 +1,8 @@
 classdef TrivialBlock < AbstractBlock
-    % TrivialBlock - Data structure for tensors without symmetry.
+    % Data structure for tensors without symmetry.
+    %
+    % .. todo::
+    %   Document properties and behavior.
     
     properties
         var
@@ -18,7 +21,7 @@ classdef TrivialBlock < AbstractBlock
         
         function Y = axpby(a, X, b, Y, p, ~)
             
-            %% Special case 1: scalar multiplication
+            %%% Special case 1: scalar multiplication
             if a == 0
                 if b == 1
                     return;
@@ -117,25 +120,6 @@ classdef TrivialBlock < AbstractBlock
         end
         
         function Y = rdivide(Y, a)
-            % Scalar division of Y and a.
-            %
-            % Usage
-            % -----
-            % Y = rdivide(Y, a)
-            % Y = Y ./ a
-            %
-            % Arguments
-            % ---------
-            % Y : MatrixBlock
-            %   list of input matrices.
-            %
-            % a : double
-            %   scalar factor.
-            %
-            % Returns
-            % -------
-            % Y : MatrixBlock
-            %   list of output matrices.
             
             if a == 1, return; end
             if a == -1, Y = -Y; return; end
@@ -193,6 +177,15 @@ classdef TrivialBlock < AbstractBlock
         end
         
         function v = vectorize(X, type)
+            if numel(X) > 1
+                vs = cell(size(X));
+                for i = 1:numel(X)
+                    vs{i} = vectorize(X(i), type);
+                end
+                v = vertcat(vs{:});
+                return
+            end
+            
             switch type
                 case 'complex'
                     v = X.var(:);
@@ -203,14 +196,19 @@ classdef TrivialBlock < AbstractBlock
         end
         
         function X = devectorize(v, X, type)
-            switch type
-                case 'complex'
-                    X.var = reshape(v, size(X.var));
-                    
-                case 'real'
-                    m = size(v, 1) / 2;
-                    sz = size(X.var);
-                    X.var = complex(reshape(v(1:m), sz), reshape(v(m + 1:2 * m), sz));
+            ctr = 0;
+            for i = 1:numel(X)
+                switch type
+                    case 'complex'
+                        X(i).var = reshape(v(ctr + (1:numel(X(i).var))), size(X(i).var));
+                        ctr = ctr + numel(X(i).var);
+                    case 'real'
+                        v_ = v(ctr + 1:2*numel(X(i).var));
+                        m = size(v_, 1) / 2;
+                        sz = size(X(i).var);
+                        X(i).var = complex(reshape(v_(1:m), sz), reshape(v_(m + 1:2 * m), sz));
+                        ctr = ctr + numel(X(i).var) * 2;
+                end
             end
         end
         

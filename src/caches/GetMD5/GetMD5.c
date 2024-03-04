@@ -590,7 +590,7 @@ void ArrayCore(MD5_CTX *context, const mxArray *V)
   // mxGetDimensions replies [1x1] for opaque arrays, e.g. the string class.
   // They are forwarded to the helper function, where SIZE() replies the true
   // dimensions.
-  if (!dataOpaq) {
+  if (true) {
      // Consider class as name, not as ClassID, because the later might change
      // with the Matlab version:
      Len = strlen(ClassName);
@@ -606,7 +606,7 @@ void ArrayCore(MD5_CTX *context, const mxArray *V)
      }
      MD5_Update(context, (uchar_T *) header, lenHeader * sizeof(int64_T));
      mxFree(header);
-  }
+  } 
   
   // Include the contents of the array:
   switch (ClassID) {
@@ -639,6 +639,8 @@ void ArrayCore(MD5_CTX *context, const mxArray *V)
         break;
         
      default:  // FUNCTION, VOID, OPAQUE, UNKNOWN CLASS: -----------------------
+         
+         
         // Treat deep recursion as an error:
         if (++RecursionCount > MAX_RECURSION) {
            ERROR("DeepRecursion", "Cannot serialize recursive data type.\n"

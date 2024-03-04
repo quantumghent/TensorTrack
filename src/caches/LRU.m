@@ -1,31 +1,47 @@
 classdef LRU < handle
-    % LRU a least-recently-used cache. Stores data up to a preset memory limit, then removes
+    % A least-recently-used cache. Stores data up to a preset memory limit, then removes
     % the least-recently-used elements to free up space for additional data.
+    %
+    % Properties
+    % ----------
+    % sentinel : :class:`.DLL`
+    %   sentinel of DLL, +sentinel is MRU, -sentinel is LRU
+    %
+    % map : :class:`containers.Map`
+    %   map of key --> dll
+    %
+    % itemlimit : :class:`int`
+    %   maximum size of cache in number of items
+    %
+    % memlimit : :class:`double`
+    %   maximum size of cache in bytes
+    %
+    % mem : :class:`double`
+    %   current memory usage in bytes.
     
     
     properties (Access = private)
-        sentinel            % sentinel of DLL, +sentinel is MRU, -sentinel is LRU
-        map                 % map of key --> dll
-        itemlimit = Inf     % maximum size of cache in number of items
-        memlimit = 6 * 2^30 % maximum size of cache in bytes
-        mem = 0;            % current memory usage in bytes.
+        sentinel
+        map 
+        itemlimit = Inf
+        memlimit = 20 * 2^30
+        mem = 0;
     end
-    
     methods
         function cache = LRU(itemlimit, memlimit)
             % Construct a new LRU cache.
             %
             % Arguments
             % ---------
-            % itemlimit : int
+            % itemlimit : :class:`int`
             %   maximum size of cache in number of items.
             %
-            % memlimit : numeric
+            % memlimit : :class:`double`
             %   maximum size of cache in number of bytes.
             %
             % Returns
             % -------
-            % cache : :class:`LRU`
+            % cache : :class:`.LRU`
             %   empty LRU cache.
             
             % Initialize data
@@ -46,25 +62,25 @@ classdef LRU < handle
             %
             % Arguments
             % ---------
-            % cache : :class:`LRU`
+            % cache : :class:`.LRU`
             %   data cache.
             %
-            % key : :class:`uint8`
+            % key : :class:`.uint8`
             %   data key.
             %
             % Returns
             % -------
-            % val : any
+            % val : :class:`any`
             %   value that is stored with a key, or empty if key not in cache.
             
-            try
+            if isKey(cache.map, key)
                 dll = cache.map(key);
                 val = dll.val{2};
                 
                 % Re-insert dll to the front of the list
                 pop(dll);
                 append(cache.sentinel, dll);
-            catch
+            else
                 val = [];
             end
         end
@@ -74,18 +90,18 @@ classdef LRU < handle
             %
             % Arguments
             % ---------
-            % cache : :class:`LRU`
+            % cache : :class:`.LRU`
             %   data cache.
             %
             % key : :class:`uint8`
             %   data key.
             %
-            % val : any
+            % val : :class:`any`
             %   data value.
             %
             % Returns
             % -------
-            % cache : :class:`LRU`
+            % cache : :class:`.LRU`
             %   updated cache.
             
             % remove previously stored data
@@ -105,9 +121,9 @@ classdef LRU < handle
             cache.mem = cache.mem + memsize(val, 'B');
             while cache.mem > cache.memlimit || length(cache.map) > cache.itemlimit
                 dll_oldest = -cache.sentinel;
-                pop(dll_oldest);
                 cache.mem = cache.mem - memsize(dll_oldest.val{2}, 'B');
-                cache.map.remove(key);
+                cache.map.remove(dll_oldest.val{1});
+                pop(dll_oldest);
             end
         end
         

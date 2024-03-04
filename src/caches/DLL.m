@@ -4,10 +4,15 @@ classdef DLL < handle
     %
     % Based on the work by Richard Lange (2022). Least-Recently Used (LRU) Cache 
     % (https://www.mathworks.com/matlabcentral/fileexchange/68836-least-recently-used-lru-cache),
-    % MATLAB Central File Exchange. Retrieved June 18, 2022. 
+    % MATLAB Central File Exchange. Retrieved June 18, 2022.
+    %
+    % Properties
+    % ----------
+    % val : :class:`any`
+    %   data stored in this element
     
     properties
-        val  % data stored in this element
+        val
     end
     
     properties (Access = private)
@@ -22,12 +27,12 @@ classdef DLL < handle
             %
             % Arguments
             % ---------
-            % val : any
+            % val : :class:`any`
             %   data stored in this element.
             %
             % Returns
             % -------
-            % dll : :class:`DLL`
+            % dll : :class:`.DLL`
             %   data wrapped in a doubly-linked list format.
             
             obj.val = val;
@@ -41,12 +46,12 @@ classdef DLL < handle
             %
             % Arguments
             % ---------
-            % obj : :class:`DLL`
+            % obj : :class:`.DLL`
             %   object to remove from the list.
             %
             % Returns
             % -------
-            % obj : :class:`DLL`
+            % obj : :class:`.DLL`
             %   removed object, with detached links.
             
             obj.prev.next = obj.next;
@@ -60,15 +65,15 @@ classdef DLL < handle
             %
             % Arguments
             % ---------
-            % obj : :class:`DLL`
+            % obj : :class:`.DLL`
             %   list to append to.
             %
-            % other : :class:`DLL`
+            % other : :class:`.DLL`
             %   object to append.
             %
             % Returns
             % -------
-            % obj : :class:`DLL`
+            % obj : :class:`.DLL`
             %   updated list.
             
             other.next = obj.next;
@@ -88,12 +93,12 @@ classdef DLL < handle
             %
             % Arguments
             % ---------
-            % obj : :class`DLL`
+            % obj : :class`.DLL`
             %   current element in the list.
             %
             % Returns
             % -------
-            % other : :class`DLL`
+            % other : :class`.DLL`
             %   next element in the list.
             
             other = obj.next;
@@ -110,12 +115,12 @@ classdef DLL < handle
             %
             % Arguments
             % ---------
-            % obj : :class`DLL`
+            % obj : :class`.DLL`
             %   current element in the list.
             %
             % Returns
             % -------
-            % other : :class`DLL`
+            % other : :class`.DLL`
             %   previous element in the list.
             
             other = obj.prev;

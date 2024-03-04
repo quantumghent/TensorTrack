@@ -3,13 +3,20 @@ function uTest_GetMD5(doSpeed)
 % This is a routine for automatic testing. It is not needed for processing and
 % can be deleted or moved to a folder, where it does not bother.
 %
-% uTest_GetMD5(doSpeed)
-% INPUT:
-%   doSpeed: Optional logical flag to trigger time consuming speed tests.
-%            Default: TRUE. If no speed test is defined, this is ignored.
-% OUTPUT:
-%   On failure the test stops with an error.
-%   The speed is compared to a Java method.
+% Usage
+% -----
+% :code:`uTest_GetMD5(doSpeed)`
+%
+% Arguments
+% ---------
+% doSpeed
+%   Optional logical flag to trigger time consuming speed tests. Defaults to :code:`true`.
+%   If no speed test is defined, this is ignored.
+%
+% Note
+% ----
+% On failure the test stops with an error.
+% The speed is compared to a Java method.
 %
 % Tested: Matlab 6.5, 7.7, 7.8, 7.13, WinXP/32, Win7/64
 % Author: Jan Simon, Heidelberg, (C) 2009-2019 matlab.2010(a)n(MINUS)simon.de
@@ -209,13 +216,13 @@ fprintf('  ok: Null pointer\n');
 if MatlabV >= 901  % R2016b
    Data = string('hello');
    S1   = GetMD5(Data, 'Array');
-   if ~isequal(S1, '2614526bcbd4af5a8e7bf79d1d0d92ab')
+   if ~isequal(S1, '54d669bbc5d2f755929a1ade4869f80b')
       error([ErrID, ':String'], 'Bad result for string.');
    end
    
    Data = string({'hello', 'world'});
    S1   = GetMD5(Data, 'Array');
-   if ~isequal(S1, 'a1bdbbe9a15c249764847ead9bf47326')
+   if ~isequal(S1, '0b633f8d7bc5bc54171f8ce6b60a096b')
       error([ErrID, ':String'], 'Bad result for string.');
    end
    fprintf('  ok: String class\n');

@@ -1,5 +1,5 @@
 classdef (Abstract) AbstractCharge
-    % AbstractCharge - Abstract base class for objects in a fusion category.
+    % Abstract base class for objects in a fusion category.
     
     %% Required categorical data.
     methods
@@ -28,13 +28,13 @@ classdef (Abstract) AbstractCharge
             %
             % Arguments
             % --------
-            % a : :class:`AbstractCharge`
+            % a : :class:`.AbstractCharge`
             %   input charge
             %
             % Returns
             % -------
-            % abar : :class:`AbstractCharge`
-            %   conjugate charge suche that :code:`one(a)` is an element of :code:`a * abar`
+            % abar : :class:`.AbstractCharge`
+            %   conjugate charge such that :code:`one(a)` is an element of :code:`a * abar`
             error('AbstractCharge:requiredMethod', ...
                     'Error. \nMethod must be overloaded.')
         end
@@ -69,7 +69,7 @@ classdef (Abstract) AbstractCharge
             %
             % Returns
             % -------
-            % c : :class:`.AbstractCharge` (1, \*)
+            % c : (1, :) :class:`.AbstractCharge`
             %   the unique elements in the decomposition of the tensor product of ``a`` and
             %   ``b``
             error('AbstractCharge:requiredMethod', ...
@@ -109,7 +109,7 @@ classdef (Abstract) AbstractCharge
             %
             % Returns
             % -------
-            % F : :class:`double` (\*, \*, \*, \*)
+            % F : (:, :, :, :) :class:`double`
             %   recoupling coefficients
             error('AbstractCharge:requiredMethod', ...
                     'Error. \nMethod must be overloaded.')
@@ -177,7 +177,7 @@ classdef (Abstract) AbstractCharge
             %
             % Returns
             % -------
-            % C : :class:`double` (\*, \*, \*, \*)
+            % C : (:, :, :, :) :class:`double`
             %   fusion tensor
             error('AbstractCharge:optionalMethod', ...
                     'Error. \nMethod must be overloaded.')
@@ -211,7 +211,7 @@ classdef (Abstract) AbstractCharge
             %
             % Returns
             % -------
-            % R : :class:`double` (\*, \*)
+            % R : (:, :) :class:`double`
             %   braiding coefficients
             error('AbstractCharge:optionalMethod', ...
                     'Error. \nMethod must be overloaded.')
@@ -224,7 +224,7 @@ classdef (Abstract) AbstractCharge
             % Compute the fusion to splitting coefficient.
             % 
             % .. todo::
-            %   Add diagram?
+            %   Add diagram.
             %
             % Arguments
             % ---------
@@ -246,7 +246,7 @@ classdef (Abstract) AbstractCharge
             % Compute the splitting to fusion coefficient.
             % 
             % .. todo::
-            %   Add diagram?
+            %   Add diagram.
             %
             % Arguments
             % ---------
@@ -303,7 +303,7 @@ classdef (Abstract) AbstractCharge
             % Create a matrix-representation of an arrowflip.
             % 
             % .. todo::
-            %   Add diagram or definition?
+            %   Add diagram and proper definition.
             %
             % Arguments
             % ---------
@@ -311,7 +311,7 @@ classdef (Abstract) AbstractCharge
             %
             % Returns
             % -------
-            % F : :class:`double` (\*, \*)
+            % F : (:, :) :class:`double`
             %   matrix-representation of an arrowflip
             F = conj(sqrt(qdim(a)) .* fusiontensor(conj(a), a, one(a)));
         end
@@ -320,7 +320,7 @@ classdef (Abstract) AbstractCharge
             % Compute the full recoupling matrix from ``e`` to ``f``.
             %
             % .. todo::
-            %   Add proper definition?
+            %   Add proper definition.
             %
             % Usage
             % -----
@@ -333,14 +333,14 @@ classdef (Abstract) AbstractCharge
             %   charges being fused
             % d : :class:`.AbstractCharge`
             %   total charges
-            % e : :class:`.AbstractCharge` (1, \*)
+            % e : (1, :) :class:`.AbstractCharge`
             %   intermediate charges before recoupling
-            % f : :class:`.AbstractCharge` (1, \*)
+            % f : (1, :) :class:`.AbstractCharge`
             %   intermediate charge after recoupling
             %
             % Returns
             % -------
-            % F : :class:`double` (\*, \*, \*, \*)
+            % F : (:, :, :, :) :class:`double`
             %   recoupling matrix between all allowed channels
             if a.fusionstyle == FusionStyle.Unique
                 if nargin < 5, e = a * b; end
@@ -414,7 +414,7 @@ classdef (Abstract) AbstractCharge
             % Compute the coefficient obtained by twisting a charge.
             %
             % .. todo::
-            %   Add diagram/definition?
+            %   Add diagram and proper definition.
             %
             % Arguments
             % ---------
@@ -449,19 +449,21 @@ classdef (Abstract) AbstractCharge
     %% Utility functions
     methods
         function [d, N] = prod(a, dim)
-            % Total fusion product of charges.
-            %
-            % .. todo::
-            %   Complete docstring
+            % Compute the total fusion product of array of charges along a given axis.
             %
             % Arguments
             % ---------
-            % a, b, c, ... : :class:`.AbstractCharge`
+            % a : :class:`.AbstractCharge`
+            %   input array of charges
+            % dim : :class:`int`
+            %   array dimension along which to take the fusion product, defaults to first
+            %   non-trivial axis
             %
             % Returns
             % -------
             % c : :class:`.AbstractCharge`
-            %   total fusion product determined by subsequently multiplying input charges
+            %   array of total fusion products determined by subsequently multiplying input
+            %   charges along the given direction
             arguments
                 a
                 dim = find(size(a) ~= 1, 1)
@@ -550,11 +552,12 @@ classdef (Abstract) AbstractCharge
             % Cumulative fusion product of elements.
             %
             % .. todo::
-            %   Complete docstring
+            %   Complete docstring.
             %
             % Usage
             % -----
-            % :code:`Y = cumprod(X)` computes the cumulative fusion product along the
+            % :code:`Y = cumprod(X)`
+            % computes the cumulative fusion product along the
             % columns of X.
             %
             % For ``FusionStyle.Unique``, ``Y`` has the same size as ``X``, which can be
@@ -564,7 +567,7 @@ classdef (Abstract) AbstractCharge
             %
             % Arguments
             % ---------
-            % a: :class:`.AbstractCharge` (\*, \*)
+            % a: (:, :) :class:`.AbstractCharge`
             %
             % Returns
             % -------
@@ -572,6 +575,7 @@ classdef (Abstract) AbstractCharge
             %   explanation
             % vertices : type
             %   explanation
+            
             if a.fusionstyle == FusionStyle.Unique
                 charges = a;
                 for i = 2:size(charges, 1)
@@ -590,7 +594,8 @@ classdef (Abstract) AbstractCharge
                 charges = [];
                 vertices = [];
                 for i = 1:size(a, 2)
-                    [chargepart, vertexpart] = cumprod(a(:, i));
+                    [chargepart, vertexpart] = cumprod(...
+                        subsref(a, substruct('()', {':', i})));
                     charges = horzcat(charges, chargepart);
                     vertices = horzcat(vertices, vertexpart);
                 end
@@ -605,17 +610,20 @@ classdef (Abstract) AbstractCharge
                 end
                 
                 if length(a) == 2
-                    f = a(1) * a(2);
-                    charges = [repmat(a(1), 1, length(f)); f];
+                    f = subsref(a, substruct('()', {1})) * subsref(a, substruct('()', {2}));
+                    charges = [repmat(subsref(a, substruct('()', {1})), 1, length(f)); f];
                     vertices = [];
                     return
                 end
                 
-                part = cumprod(a(1:end-1));
+                part = cumprod(subsref(a, substruct('()', {1:length(a)-1})));
                 charges = [];
                 for i = 1:size(part, 2)
-                    f = part(end, i) * a(end);
-                    charges = [charges [repmat(part(:, i), 1, length(f)); f]];
+                    f = subsref(part, substruct('()', {size(part, 1), i})) * ...
+                        subsref(a, substruct('()', {length(a)}));
+                    charges = [charges ...
+                        [repmat(subsref(part, substruct('()', {1:size(part, 1), i})), ...
+                        1, length(f)); f]];
                 end
                 vertices = [];
                 return
@@ -630,9 +638,10 @@ classdef (Abstract) AbstractCharge
             if length(a) == 2
                 charges = [];
                 vertices = [];
-                for f = a(1) * a(2)
-                    N = Nsymbol(a(1), a(2), f);
-                    charges = [charges repmat([a(1); f], 1, N)]; 
+                for f = subsref(a, substruct('()', {1})) * subsref(a, substruct('()', {2}))
+                    N = Nsymbol(subsref(a, substruct('()', {1})), ...
+                        subsref(a, substruct('()', {2})), f);
+                    charges = [charges repmat([subsref(a, substruct('()', {1})); f], 1, N)]; 
                     vertices = [vertices 1:N];
                 end
                 return
@@ -642,9 +651,12 @@ classdef (Abstract) AbstractCharge
             charges = [];
             vertices = [];
             for i = 1:size(chargepart, 2)
-                for f = chargepart(end, i) * a(end)
-                    N = Nsymbol(chargepart(end, i), a(end), f);
-                    charges = [charges, repmat([chargepart(:, i); f], 1, N)];
+                for f = subsref(chargepart, substruct('()', {size(chargepart, 1), i})) * ...
+                        subsref(a, substruct('()', {length(a)}))
+                    N = Nsymbol(subsref(chargepart, substruct('()', {size(chargepart, 1), i})), ...
+                        subsref(a, substruct('()', {length(a)})), f);
+                    charges = [charges, ...
+                        repmat([subsref(chargepart, substruct('()', {':', i})); f], 1, N)];
                     vertices = [vertices [repmat(vertexpart(:, i), 1, N); 1:N]];
                 end
             end
@@ -654,7 +666,7 @@ classdef (Abstract) AbstractCharge
             % Create all combinations of vectors.
             %
             % .. todo::
-            %   Complete docstring
+            %   Complete docstring.
             %
             % Usage
             % -----
@@ -698,7 +710,7 @@ classdef (Abstract) AbstractCharge
                 if any(size(a) == numel(a)) && any(size(b) == numel(b))
                     lia = a == b;
                 else
-                    lia = a(:) == b(:);
+                    lia = reshape(a == b, [], 1);
                 end
                 
                 if ~any(lia)
@@ -716,8 +728,9 @@ classdef (Abstract) AbstractCharge
                 return
             end
             
-            [sortab, indsortab] = sort([a(:); b(:)]);
-            d = sortab(1:end-1) == sortab(2:end);
+            [sortab, indsortab] = sort([reshape(a, [], 1); reshape(b, [], 1)]);
+            d = subsref(sortab, substruct('()', {1:length(sortab)-1})) == ...
+                subsref(sortab, substruct('()', {2:length(sortab)}));
             ndx1 = indsortab(d);
             
             if nargout <= 1
@@ -735,11 +748,9 @@ classdef (Abstract) AbstractCharge
                 locb = reshape(locb, size(a));
             end
         end
-    end
-    
-    methods
-%         bool = issortedrows(A)
-%         bools = ne(A, B)
-%         [B, I] = sort(A, varargin)
+        
+        function s = name(a)
+            s = class(a);
+        end
     end
 end

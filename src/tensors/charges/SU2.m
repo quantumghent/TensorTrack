@@ -1,10 +1,10 @@
 classdef SU2 < AbstractCharge & uint8
-    % SU2 - Irreducible representations of SU2.
-    %   This class represents the representations of SU2, represented using uint8, such that
-    %   the representative is equal to the quantum dimension. The use of uint8 limits the
-    %   maximum to 255. The spin label can be recovered with spin = (j - 1) / 2.
+    % Irreducible representations of :math:`\mathrm{SU}(2)`.
     %
-    %   See also AbstractCharge
+    % This class represents the representations of :math:`\mathrm{SU}(2)`, represented using
+    % :code:`uint8`, such that the representative is equal to the quantum dimension. The use
+    % of :math:`uint8` limits the maximum dimension to 255. The spin label can be recovered
+    % as :math:`s = (j - 1) / 2`.
     
     methods
         function style = braidingstyle(~)
@@ -97,9 +97,9 @@ classdef SU2 < AbstractCharge & uint8
         
         function varargout = prod(varargin)
             [varargout{1:nargout}] = prod@AbstractCharge(varargin{:});
-            if nargout > 0
-                varargout{1} = SU2(varargout{1});
-            end
+%             if nargout > 0
+%                 varargout{1} = SU2(varargout{1});
+%             end
         end
         
         function d = qdim(a)
@@ -128,6 +128,10 @@ classdef SU2 < AbstractCharge & uint8
                 labels = horzcat(varargin{:});
             end
             charge@uint8(labels);
+        end
+        
+        function s = GetMD5_helper(a)
+            s = uint8(a);
         end
     end
 end

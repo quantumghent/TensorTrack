@@ -1,28 +1,30 @@
-function C = tensortrace(A, ia)
-% tensortrace - Compute the (partial) trace of a tensor.
-%   [C, ic] = tensortrace(A, ia)
-%       traces over the indices that appear twice in ia.
+function C = tensortrace(A, i1, i2)
+% Compute the (partial) trace of a tensor.
 %
-%   [C, ic] = tensortrace(A, ia, ic)
-%       optionally specifies the output indices' order.
+% Usage
+% -----
+%
+% :code:`[C, ic] = tensortrace(A, i1)`
+% 
+% traces over the indices that appear twice in :code:`i1`.
+%
+% :code:`[C, ic] = tensortrace(A, i1, i2)`
+% 
+% optionally specifies the output indices' order.
 
-arguments
-    A
-    ia
-end
+if isempty(i1) && isempty(i2), C = A; return; end
+assert(length(i1) == length(i2), 'invalid indices');
 
-[dimA1, dimA2] = traceinds(ia);
-
-szA1 = size(A, dimA1);
-szA2 = size(A, dimA2);
+szA1 = size(A, i1);
+szA2 = size(A, i2);
 
 assert(all(szA1 == szA2));
 
 E = reshape(eye(prod(szA1)), [szA1 szA2]);
 
 indsA = -(1:ndims(A));
-indsA(dimA1) = 1:length(dimA1);
-indsA(dimA2) = (1:length(dimA2)) + length(dimA1);
-C = contract(A, indsA, E, [1:length(dimA1) (1:length(dimA2)) + length(dimA1)]);
+indsA(i1) = 1:length(i1);
+indsA(i2) = (1:length(i2)) + length(i1);
+C = contract(A, indsA, E, [1:length(i1) (1:length(i2)) + length(i1)]);
 
 end
